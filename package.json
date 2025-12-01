@@ -9,9 +9,6 @@
     "dependencies": {
         "@tailwindcss/vite": "^4.1.11",
         "autoprefixer": "^10.4.20",
-            "dev": "vite",
-            "build": "vite build",
-            "deploy": "pwsh -File scripts/deploy.ps1 -Env Production"
         "laravel-vite-plugin": "^2.0",
         "tailwindcss": "^4.0.7",
         "vite": "^7.0.4"

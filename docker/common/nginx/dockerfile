@@ -11,10 +11,10 @@ RUN apt-get update && apt-get install -y unzip git curl && \
 	composer install --no-dev --optimize-autoloader
 
 # Stage 2: Node.js (npm build)
-FROM node:24-alpine AS node_build
+FROM node:20-alpine AS node_build
 WORKDIR /var/www
 # Kopiere nur relevante Dateien für den Build
-COPY package.json vite.config.js /var/www/
+COPY package.json package-lock.json vite.config.js /var/www/
 COPY resources/ /var/www/resources/
 COPY public/ /var/www/public/
 COPY composer.json composer.lock /var/www/
@@ -26,7 +26,7 @@ COPY app/ /var/www/app/
 # Copy vendor from PHP stage
 COPY --from=php_vendor /var/www/vendor /var/www/vendor
 # Node dependencies & build
-RUN npm install || { echo "npm install failed"; exit 1; }
+RUN npm ci || { echo "npm ci failed"; exit 1; }
 RUN npm run build || { echo "npm run build failed"; exit 1; }
 
 # Stage 3: Nginx production image
