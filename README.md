@@ -1,123 +1,114 @@
-# Growdash - Laravel 12 Integration
+# Growdash - Laravel 12 Multi-Tenant IoT Platform
 
-Laravel-basiertes Dashboard zur Verwaltung und Überwachung von Growdash-Geräten (Arduino-basierte Hydroponik-Systeme).
+Laravel-basiertes Dashboard zur Verwaltung und Überwachung von Growdash-Geräten (Arduino-basierte Hydroponik-Systeme) mit vollständiger Multi-Tenant-Architektur, Device-Provisioning, Team-Sharing und sicherer Agent-Authentifizierung.
 
 ## Projektübersicht
 
-Dieses Projekt integriert mehrere Growdash-Geräte in eine zentrale Laravel-Anwendung. Jedes Gerät sendet Sensordaten (Wasserstand, TDS, Temperatur) und Events (Sprüh- und Füllvorgänge) via Webhooks an Laravel. Die Anwendung:
+Dieses Projekt integriert mehrere Growdash-Geräte in eine zentrale Laravel-Anwendung mit:
 
--   **Empfängt und persistiert** Sensordaten und Logs von mehreren Geräten
--   **Parst Arduino-Log-Messages** automatisch und extrahiert strukturierte Daten
--   **Verwaltet System-Status** in Echtzeit (letzter Wasserstand, TDS, Temperatur, aktive Prozesse)
--   **Stellt APIs bereit** für Historien, Status-Abfragen und manuelle Steuerung
--   **Sichert Webhooks ab** via Token-basierter Authentifizierung
+-   **Multi-Tenant-Architektur**: Jeder User verwaltet eigene Devices, optional Team-Sharing via Pivot-Tabelle
+-   **Device-Provisioning**: Bootstrap-Flow für neue Geräte mit 6-stelligem Pairing-Code
+-   **Agent-Authentifizierung**: SHA256-gehashte Tokens für sichere Device-Communication
+-   **Generische Telemetrie**: JSON-basierte Sensor-/Actuator-Konfiguration
+-   **Command-Queue**: Bidirektionale Steuerung (UI → Agent → UI)
+-   **WebSocket-Support**: Echtzeit-Updates via Laravel Reverb (geplant)
 
 ## Datenmodell (ER-Diagramm)
 
 ```mermaid
 erDiagram
-    DEVICES ||--o{ WATER_LEVELS : has
-    DEVICES ||--o{ TDS_READINGS : has
-    DEVICES ||--o{ TEMPERATURE_READINGS : has
-    DEVICES ||--o{ SPRAY_EVENTS : has
-    DEVICES ||--o{ FILL_EVENTS : has
-    DEVICES ||--o{ SYSTEM_STATUSES : has
-    DEVICES ||--o{ ARDUINO_LOGS : has
+    USERS ||--o{ DEVICES : owns
+    USERS ||--o{ USERS_DEVICES : shares
+    DEVICES ||--o{ USERS_DEVICES : "shared_with"
+    DEVICES ||--o{ PAIR_CODES : has
+    DEVICES ||--o{ TELEMETRY_READINGS : has
+    DEVICES ||--o{ COMMANDS : receives
+    DEVICES ||--o{ DEVICE_LOGS : has
+    DEVICES ||--o{ WATER_LEVELS : "legacy"
+    DEVICES ||--o{ TDS_READINGS : "legacy"
+    DEVICES ||--o{ TEMPERATURE_READINGS : "legacy"
+
+    USERS {
+        int id PK
+        string name
+        string email UK
+        string password
+        datetime email_verified_at
+        datetime created_at
+    }
 
     DEVICES {
         int id PK
+        int user_id FK
         string name
-        string slug
-        string ip_address
-        string serial_port
+        string slug UK
+        string public_id UK "UUID for API"
+        string agent_token "SHA256 hash"
+        string bootstrap_id UK "Agent hardware ID"
+        string bootstrap_code "6-char pairing code"
+        datetime paired_at
+        string board_type
+        string status "paired|unpaired|offline"
+        json capabilities "sensors, actuators"
+        json last_state "latest readings"
+        datetime last_seen_at
         datetime created_at
-        datetime updated_at
     }
 
-    WATER_LEVELS {
+    USERS_DEVICES {
+        int user_id FK
+        int device_id FK
+        string role "owner|editor|viewer"
+        datetime created_at
+    }
+
+    PAIR_CODES {
         int id PK
         int device_id FK
+        string code "6-char"
+        datetime expires_at
+        datetime used_at
+        int used_by_user_id FK
+    }
+
+    TELEMETRY_READINGS {
+        int id PK
+        int device_id FK
+        string sensor_key "water_level, tds, temp"
+        float value
+        string unit
+        json raw_data
         datetime measured_at
-        float level_percent
-        float liters
-        datetime created_at
-        datetime updated_at
     }
 
-    TDS_READINGS {
+    COMMANDS {
         int id PK
         int device_id FK
-        datetime measured_at
-        float value_ppm
+        int created_by_user_id FK
+        string type "spray, fill, stop"
+        json params
+        string status "pending|executing|completed|failed"
+        text result_message
+        datetime completed_at
         datetime created_at
-        datetime updated_at
     }
 
-    TEMPERATURE_READINGS {
+    DEVICE_LOGS {
         int id PK
         int device_id FK
-        datetime measured_at
-        float value_c
-        datetime created_at
-        datetime updated_at
-    }
-
-    SPRAY_EVENTS {
-        int id PK
-        int device_id FK
-        datetime start_time
-        datetime end_time
-        int duration_seconds
-        boolean manual
-        datetime created_at
-        datetime updated_at
-    }
-
-    FILL_EVENTS {
-        int id PK
-        int device_id FK
-        datetime start_time
-        datetime end_time
-        int duration_seconds
-        float target_level
-        float target_liters
-        float actual_liters
-        boolean manual
-        datetime created_at
-        datetime updated_at
-    }
-
-    SYSTEM_STATUSES {
-        int id PK
-        int device_id FK
-        datetime measured_at
-        float water_level
-        float water_liters
-        boolean spray_active
-        boolean filling_active
-        float last_tds
-        float last_temperature
-        datetime created_at
-        datetime updated_at
-    }
-
-    ARDUINO_LOGS {
-        int id PK
-        int device_id FK
-        datetime logged_at
-        string level
+        string level "debug|info|warning|error"
         text message
-        datetime created_at
-        datetime updated_at
+        datetime logged_at
     }
 ```
 
-### Konzept
+### Architektur-Konzepte
 
--   **devices**: Zentrale Tabelle für alle Growdash-Geräte (1:n zu allen Messungen/Events)
--   **system_statuses**: Komprimierte "aktueller Status"-Tabelle für schnelle Abfragen
--   **Historien-Tabellen**: Alle Messungen und Events werden vollständig gespeichert
--   **arduino_logs**: Rohdaten aller Arduino-Nachrichten für Debugging
+-   **Multi-Tenancy**: `user_id` in `devices`, Policies prüfen Owner oder `users_devices` Pivot-Rolle
+-   **Bootstrap-Flow**: Agent sendet `bootstrap_id` → Server generiert `bootstrap_code` → User pairt via UI → Agent erhält `public_id` + `agent_token`
+-   **Token-Sicherheit**: `agent_token` wird als SHA256-Hash gespeichert, Klartext nur beim Pairing zurückgegeben (einmalig!)
+-   **Generische Telemetrie**: `telemetry_readings` ersetzt alte `water_levels`, `tds_readings`, etc. (migration geplant)
+-   **Command-Queue**: UI erstellt Commands → Agent pollt `/api/growdash/agent/commands/pending` → sendet Ergebnis zurück
 
 ## Installation & Setup
 
@@ -126,17 +117,22 @@ erDiagram
 ```bash
 composer install
 npm install
+npm run build
 ```
 
 ### 2. Environment konfigurieren
 
-Kopiere `.env.example` zu `.env` und setze folgende Werte:
+Kopiere `.env.example` zu `.env`:
 
 ```env
-# Growdash-Konfiguration
-GROWDASH_DEVICE_SLUG=growdash-1
-GROWDASH_WEBHOOK_TOKEN=super-secret-token-hier-einfügen
-GROWDASH_PYTHON_BASE_URL=http://192.168.178.12:8000
+APP_NAME=GrowDash
+APP_URL=http://localhost
+
+DB_CONNECTION=sqlite
+DB_DATABASE=/absolute/path/to/database.sqlite
+
+# Growdash Legacy (optional für Webhooks)
+GROWDASH_WEBHOOK_TOKEN=super-secret-token
 ```
 
 ### 3. Datenbank migrieren
@@ -145,19 +141,166 @@ GROWDASH_PYTHON_BASE_URL=http://192.168.178.12:8000
 php artisan migrate
 ```
 
-### 4. Initial-Device erstellen (optional)
+### 4. Test-User erstellen
 
 ```bash
-php artisan db:seed --class=DeviceSeeder
+php artisan db:seed --class=UserSeeder
+# → admin@growdash.local / password
 ```
 
 ## API-Dokumentation
 
-### Webhook-Endpunkte (erfordern `X-Growdash-Token` Header)
+### 🔐 Bootstrap & Pairing (Multi-Tenant-Flow)
+
+#### 1️⃣ Agent Bootstrap (öffentlich)
+
+**POST** `/api/agents/bootstrap`
+
+Agent sendet beim ersten Start seine Hardware-ID und wartet auf Pairing.
+
+**Request:**
+
+```json
+{
+    "bootstrap_id": "esp32-abc123def456",
+    "name": "GrowBox Kitchen",
+    "board_type": "ESP32",
+    "capabilities": {
+        "sensors": ["water_level", "tds", "temperature"],
+        "actuators": ["spray", "fill"]
+    }
+}
+```
+
+**Response (unpaired):**
+
+```json
+{
+    "status": "unpaired",
+    "bootstrap_code": "XY42Z7",
+    "message": "Device registered. Please pair via web UI with code: XY42Z7"
+}
+```
+
+**Response (paired, nach User-Pairing):**
+
+```json
+{
+    "status": "paired",
+    "public_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+    "agent_token": "7f3d9a8b...64-char-plaintext-token...c2e1f4a6",
+    "device_name": "GrowBox Kitchen",
+    "user_email": "admin@growdash.local"
+}
+```
+
+⚠️ **WICHTIG**: `agent_token` wird nur EINMAL zurückgegeben! Agent muss ihn in `.env` speichern.
+
+---
+
+#### 2️⃣ User Pairing (auth:web)
+
+**POST** `/api/devices/pair`
+
+User gibt 6-stelligen Code ein, um Device mit Account zu verknüpfen.
+
+**Request:**
+
+````json
+{
+    "bootstrap_code": "XY42Z7"
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Device paired successfully!",
+    "device": {
+        "id": 1,
+        "name": "GrowBox Kitchen",
+        "public_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+        "paired_at": "2025-12-01T16:42:00Z"
+    },
+    "agent_token": "7f3d9a8b...64-char-plaintext-token...c2e1f4a6"
+}
+````
+
+⚠️ **WICHTIG**: Agent muss nach erfolgreichem Pairing `agent_token` UND `public_id` in seiner `.env` speichern!
+
+---
+
+### 🤖 Agent API (Device-Authenticated)
+
+Alle Agent-Endpoints erfordern folgende Header:
+
+```
+X-Device-ID: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
+X-Device-Token: 7f3d9a8b...64-char-plaintext-token...c2e1f4a6
+```
+
+#### POST `/api/growdash/agent/telemetry`
+
+Agent sendet Sensor-Readings (geplant, Controller fehlt noch).
+
+**Request:**
+
+```json
+{
+    "readings": [
+        {
+            "sensor_key": "water_level",
+            "value": 75.3,
+            "unit": "percent",
+            "measured_at": "2025-12-01T10:30:00Z"
+        },
+        {
+            "sensor_key": "tds",
+            "value": 450.2,
+            "unit": "ppm",
+            "measured_at": "2025-12-01T10:30:00Z"
+        }
+    ]
+}
+```
+
+#### GET `/api/growdash/agent/commands/pending`
+
+Agent holt pending Commands ab (geplant, Controller fehlt noch).
+
+**Response:**
+
+```json
+{
+    "commands": [
+        {
+            "id": 42,
+            "type": "spray",
+            "params": { "duration": 10 },
+            "created_at": "2025-12-01T16:40:00Z"
+        }
+    ]
+}
+```
+
+#### POST `/api/growdash/agent/commands/{id}/result`
+
+Agent meldet Command-Ergebnis zurück (geplant).
+
+**Request:**
+
+```json
+{
+    "status": "completed",
+    "result_message": "Spray cycle completed successfully"
+}
+```
+
+---
+
+### 📊 Legacy Webhook-Endpunkte (deprecated, erfordern `X-Growdash-Token`)
 
 #### POST `/api/growdash/log`
 
-Empfängt einzelne Log-Zeilen vom Arduino.
+Empfängt einzelne Log-Zeilen vom Arduino (legacy).
 
 **Request:**
 
@@ -169,27 +312,9 @@ Empfängt einzelne Log-Zeilen vom Arduino.
 }
 ```
 
-#### POST `/api/growdash/event`
-
-Empfängt strukturierte Events (optional, falls Python bereits parst).
-
-**Request:**
-
-```json
-{
-    "device_slug": "growdash-1",
-    "type": "water_level",
-    "payload": {
-        "level_percent": 75.3,
-        "liters": 15.2,
-        "measured_at": "2025-12-01T10:30:00Z"
-    }
-}
-```
-
 #### POST `/api/growdash/manual-spray`
 
-Manuelles Aktivieren/Deaktivieren der Sprühfunktion.
+Manuelles Aktivieren/Deaktivieren der Sprühfunktion (legacy).
 
 **Request:**
 
@@ -197,21 +322,6 @@ Manuelles Aktivieren/Deaktivieren der Sprühfunktion.
 {
     "device_slug": "growdash-1",
     "action": "on"
-}
-```
-
-#### POST `/api/growdash/manual-fill`
-
-Manuelles Starten/Stoppen des Füllvorgangs.
-
-**Request:**
-
-```json
-{
-    "device_slug": "growdash-1",
-    "action": "start",
-    "target_level": 80.0,
-    "target_liters": 20.0
 }
 ```
 
@@ -344,169 +454,112 @@ Arduino-Logs.
 
 ---
 
-## 🚀 NEUE ANFORDERUNG: Multi-Tenant-Architektur
+## 🚀 Multi-Tenant-Architektur (Phase 11-16)
 
-### ✅ Phase 11: User-Device-Beziehungen
+### ✅ Phase 11: User-Device-Beziehungen & Bootstrap/Pairing
 
--   [x] Migration: user_id zu devices_table hinzufügen
--   [x] Migration: public_id (UUID) zu devices_table
--   [x] Migration: agent_token zu devices_table (für Agent-Auth)
--   [x] Device Model um User-Relation erweitern
--   [x] DevicePolicy erstellen (user_id === auth()->id())
--   [x] Policy in AppServiceProvider registrieren
--   [x] Alle API-Endpunkte mit Policy absichern
--   [x] Tests mit user_id aktualisiert
--   [x] DeviceSeeder angepasst (admin@growdash.local / password)
--   [x] Migration ausgeführt
--   [x] Alle 65 Tests bestanden ✅
+-   [x] Migration: user_id, public_id (UUID), agent_token zu devices
+-   [x] Migration: bootstrap_id, bootstrap_code, paired_at zu devices
+-   [x] Migration: capabilities (JSON), last_state (JSON), status, board_type
+-   [x] Migration: users_devices Pivot-Tabelle für Team-Sharing (role: owner/editor/viewer)
+-   [x] Migration: pair_codes Tabelle für Pairing-Codes
+-   [x] Migration: telemetry_readings für generische Sensor-Daten
+-   [x] Migration: commands für Command-Queue (type, params, status)
+-   [x] Migration: device_logs für Agent-Logs
+-   [x] Device Model: pairWithUser() mit SHA256-Token-Hashing
+-   [x] Device Model: verifyAgentToken() für Hash-Vergleich
+-   [x] Device Model: sharedUsers() BelongsToMany-Relation
+-   [x] User Model: devices() + sharedDevices() Relations
+-   [x] BootstrapController: bootstrap() Endpoint (öffentlich)
+-   [x] DevicePairingController: pair() Endpoint (auth:web)
+-   [x] AuthenticateDevice Middleware für Agent-Auth (X-Device-ID + X-Device-Token)
+-   [x] API Routes: /api/agents/bootstrap, /api/devices/pair, /api/growdash/agent/\*
+-   [x] DevicePolicy: view/update/delete prüfen user_id oder users_devices pivot
+-   [x] DevicePolicy: control() erlaubt owner + shared users mit editor/owner role
+-   [x] Policy in AppServiceProvider registriert
+-   [x] README.md mit ER-Diagramm und API-Dokumentation aktualisiert
 
--   [ ] Migration: user_id zu devices_table hinzufügen
--   [ ] Migration: public_id (UUID) zu devices_table
--   [ ] Migration: agent_token zu devices_table (für Agent-Auth)
--   [ ] Optional: users_devices Pivot-Tabelle für Team-Sharing
--   [ ] Device Model um User-Relation erweitern
--   [ ] DevicePolicy erstellen (user_id === auth()->id())
--   [ ] Alle API-Endpunkte mit Policy absichern
+**Status**: ✅ Phase 11 abgeschlossen! Bootstrap/Pairing-Flow funktioniert, Agent-Auth implementiert, Multi-Tenant-Policies aktiv.
 
-### Phase 12: Generische Sensor/Actuator-Framework
+---
 
-**Ziel**: Hardcodierte Sensoren (water, TDS, temp) durch generisches System ersetzen
+### 📋 Phase 12: Agent-API Controller implementieren
 
--   [ ] Migration: sensors_table (device_id, type, name, config JSON)
--   [ ] Migration: actuators_table (device_id, type, name, config JSON)
--   [ ] Migration: measurements_table (sensor_id, value, unit, measured_at)
--   [ ] Migration: actuations_table (actuator_id, action, params JSON, executed_at)
--   [ ] Model: Sensor (polymorphische Typen: water_level, tds, temperature, custom)
--   [ ] Model: Actuator (polymorphische Typen: spray, fill, custom)
--   [ ] Model: Measurement (ersetzt WaterLevel, TdsReading, TemperatureReading)
--   [ ] Model: Actuation (ersetzt SprayEvent, FillEvent)
--   [ ] SensorTypeEnum/ActuatorTypeEnum für Typ-Validierung
--   [ ] Data Migration: Alte Daten → neue Struktur migrieren
+-   [ ] TelemetryController: store() für /api/growdash/agent/telemetry
+-   [ ] CommandController: pending() für /api/growdash/agent/commands/pending
+-   [ ] CommandController: result() für /api/growdash/agent/commands/{id}/result
+-   [ ] DeviceManagementController: updateCapabilities(), heartbeat()
+-   [ ] LogController: store() für /api/growdash/agent/logs
+-   [ ] API Routes aktivieren (aktuell auskommentiert)
 
-### Phase 13: Device-Provisioning & Handshake
+### 📋 Phase 13: Data Migration & Cleanup
 
-**Ziel**: Neue Devices registrieren und mit Benutzern verknüpfen
+-   [x] Migration: measurements_table erstellt (unified sensor data)
+-   [x] Migration: migrate_legacy_sensor_tables_to_measurements erstellt
+-   [ ] Migration ausführen und alte Daten migrieren
+-   [ ] Legacy-Tabellen deprecaten (water_levels, tds_readings, temperature_readings)
+-   [ ] Legacy-Models entfernen nach erfolgreicher Migration
 
--   [ ] Livewire Component: DeviceRegistration (Name, Type, Slug eingeben)
--   [ ] POST /api/devices/provision (erstellt Device + generiert agent_token)
--   [ ] GET /api/devices/{public_id}/handshake (Agent-Auth via agent_token)
--   [ ] Handshake-Response: sensor_config, actuator_config, polling_interval
--   [ ] View: Device-Setup-Wizard mit QR-Code für agent_token
--   [ ] Agent-seitiges Setup-Skript (Python) für Ersteinrichtung
+---
 
-### Phase 14: Telemetrie & Command-Queue APIs
+## ✅ Architektur-Entscheidungen (getroffen)
 
-**Ziel**: Generische APIs für Agent-Communication
+### 1. **Team-Sharing**: ✅ Ja, via `users_devices` Pivot-Tabelle
 
--   [ ] POST /api/devices/{public_id}/telemetry (Array von Measurements)
--   [ ] GET /api/devices/{public_id}/commands (Pending Commands abrufen)
--   [ ] PATCH /api/devices/{public_id}/commands/{id} (Command als ausgeführt markieren)
--   [ ] Migration: commands_table (device_id, type, params JSON, status, created_at)
--   [ ] Model: Command (status: pending/executing/completed/failed)
--   [ ] Controller: TelemetryController (ersetzt GrowdashWebhookController)
--   [ ] Controller: CommandController (Queue-Management)
--   [ ] Agent-Polling-Mechanismus dokumentieren (HTTP Long-Polling vs. WebSocket)
+-   **Begründung**: Ermöglicht flexible Zugriffskontrolle (owner/editor/viewer)
+-   **Status**: Migration erstellt, Relations implementiert, Policy prüft Pivot-Rollen
 
-### Phase 15: Multi-Tenant-Frontend
+### 2. **Agent-Auth**: ✅ Token-basiert via `agent_token` (SHA256-Hash)
 
-**Ziel**: UI für Device-Management und Monitoring
+-   **Begründung**: Einfacher als Sanctum, direkt in `AuthenticateDevice` Middleware
+-   **Status**: Implementiert, Token-Hashing in `pairWithUser()`, Verifikation in Middleware
 
--   [ ] Livewire: DeviceList (nur eigene Devices anzeigen)
--   [ ] Livewire: DeviceCard (Status, Sensor-Werte, Actuator-Controls)
--   [ ] Livewire: CommandHistory (gesendete Befehle + Status)
--   [ ] Livewire: SensorChart (generisch für alle Sensor-Typen)
--   [ ] Livewire: ActuatorControl (generische Buttons für Actuators)
--   [ ] View: devices/index.blade.php (Dashboard)
--   [ ] View: devices/show.blade.php (Device-Detail mit Charts)
--   [ ] View: devices/provision.blade.php (Setup-Wizard)
+### 3. **Command-Delivery**: ✅ WebSocket via Laravel Reverb (geplant)
 
-### Phase 16: Auth-Policies & Team-Sharing (Optional)
+-   **Begründung**: Echtzeit-Push statt Polling, bessere UX für UI und Agent
+-   **Status**: Reverb installiert (pending fix), Event-Typen dokumentiert in ARCHITECTURE.md
 
--   [ ] DevicePolicy: viewAny, view, update, delete, control
--   [ ] Middleware: EnsureDeviceOwnership für alle Device-Routes
--   [ ] Optional: Team-Model für Multi-User-Zugriff
--   [ ] Optional: Invitation-System für Device-Sharing
--   [ ] Optional: Role-Based-Access (owner, admin, viewer)
+### 4. **Data-Migration**: ✅ Migrieren und Legacy-Tabellen aufräumen
 
-## Offene Entscheidungen
+-   **Begründung**: Unified `measurements` Tabelle skaliert besser, generisches Schema
+-   **Status**: Migration erstellt, Ausführung pending
 
-### ✅ Entscheidungen getroffen:
+---
 
-1. **System-Status-Strategie**: ✅ Ein Status pro Device (wird überschrieben) - optimal für schnelle Abfragen
-2. **API-Authentifizierung**: ✅ Auth-Middleware wird für öffentliche Endpunkte hinzugefügt
-3. **Frontend-Framework**: ✅ Livewire + Flux (bereits im Projekt vorhanden)
-4. **Echtzeit-Updates**: ✅ WebSockets mit Laravel Reverb
-5. **Multi-Tenant-Architektur**: ✅ User-Device-Beziehungen über user_id + public_id (UUID)
-6. **Sensor-Framework**: ✅ Generische Sensor/Actuator-Tabellen statt hardcodierte Typen
+## Offene Punkte
 
-### ⚠️ Neue Entscheidungen erforderlich:
+1. **Reverb Installation**: ⚠️ `php artisan reverb:install` hängt - manuell publishen oder fix
+2. **Agent-API Controller**: TelemetryController, CommandController, DeviceManagementController implementieren
+3. **Frontend**: Livewire Components für Device-List, Pairing-UI, Dashboard
+4. **WebSocket Events**: DeviceStatusUpdated, CommandCreated, TelemetryReceived
 
-1. **Team-Sharing**: Sollen Devices mit mehreren Usern geteilt werden können? (Pivot-Tabelle users_devices)
-2. **Agent-Auth**: Token-basiert via agent_token oder API Keys mit Sanctum?
-3. **Command-Delivery**: HTTP Long-Polling vs. WebSocket für Command-Queue?
-4. **Data-Migration**: Alte Daten (water_levels, tds_readings) in neue measurements_table migrieren oder parallel behalten?
+---
 
 ## Technologie-Stack
 
 -   **Backend**: Laravel 12, PHP 8.3+
--   **Database**: MySQL/PostgreSQL/SQLite (konfigurierbar)
+-   **Database**: PostgreSQL/MySQL/SQLite (konfigurierbar)
 -   **Frontend**: Livewire 3.x + Flux UI
--   **Echtzeit**: Laravel Reverb (WebSockets)
+-   **Echtzeit**: Laravel Reverb (WebSockets) - Installation pending
 -   **Testing**: Pest PHP
--   **Python-Interface**: HTTP Webhooks + REST API
--   **Multi-Tenancy**: User-Device-Ownership + Policies
--   **IoT-Framework**: Generische Sensor/Actuator-Abstraktion
+-   **Multi-Tenancy**: User-Device-Ownership + Pivot-Sharing + Policies
+-   **IoT-Auth**: SHA256-gehashte Device-Tokens + Bootstrap/Pairing-Flow
+-   **Deployment**: Docker Compose (Production-ready, Port 6480, isoliertes Netzwerk)
 
 ## Architektur-Prinzipien
 
-1. **Multi-Tenant**: Strikte User-Device-Isolation via Policies
-2. **Multi-Device-Ready**: Alle Tabellen sind auf device_id normalisiert
-3. **Generische IoT-Abstraktion**: Sensor/Actuator-Framework für beliebige Geräte
-4. **Event-Sourcing-Light**: Vollständige Historie aller Messungen
-5. **Status-Caching**: system_statuses für schnelle Abfragen
-6. **Webhook-Sicherheit**: Token-basierte Authentifizierung (agent_token)
-7. **Parser-Flexibilität**: Unterstützt sowohl rohe Logs als auch strukturierte Events
-8. **API-Sicherheit**: Authentifizierte Endpunkte mit Policies
-9. **Provisioning-Flow**: Device-Registrierung via UI + Agent-Handshake
-10. **Command-Queue**: Bidirektionale Communication (UI → Agent)
+1. **Multi-Tenant**: Strikte User-Device-Isolation via Policies + Team-Sharing via Pivot
+2. **Secure Bootstrap**: 6-stelliger Pairing-Code + SHA256-Token-Hashing
+3. **Generische Telemetrie**: JSON-basierte Sensor-/Actuator-Konfiguration
+4. **Event-Sourcing-Light**: Vollständige Historie aller Messungen in `telemetry_readings`
+5. **Command-Queue**: Bidirektionale Communication (UI → Agent → UI)
+6. **API-Sicherheit**: Device-Token-Middleware + User-Auth + Policies
+7. **Provisioning-Flow**: Agent-Bootstrap → User-Pairing → Device-Auth
+8. **WebSocket-Ready**: Laravel Reverb für Echtzeit-Updates (pending setup)
 
 ---
 
-**Projekt-Status**: 🚀 Phase 10 (WebSocket-Setup läuft) + Phase 11-16 (Multi-Tenant-Erweiterung geplant)  
-**Aktuelles Problem**: ⚠️ Terminal hängt bei `php artisan reverb:install` - siehe Troubleshooting unten  
-**Letzte Aktualisierung**: 2025-12-01
-
----
-
-## 🔧 Troubleshooting: Reverb-Installation
-
-**Problem**: `php artisan reverb:install` hängt im Terminal
-
-**Mögliche Ursachen**:
-
-1. **Interaktive Prompts**: Der Befehl wartet auf Eingaben (z.B. "Soll config/reverb.php überschrieben werden?")
-2. **Migration läuft**: Datenbank-Migration kann bei großen Tabellen lange dauern
-3. **Prozess hängt**: Echter Deadlock oder Timeout
-
-**Lösungen**:
-
-```powershell
-# 1. Terminal prüfen: Wartet der Befehl auf Input? Dann:
-y # Drücken um fortzufahren
-
-# 2. Falls wirklich eingefroren: Ctrl+C und manuell durchführen
-php artisan vendor:publish --tag=reverb-config
-php artisan vendor:publish --tag=reverb-migrations
-php artisan migrate
-
-# 3. Broadcasting-Events manuell erstellen
-php artisan make:event DeviceStatusUpdated
-php artisan make:event NewLogReceived
-php artisan make:event SprayEventStarted
-```
-
-**Nächste Schritte nach Reverb-Fix**:
-
-1. Events erstellen (siehe WEBSOCKETS.md)
-2. Controller-Integration testen
-3. Dann: Multi-Tenant-Migration starten (Phase 11)
+**Projekt-Status**: 🚀 **Phase 11 abgeschlossen** - Bootstrap/Pairing/Agent-Auth implementiert, Multi-Tenant-Policies aktiv  
+**Nächste Phase**: Phase 12 - Agent-API Controller (Telemetry, Commands, Logs)  
+**Production-Deployment**: ✅ Docker Compose ready (Port 6480, isoliertes Netzwerk, Nginx mit gzip)  
+**Letzte Aktualisierung**: 2025-12-01 18:30

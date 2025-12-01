@@ -129,6 +129,30 @@ class Device extends Model
     }
 
     /**
+     * Get all telemetry readings for this device.
+     */
+    public function telemetryReadings(): HasMany
+    {
+        return $this->hasMany(TelemetryReading::class);
+    }
+
+    /**
+     * Get all commands for this device.
+     */
+    public function commands(): HasMany
+    {
+        return $this->hasMany(Command::class);
+    }
+
+    /**
+     * Get all device logs for this device.
+     */
+    public function deviceLogs(): HasMany
+    {
+        return $this->hasMany(DeviceLog::class);
+    }
+
+    /**
      * Get all water level measurements for this device.
      */
     public function waterLevels(): HasMany

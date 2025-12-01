@@ -31,22 +31,22 @@ Route::middleware('auth:web')->prefix('devices')->group(function () {
 // Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
 Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
     // POST telemetry data (sensor readings)
-    // Route::post('/telemetry', [TelemetryController::class, 'store']);
+    Route::post('/telemetry', [\App\Http\Controllers\Api\TelemetryController::class, 'store']);
 
     // GET pending commands for this device
-    // Route::get('/commands/pending', [CommandController::class, 'pending']);
+    Route::get('/commands/pending', [\App\Http\Controllers\Api\CommandController::class, 'pending']);
 
     // POST command result/acknowledgement
-    // Route::post('/commands/{id}/result', [CommandController::class, 'result']);
+    Route::post('/commands/{id}/result', [\App\Http\Controllers\Api\CommandController::class, 'result']);
 
     // POST/PUT device capabilities (what sensors/actuators are available)
-    // Route::post('/capabilities', [DeviceController::class, 'updateCapabilities']);
+    Route::post('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'updateCapabilities']);
 
     // POST device logs
-    // Route::post('/logs', [LogController::class, 'store']);
+    Route::post('/logs', [\App\Http\Controllers\Api\LogController::class, 'store']);
 
     // POST heartbeat/last_seen update
-    // Route::post('/heartbeat', [HeartbeatController::class, 'store']);
+    Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
 });
 
 // ==================== Legacy Webhook Endpoints ====================
