@@ -111,7 +111,7 @@ message, context (JSON), created_at
 
 #### `pair_codes` (time-limited)
 
-```sql
+````sql
 id, user_id (FK), code (6-char unique),
 device_name, expires_at, used_at, device_id (nullable)
 
@@ -119,8 +119,9 @@ device_name, expires_at, used_at, device_id (nullable)
 
 ```sql
 user_id (FK), device_id (FK), role (viewer/operator/owner), created_at, updated_at
-```
-```
+````
+
+````
 
 ---
 
@@ -130,7 +131,7 @@ user_id (FK), device_id (FK), role (viewer/operator/owner), created_at, updated_
 
 #### `POST /api/growdash/devices/register`
 
-**Purpose**: Agent registriert sich mit Pair-Code  
+**Purpose**: Agent registriert sich mit Pair-Code
 **Request**:
 
 ```json
@@ -141,7 +142,7 @@ user_id (FK), device_id (FK), role (viewer/operator/owner), created_at, updated_
         /* siehe oben */
     }
 }
-```
+````
 
 **Response**:
 
