@@ -24,6 +24,8 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Direct device registration from an authenticated agent (alternative to pairing flow)
 Route::middleware('auth:sanctum')->post('/growdash/devices/register-from-agent', [DeviceRegistrationController::class, 'registerFromAgent']);
+// Alias für Agent-Kompatibilität (Direct-Login-Flow)
+Route::middleware('auth:sanctum')->post('/growdash/devices/register', [DeviceRegistrationController::class, 'registerFromAgent']);
 
 // ==================== Bootstrap & Pairing ====================
 
