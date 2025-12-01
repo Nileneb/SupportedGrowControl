@@ -463,3 +463,104 @@ Livewire.on("device-connected", (deviceId) => {
 
 **Design-Status**: 📋 Konzept erstellt  
 **Nächster Schritt**: Figma-Prototyp
+
+---
+
+## Production Build & Deployment
+
+- **Ziel**: Reproduzierbarer Produktions-Build mit Assets, Caches, Migrations und WebSockets (Reverb).
+- **Prereqs**: `.env` korrekt, DB erreichbar, Queue/Cache Treiber gesetzt, Broadcast auf Reverb.
+
+### 1) Umgebungsvariablen (.env)
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_URL=https://your-domain`
+- `LOG_CHANNEL=stack`
+- `DB_CONNECTION=pgsql` (oder eure Wahl) + passende `DB_*`
+- `CACHE_DRIVER=redis` (empfohlen) / `file`
+- `QUEUE_CONNECTION=redis` (empfohlen) / `database`
+- `SESSION_DRIVER=redis` / `file`
+- Broadcasting (Reverb):
+    - `BROADCAST_DRIVER=reverb`
+    - `REVERB_APP_KEY=your-key`
+    - `REVERB_HOST=your-domain` (oder `127.0.0.1` bei lokal)
+    - `REVERB_PORT=443` (oder `6001` lokal)
+    - `REVERB_SCHEME=https` (lokal: `http`)
+
+### 2) Abhängigkeiten installieren
+```pwsh
+# Windows (pwsh)
+composer install --no-dev --prefer-dist --optimize-autoloader
+npm ci
+```
+
+### 3) Frontend Assets bauen
+```pwsh
+npm run build
+```
+
+### 4) App vorbereiten
+```pwsh
+# Schlüssel, Konfigurationen und Caches
+php artisan key:generate
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+
+# Datenbank Migrationen
+php artisan migrate --force
+```
+
+### 5) Reverb (WebSockets) konfigurieren
+- Falls `php artisan reverb:install` fehlschlägt, sicherstellen:
+    - `config/broadcasting.php` enthält den `reverb` Treiber.
+    - `config/reverb.php` existiert mit Host/Port/Key aus `.env`.
+- Starten (Produktiv als Dienst/Prozess):
+```pwsh
+php artisan reverb:start --host "$env:REVERB_HOST" --port $env:REVERB_PORT
+```
+- Frontend-Echo ist in `resources/js/app.js` vorbereitet (siehe oben, Design-Dokument).
+
+### 6) Hintergrundprozesse
+- **Queue Worker**:
+```pwsh
+php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+```
+- **Scheduler** (Windows Task Scheduler oder Linux cron):
+```pwsh
+php artisan schedule:run
+```
+
+### 7) Webserver-Konfiguration
+- **Nginx/Apache**: Root auf `public/`, HTTPS aktivieren, Gzip/Brotli aktivieren.
+- **Static Assets**: aus `public/build` bereitstellen (Vite Manifest).
+
+### 8) Health-Check & Smoke Test
+```pwsh
+# Basis-Routen prüfen
+php artisan route:list | Select-Object -First 10
+
+# Simple HTTP-Check (lokal)
+Invoke-WebRequest -Uri "http://localhost" -UseBasicParsing | Select-Object -ExpandProperty StatusCode
+```
+
+### 9) Troubleshooting
+- Reverb-Verbindung: Prüfe `REVERB_HOST/PORT/SCHEME` und Firewall.
+- Asset-Fehler: Stelle sicher, dass `npm run build` gelaufen ist und `public/build/manifest.json` existiert.
+- 403 bei Device-Auth: Prüfe Header `X-Device-ID` und `X-Device-Token` (Plaintext vs. Hash).
+- Caches invalide: `php artisan optimize:clear` und Schritte aus Abschnitt 4 erneut.
+
+### 10) Schnellbefehle (Deployment Sequenz)
+```pwsh
+composer install --no-dev --prefer-dist --optimize-autoloader
+npm ci
+npm run build
+php artisan optimize:clear
+php artisan key:generate
+php artisan config:cache; php artisan route:cache; php artisan view:cache; php artisan event:cache
+php artisan migrate --force
+php artisan reverb:start --host "$env:REVERB_HOST" --port $env:REVERB_PORT
+```
+
+Hinweis: In Produktion Prozessmanager verwenden (Supervisor, PM2, NSSM) für `queue:work` und `reverb:start`.
