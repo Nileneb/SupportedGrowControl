@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\CommandStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Command;
 use App\Models\Device;
@@ -72,7 +73,8 @@ class CommandController extends Controller
                 : null,
         ]);
 
-        // TODO: Broadcast WebSocket event (CommandStatusUpdated)
+        // Broadcast WebSocket event
+        broadcast(new CommandStatusUpdated($command));
 
         return response()->json([
             'success' => true,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DeviceTelemetryReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
@@ -69,7 +70,8 @@ class TelemetryController extends Controller
             $inserted[] = $telemetry->id;
         }
 
-        // TODO: Broadcast WebSocket event (DeviceTelemetryReceived)
+        // Broadcast WebSocket event
+        broadcast(new DeviceTelemetryReceived($device, $readings));
 
         return response()->json([
             'success' => true,

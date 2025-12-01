@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DeviceCapabilitiesUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +45,8 @@ class DeviceManagementController extends Controller
             'capabilities' => $request->input('capabilities'),
         ]);
 
-        // TODO: Broadcast WebSocket event (DeviceCapabilitiesUpdated)
+        // Broadcast WebSocket event
+        broadcast(new DeviceCapabilitiesUpdated($device));
 
         return response()->json([
             'success' => true,
@@ -83,7 +85,7 @@ class DeviceManagementController extends Controller
         }
 
         $updateData = [
-            'last_seen' => now(),
+            'last_seen_at' => now(),
         ];
 
         if ($request->has('last_state')) {
@@ -95,7 +97,7 @@ class DeviceManagementController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Heartbeat received',
-            'last_seen' => $device->last_seen,
+            'last_seen_at' => $device->last_seen_at,
         ]);
     }
 }
