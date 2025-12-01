@@ -26,6 +26,29 @@ Route::middleware('auth:web')->prefix('devices')->group(function () {
     Route::get('/unclaimed', [DevicePairingController::class, 'unclaimed']);
 });
 
+// ==================== Agent API (Device-Authenticated) ====================
+
+// Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
+Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
+    // POST telemetry data (sensor readings)
+    // Route::post('/telemetry', [TelemetryController::class, 'store']);
+
+    // GET pending commands for this device
+    // Route::get('/commands/pending', [CommandController::class, 'pending']);
+
+    // POST command result/acknowledgement
+    // Route::post('/commands/{id}/result', [CommandController::class, 'result']);
+
+    // POST/PUT device capabilities (what sensors/actuators are available)
+    // Route::post('/capabilities', [DeviceController::class, 'updateCapabilities']);
+
+    // POST device logs
+    // Route::post('/logs', [LogController::class, 'store']);
+
+    // POST heartbeat/last_seen update
+    // Route::post('/heartbeat', [HeartbeatController::class, 'store']);
+});
+
 // ==================== Legacy Webhook Endpoints ====================
 
 // Protected webhook endpoints (require X-Growdash-Token header)

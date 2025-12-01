@@ -42,8 +42,8 @@ class DevicePairingController extends Controller
             ], 404);
         }
 
-        // Pair device with authenticated user
-        $device->pairWithUser(Auth::id());
+        // Pair device with authenticated user (returns plaintext token once!)
+        $plaintextToken = $device->pairWithUser(Auth::id());
 
         return response()->json([
             'success' => true,
@@ -54,6 +54,7 @@ class DevicePairingController extends Controller
                 'public_id' => $device->public_id,
                 'paired_at' => $device->paired_at->toIso8601String(),
             ],
+            'agent_token' => $plaintextToken, // Only returned once, never stored in plaintext!
         ]);
     }
 

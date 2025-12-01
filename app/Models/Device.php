@@ -76,15 +76,22 @@ class Device extends Model
 
     /**
      * Pair this device with a user.
+     * Returns plaintext token (only time it's available!).
      */
-    public function pairWithUser(int $userId): bool
+    public function pairWithUser(int $userId): string
     {
         $this->user_id = $userId;
-        $this->public_id = (string) Str::uuid();
-        $this->agent_token = Str::random(64);
+        $this->public_id = $this->public_id ?? (string) Str::uuid();
+
+        // Generate plaintext token and store only SHA256 hash
+        $plaintextToken = Str::random(64);
+        $this->agent_token = hash('sha256', $plaintextToken);
         $this->paired_at = now();
 
-        return $this->save();
+        $this->save();
+
+        // Return plaintext token (never stored, never retrievable again)
+        return $plaintextToken;
     }
 
     /**
@@ -234,10 +241,10 @@ class Device extends Model
     }
 
     /**
-     * Verify agent token.
+     * Verify agent token against stored SHA256 hash.
      */
-    public function verifyAgentToken(string $token): bool
+    public function verifyAgentToken(string $plaintextToken): bool
     {
-        return hash_equals($this->agent_token, $token);
+        return hash_equals($this->agent_token, hash('sha256', $plaintextToken));
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class BootstrapController extends Controller
 {
@@ -57,10 +58,16 @@ class BootstrapController extends Controller
 
         // Device exists and is paired
         if ($device->isPaired()) {
+            // IMPORTANT: Re-generate token for security (in case agent lost it)
+            // Agent should store this token securely!
+            $plaintextToken = Str::random(64);
+            $device->agent_token = hash('sha256', $plaintextToken);
+            $device->save();
+
             return response()->json([
                 'status' => 'paired',
                 'public_id' => $device->public_id,
-                'device_token' => $device->agent_token,
+                'agent_token' => $plaintextToken, // New plaintext token (never stored!)
                 'device_name' => $device->name,
                 'user_email' => $device->user->email ?? null,
             ]);
