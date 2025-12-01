@@ -1,12 +1,16 @@
 <?php
 
 use App\Models\Device;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->user = User::factory()->create();
+    
     $this->device = Device::create([
+        'user_id' => $this->user->id,
         'name' => 'Test Growdash',
         'slug' => 'test-growdash',
         'ip_address' => '192.168.1.100',

@@ -13,19 +13,29 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->user = User::factory()->create();
+    
     $this->device = Device::create([
+        'user_id' => $this->user->id,
         'name' => 'Test Growdash',
         'slug' => 'test-growdash',
         'ip_address' => '192.168.1.100',
         'serial_port' => '/dev/ttyUSB0',
     ]);
-
-    $this->user = User::factory()->create();
 });
 
 test('status endpoint requires authentication', function () {
     $response = $this->getJson('/api/growdash/status?device_slug=test-growdash');
     $response->assertStatus(401);
+});
+
+test('status endpoint denies access to other users devices', function () {
+    $otherUser = User::factory()->create();
+    
+    $response = $this->actingAs($otherUser)
+        ->getJson('/api/growdash/status?device_slug=test-growdash');
+    
+    $response->assertStatus(403);
 });
 
 test('status endpoint returns default values for device without data', function () {
@@ -161,7 +171,7 @@ test('fill events endpoint returns events', function () {
     $events = $response->json('events');
 
     expect($events)->toHaveCount(1);
-    expect($events[0]['target_level'])->toBe(80.0);
+    expect($events[0]['target_level'])->toBe(80);
     expect($events[0]['actual_liters'])->toBe(19.5);
 });
 

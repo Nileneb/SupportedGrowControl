@@ -335,11 +335,98 @@ Arduino-Logs.
 ### 📋 Phase 10: WebSockets & Echtzeit
 
 -   [x] WebSocket-Konzept dokumentiert (WEBSOCKETS.md)
--   [ ] Laravel Reverb installieren und konfigurieren
+-   [x] Laravel Reverb installiert (composer require laravel/reverb)
+-   [ ] ⚠️ BLOCKIERT: reverb:install hängt - Terminal prüfen und ggf. Ctrl+C, dann manuell durchführen
 -   [ ] Broadcasting-Events erstellen (DeviceStatusUpdated, NewLogReceived)
 -   [ ] Events in Controller integrieren
 -   [ ] Frontend: WebSocket-Listener implementieren
 -   [ ] Echtzeit-Chart-Updates
+
+---
+
+## 🚀 NEUE ANFORDERUNG: Multi-Tenant-Architektur
+
+### ✅ Phase 11: User-Device-Beziehungen
+
+-   [x] Migration: user_id zu devices_table hinzufügen
+-   [x] Migration: public_id (UUID) zu devices_table
+-   [x] Migration: agent_token zu devices_table (für Agent-Auth)
+-   [x] Device Model um User-Relation erweitern
+-   [x] DevicePolicy erstellen (user_id === auth()->id())
+-   [x] Policy in AppServiceProvider registrieren
+-   [x] Alle API-Endpunkte mit Policy absichern
+-   [x] Tests mit user_id aktualisiert
+-   [x] DeviceSeeder angepasst (admin@growdash.local / password)
+-   [x] Migration ausgeführt
+-   [x] Alle 65 Tests bestanden ✅
+
+-   [ ] Migration: user_id zu devices_table hinzufügen
+-   [ ] Migration: public_id (UUID) zu devices_table
+-   [ ] Migration: agent_token zu devices_table (für Agent-Auth)
+-   [ ] Optional: users_devices Pivot-Tabelle für Team-Sharing
+-   [ ] Device Model um User-Relation erweitern
+-   [ ] DevicePolicy erstellen (user_id === auth()->id())
+-   [ ] Alle API-Endpunkte mit Policy absichern
+
+### Phase 12: Generische Sensor/Actuator-Framework
+
+**Ziel**: Hardcodierte Sensoren (water, TDS, temp) durch generisches System ersetzen
+
+-   [ ] Migration: sensors_table (device_id, type, name, config JSON)
+-   [ ] Migration: actuators_table (device_id, type, name, config JSON)
+-   [ ] Migration: measurements_table (sensor_id, value, unit, measured_at)
+-   [ ] Migration: actuations_table (actuator_id, action, params JSON, executed_at)
+-   [ ] Model: Sensor (polymorphische Typen: water_level, tds, temperature, custom)
+-   [ ] Model: Actuator (polymorphische Typen: spray, fill, custom)
+-   [ ] Model: Measurement (ersetzt WaterLevel, TdsReading, TemperatureReading)
+-   [ ] Model: Actuation (ersetzt SprayEvent, FillEvent)
+-   [ ] SensorTypeEnum/ActuatorTypeEnum für Typ-Validierung
+-   [ ] Data Migration: Alte Daten → neue Struktur migrieren
+
+### Phase 13: Device-Provisioning & Handshake
+
+**Ziel**: Neue Devices registrieren und mit Benutzern verknüpfen
+
+-   [ ] Livewire Component: DeviceRegistration (Name, Type, Slug eingeben)
+-   [ ] POST /api/devices/provision (erstellt Device + generiert agent_token)
+-   [ ] GET /api/devices/{public_id}/handshake (Agent-Auth via agent_token)
+-   [ ] Handshake-Response: sensor_config, actuator_config, polling_interval
+-   [ ] View: Device-Setup-Wizard mit QR-Code für agent_token
+-   [ ] Agent-seitiges Setup-Skript (Python) für Ersteinrichtung
+
+### Phase 14: Telemetrie & Command-Queue APIs
+
+**Ziel**: Generische APIs für Agent-Communication
+
+-   [ ] POST /api/devices/{public_id}/telemetry (Array von Measurements)
+-   [ ] GET /api/devices/{public_id}/commands (Pending Commands abrufen)
+-   [ ] PATCH /api/devices/{public_id}/commands/{id} (Command als ausgeführt markieren)
+-   [ ] Migration: commands_table (device_id, type, params JSON, status, created_at)
+-   [ ] Model: Command (status: pending/executing/completed/failed)
+-   [ ] Controller: TelemetryController (ersetzt GrowdashWebhookController)
+-   [ ] Controller: CommandController (Queue-Management)
+-   [ ] Agent-Polling-Mechanismus dokumentieren (HTTP Long-Polling vs. WebSocket)
+
+### Phase 15: Multi-Tenant-Frontend
+
+**Ziel**: UI für Device-Management und Monitoring
+
+-   [ ] Livewire: DeviceList (nur eigene Devices anzeigen)
+-   [ ] Livewire: DeviceCard (Status, Sensor-Werte, Actuator-Controls)
+-   [ ] Livewire: CommandHistory (gesendete Befehle + Status)
+-   [ ] Livewire: SensorChart (generisch für alle Sensor-Typen)
+-   [ ] Livewire: ActuatorControl (generische Buttons für Actuators)
+-   [ ] View: devices/index.blade.php (Dashboard)
+-   [ ] View: devices/show.blade.php (Device-Detail mit Charts)
+-   [ ] View: devices/provision.blade.php (Setup-Wizard)
+
+### Phase 16: Auth-Policies & Team-Sharing (Optional)
+
+-   [ ] DevicePolicy: viewAny, view, update, delete, control
+-   [ ] Middleware: EnsureDeviceOwnership für alle Device-Routes
+-   [ ] Optional: Team-Model für Multi-User-Zugriff
+-   [ ] Optional: Invitation-System für Device-Sharing
+-   [ ] Optional: Role-Based-Access (owner, admin, viewer)
 
 ## Offene Entscheidungen
 
@@ -349,6 +436,15 @@ Arduino-Logs.
 2. **API-Authentifizierung**: ✅ Auth-Middleware wird für öffentliche Endpunkte hinzugefügt
 3. **Frontend-Framework**: ✅ Livewire + Flux (bereits im Projekt vorhanden)
 4. **Echtzeit-Updates**: ✅ WebSockets mit Laravel Reverb
+5. **Multi-Tenant-Architektur**: ✅ User-Device-Beziehungen über user_id + public_id (UUID)
+6. **Sensor-Framework**: ✅ Generische Sensor/Actuator-Tabellen statt hardcodierte Typen
+
+### ⚠️ Neue Entscheidungen erforderlich:
+
+1. **Team-Sharing**: Sollen Devices mit mehreren Usern geteilt werden können? (Pivot-Tabelle users_devices)
+2. **Agent-Auth**: Token-basiert via agent_token oder API Keys mit Sanctum?
+3. **Command-Delivery**: HTTP Long-Polling vs. WebSocket für Command-Queue?
+4. **Data-Migration**: Alte Daten (water_levels, tds_readings) in neue measurements_table migrieren oder parallel behalten?
 
 ## Technologie-Stack
 
@@ -358,17 +454,59 @@ Arduino-Logs.
 -   **Echtzeit**: Laravel Reverb (WebSockets)
 -   **Testing**: Pest PHP
 -   **Python-Interface**: HTTP Webhooks + REST API
+-   **Multi-Tenancy**: User-Device-Ownership + Policies
+-   **IoT-Framework**: Generische Sensor/Actuator-Abstraktion
 
 ## Architektur-Prinzipien
 
-1. **Multi-Device-Ready**: Alle Tabellen sind auf device_id normalisiert
-2. **Event-Sourcing-Light**: Vollständige Historie aller Messungen
-3. **Status-Caching**: system_statuses für schnelle Abfragen
-4. **Webhook-Sicherheit**: Token-basierte Authentifizierung
-5. **Parser-Flexibilität**: Unterstützt sowohl rohe Logs als auch strukturierte Events
-6. **API-Sicherheit**: Authentifizierte Endpunkte mit Laravel Sanctum
+1. **Multi-Tenant**: Strikte User-Device-Isolation via Policies
+2. **Multi-Device-Ready**: Alle Tabellen sind auf device_id normalisiert
+3. **Generische IoT-Abstraktion**: Sensor/Actuator-Framework für beliebige Geräte
+4. **Event-Sourcing-Light**: Vollständige Historie aller Messungen
+5. **Status-Caching**: system_statuses für schnelle Abfragen
+6. **Webhook-Sicherheit**: Token-basierte Authentifizierung (agent_token)
+7. **Parser-Flexibilität**: Unterstützt sowohl rohe Logs als auch strukturierte Events
+8. **API-Sicherheit**: Authentifizierte Endpunkte mit Policies
+9. **Provisioning-Flow**: Device-Registrierung via UI + Agent-Handshake
+10. **Command-Queue**: Bidirektionale Communication (UI → Agent)
 
 ---
 
-**Projekt-Status**: 🚀 Phase 8 - Authentifizierung & Frontend in Arbeit  
+**Projekt-Status**: 🚀 Phase 10 (WebSocket-Setup läuft) + Phase 11-16 (Multi-Tenant-Erweiterung geplant)  
+**Aktuelles Problem**: ⚠️ Terminal hängt bei `php artisan reverb:install` - siehe Troubleshooting unten  
 **Letzte Aktualisierung**: 2025-12-01
+
+---
+
+## 🔧 Troubleshooting: Reverb-Installation
+
+**Problem**: `php artisan reverb:install` hängt im Terminal
+
+**Mögliche Ursachen**:
+
+1. **Interaktive Prompts**: Der Befehl wartet auf Eingaben (z.B. "Soll config/reverb.php überschrieben werden?")
+2. **Migration läuft**: Datenbank-Migration kann bei großen Tabellen lange dauern
+3. **Prozess hängt**: Echter Deadlock oder Timeout
+
+**Lösungen**:
+
+```powershell
+# 1. Terminal prüfen: Wartet der Befehl auf Input? Dann:
+y # Drücken um fortzufahren
+
+# 2. Falls wirklich eingefroren: Ctrl+C und manuell durchführen
+php artisan vendor:publish --tag=reverb-config
+php artisan vendor:publish --tag=reverb-migrations
+php artisan migrate
+
+# 3. Broadcasting-Events manuell erstellen
+php artisan make:event DeviceStatusUpdated
+php artisan make:event NewLogReceived
+php artisan make:event SprayEventStarted
+```
+
+**Nächste Schritte nach Reverb-Fix**:
+
+1. Events erstellen (siehe WEBSOCKETS.md)
+2. Controller-Integration testen
+3. Dann: Multi-Tenant-Migration starten (Phase 11)

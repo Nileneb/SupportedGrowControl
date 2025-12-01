@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\BootstrapController;
+use App\Http\Controllers\DevicePairingController;
 use App\Http\Controllers\GrowdashWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +14,19 @@ use Illuminate\Support\Facades\Route;
 | public API endpoints for retrieving device status and historical data.
 |
 */
+
+// ==================== Bootstrap & Pairing ====================
+
+// Public bootstrap endpoint for agents (no auth required)
+Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
+
+// Device pairing endpoints (require user authentication)
+Route::middleware('auth:web')->prefix('devices')->group(function () {
+    Route::post('/pair', [DevicePairingController::class, 'pair']);
+    Route::get('/unclaimed', [DevicePairingController::class, 'unclaimed']);
+});
+
+// ==================== Legacy Webhook Endpoints ====================
 
 // Protected webhook endpoints (require X-Growdash-Token header)
 Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {

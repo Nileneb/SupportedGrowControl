@@ -12,9 +12,11 @@ use App\Models\TemperatureReading;
 use App\Models\WaterLevel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class GrowdashWebhookController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Find or create a device by slug.
      */
@@ -303,6 +305,10 @@ class GrowdashWebhookController extends Controller
         $deviceSlug = $request->query('device_slug', config('services.growdash.device_slug'));
         $device = Device::where('slug', $deviceSlug)->first();
 
+        if ($device) {
+            $this->authorize('view', $device);
+        }
+
         if (!$device) {
             return response()->json([
                 'water_level' => 0,
@@ -351,6 +357,7 @@ class GrowdashWebhookController extends Controller
         $limit = (int) $request->query('limit', 100);
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $history = $device->waterLevels()
             ->latest('measured_at')
@@ -376,6 +383,7 @@ class GrowdashWebhookController extends Controller
         $limit = (int) $request->query('limit', 100);
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $history = $device->tdsReadings()
             ->latest('measured_at')
@@ -400,6 +408,7 @@ class GrowdashWebhookController extends Controller
         $limit = (int) $request->query('limit', 100);
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $history = $device->temperatureReadings()
             ->latest('measured_at')
@@ -424,6 +433,7 @@ class GrowdashWebhookController extends Controller
         $limit = (int) $request->query('limit', 50);
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $events = $device->sprayEvents()
             ->latest('start_time')
@@ -450,6 +460,7 @@ class GrowdashWebhookController extends Controller
         $limit = (int) $request->query('limit', 50);
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $events = $device->fillEvents()
             ->latest('start_time')
@@ -480,6 +491,7 @@ class GrowdashWebhookController extends Controller
         $level = $request->query('level');
 
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
+        $this->authorize('view', $device);
 
         $query = $device->arduinoLogs()->latest('logged_at');
 
