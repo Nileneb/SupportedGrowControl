@@ -267,23 +267,23 @@ public function log(Request $request): JsonResponse
 ### 1. JavaScript Setup (resources/js/app.js)
 
 ```javascript
-import './bootstrap';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import "./bootstrap";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
 
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
-    broadcaster: 'reverb',
+    broadcaster: "reverb",
     key: import.meta.env.VITE_REVERB_APP_KEY,
     wsHost: import.meta.env.VITE_REVERB_HOST,
     wsPort: import.meta.env.VITE_REVERB_PORT,
     wssPort: import.meta.env.VITE_REVERB_PORT,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
+    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? "https") === "https",
+    enabledTransports: ["ws", "wss"],
 });
 
-console.log('Laravel Echo initialized');
+console.log("Laravel Echo initialized");
 ```
 
 ### 2. NPM Dependencies
@@ -295,13 +295,13 @@ npm install --save-dev laravel-echo pusher-js
 Update `vite.config.js`:
 
 ```javascript
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
+import { defineConfig } from "vite";
+import laravel from "laravel-vite-plugin";
 
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ["resources/css/app.css", "resources/js/app.js"],
             refresh: true,
         }),
     ],
@@ -338,7 +338,7 @@ class Dashboard extends Component
     public function refreshStatus()
     {
         $status = $this->device->latestStatus();
-        
+
         if ($status) {
             $this->waterLevel = $status->water_level;
             $this->waterLiters = $status->water_liters;
@@ -475,10 +475,9 @@ stdout_logfile=/path/to/project/storage/logs/reverb.log
 
 ```javascript
 // Browser Console
-window.Echo.private('device.1')
-    .listen('.status.updated', (e) => {
-        console.log('Received:', e);
-    });
+window.Echo.private("device.1").listen(".status.updated", (e) => {
+    console.log("Received:", e);
+});
 ```
 
 ### Trigger Event manually:
@@ -516,6 +515,7 @@ broadcast(new App\Events\DeviceStatusUpdated($device, $status));
 
 **Status**: 📋 Konfiguration vorbereitet  
 **Nächste Schritte**:
+
 1. `php artisan reverb:install` ausführen
 2. Events erstellen
 3. Controller aktualisieren

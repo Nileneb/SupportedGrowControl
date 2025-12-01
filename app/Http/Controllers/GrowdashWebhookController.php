@@ -201,14 +201,14 @@ class GrowdashWebhookController extends Controller
         // Spray: "Spray: ON" or "Spray: OFF"
         if (preg_match('/Spray:\s*(ON|OFF)/i', $message, $matches)) {
             $active = strtoupper($matches[1]) === 'ON';
-            
+
             if ($active) {
                 // Check if there's already an active spray event
                 $existing = $device->sprayEvents()
                     ->whereNull('end_time')
                     ->latest('start_time')
                     ->first();
-                
+
                 if (!$existing) {
                     SprayEvent::create([
                         'device_id' => $device->id,
@@ -222,7 +222,7 @@ class GrowdashWebhookController extends Controller
                     ->whereNull('end_time')
                     ->latest('start_time')
                     ->first();
-                
+
                 if ($event) {
                     $event->update([
                         'end_time' => now(),
@@ -230,20 +230,20 @@ class GrowdashWebhookController extends Controller
                     ]);
                 }
             }
-            
+
             $this->updateStatus($device, ['spray_active' => $active]);
         }
 
         // Filling: "Filling: ON" or "Filling: OFF"
         if (preg_match('/Filling:\s*(ON|OFF)/i', $message, $matches)) {
             $active = strtoupper($matches[1]) === 'ON';
-            
+
             if ($active) {
                 $existing = $device->fillEvents()
                     ->whereNull('end_time')
                     ->latest('start_time')
                     ->first();
-                
+
                 if (!$existing) {
                     FillEvent::create([
                         'device_id' => $device->id,
@@ -256,7 +256,7 @@ class GrowdashWebhookController extends Controller
                     ->whereNull('end_time')
                     ->latest('start_time')
                     ->first();
-                
+
                 if ($event) {
                     $event->update([
                         'end_time' => now(),
@@ -264,7 +264,7 @@ class GrowdashWebhookController extends Controller
                     ]);
                 }
             }
-            
+
             $this->updateStatus($device, ['filling_active' => $active]);
         }
     }
@@ -595,7 +595,7 @@ class GrowdashWebhookController extends Controller
             if ($event) {
                 // Get current water level to calculate actual liters filled
                 $currentStatus = $device->systemStatuses()->latest('measured_at')->first();
-                
+
                 $event->update([
                     'end_time' => now(),
                     'duration_seconds' => $event->start_time->diffInSeconds(now()),

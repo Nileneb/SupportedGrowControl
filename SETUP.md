@@ -38,14 +38,15 @@ php artisan migrate
 ```
 
 Dies erstellt folgende Tabellen:
-- `devices` - Growdash-Geräte
-- `water_levels` - Wasserstand-Messungen
-- `tds_readings` - TDS-Werte
-- `temperature_readings` - Temperatur-Messungen
-- `spray_events` - Sprüh-Ereignisse
-- `fill_events` - Füll-Ereignisse
-- `system_statuses` - Aktuelle System-Status
-- `arduino_logs` - Rohe Arduino-Logs
+
+-   `devices` - Growdash-Geräte
+-   `water_levels` - Wasserstand-Messungen
+-   `tds_readings` - TDS-Werte
+-   `temperature_readings` - Temperatur-Messungen
+-   `spray_events` - Sprüh-Ereignisse
+-   `fill_events` - Füll-Ereignisse
+-   `system_statuses` - Aktuelle System-Status
+-   `arduino_logs` - Rohe Arduino-Logs
 
 ### 4. Initial-Device erstellen
 
@@ -177,12 +178,12 @@ curl -X POST http://localhost/api/growdash/log \
 
 ### Sicherheits-Checkliste
 
-- [ ] **Starkes Webhook-Token** generiert und gesetzt
-- [ ] **HTTPS aktiviert** für alle API-Endpunkte
-- [ ] **Rate Limiting** für Webhooks konfigurieren (optional)
-- [ ] **Authentifizierung** für öffentliche API-Endpunkte hinzufügen (falls gewünscht)
-- [ ] **Logs rotieren** (storage/logs)
-- [ ] **Queue-Worker** für asynchrone Verarbeitung (optional)
+-   [ ] **Starkes Webhook-Token** generiert und gesetzt
+-   [ ] **HTTPS aktiviert** für alle API-Endpunkte
+-   [ ] **Rate Limiting** für Webhooks konfigurieren (optional)
+-   [ ] **Authentifizierung** für öffentliche API-Endpunkte hinzufügen (falls gewünscht)
+-   [ ] **Logs rotieren** (storage/logs)
+-   [ ] **Queue-Worker** für asynchrone Verarbeitung (optional)
 
 ### Optional: Rate Limiting hinzufügen
 
@@ -193,7 +194,7 @@ In `bootstrap/app.php`:
     $middleware->alias([
         'growdash.webhook' => \App\Http\Middleware\VerifyGrowdashToken::class,
     ]);
-    
+
     // Rate Limiting für Webhooks
     $middleware->throttleApi('growdash:60,1'); // 60 Requests pro Minute
 })
@@ -210,10 +211,10 @@ use Illuminate\Support\Facades\Queue;
 public function log(Request $request): JsonResponse
 {
     $data = $request->validate([...]);
-    
+
     // Job in Queue stellen
     \App\Jobs\ProcessGrowdashLog::dispatch($data);
-    
+
     return response()->json(['success' => true]);
 }
 ```
@@ -226,7 +227,8 @@ public function log(Request $request): JsonResponse
 
 ### Problem: Migrations schlagen fehl
 
-**Lösung:** 
+**Lösung:**
+
 ```bash
 php artisan migrate:fresh --seed
 ```
@@ -294,6 +296,7 @@ php artisan db:seed --class=DeviceSeeder
 ## Support
 
 Bei Fragen oder Problemen siehe:
-- `README.md` für Projektübersicht
-- `tests/Feature/Growdash*.php` für Beispiele
-- Laravel-Dokumentation: https://laravel.com/docs
+
+-   `README.md` für Projektübersicht
+-   `tests/Feature/Growdash*.php` für Beispiele
+-   Laravel-Dokumentation: https://laravel.com/docs

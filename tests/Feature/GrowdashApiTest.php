@@ -136,7 +136,7 @@ test('spray events endpoint returns events', function () {
 
     $response->assertStatus(200);
     $events = $response->json('events');
-    
+
     expect($events)->toHaveCount(1);
     expect($events[0]['duration_seconds'])->toBe(120);
     expect($events[0]['manual'])->toBeTrue();
@@ -159,7 +159,7 @@ test('fill events endpoint returns events', function () {
 
     $response->assertStatus(200);
     $events = $response->json('events');
-    
+
     expect($events)->toHaveCount(1);
     expect($events[0]['target_level'])->toBe(80.0);
     expect($events[0]['actual_liters'])->toBe(19.5);

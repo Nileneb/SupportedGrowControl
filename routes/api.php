@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {
     // Webhook: Receive log messages from devices
     Route::post('/log', [GrowdashWebhookController::class, 'log']);
-    
+
     // Webhook: Receive structured events from devices (optional)
     Route::post('/event', [GrowdashWebhookController::class, 'event']);
 
@@ -30,16 +30,16 @@ Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {
 Route::prefix('growdash')->middleware('auth:web')->group(function () {
     // Current system status
     Route::get('/status', [GrowdashWebhookController::class, 'status']);
-    
+
     // Historical data endpoints
     Route::get('/water-history', [GrowdashWebhookController::class, 'waterHistory']);
     Route::get('/tds-history', [GrowdashWebhookController::class, 'tdsHistory']);
     Route::get('/temperature-history', [GrowdashWebhookController::class, 'temperatureHistory']);
-    
+
     // Event histories
     Route::get('/spray-events', [GrowdashWebhookController::class, 'sprayEvents']);
     Route::get('/fill-events', [GrowdashWebhookController::class, 'fillEvents']);
-    
+
     // Arduino logs
     Route::get('/logs', [GrowdashWebhookController::class, 'logs']);
 });
