@@ -11,7 +11,6 @@ services:
       - ./public/images:/var/www/public/images:ro
     networks:
       - grow-laravel-production
-      - axia-shared-network
     ports:
       # NEU: eigener Port für grow.linn.games (Axia nutzt 6478, getaxia nutzt 6479)
       - "6480:80"
@@ -32,7 +31,6 @@ services:
       - .env
     networks:
       - grow-laravel-production
-      - axia-shared-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,8 +83,6 @@ services:
 networks:
   grow-laravel-production:
     driver: bridge
-  axia-shared-network:
-    external: true
 
 volumes:
   grow-postgres-data-production:
