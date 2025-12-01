@@ -47,8 +47,8 @@ COPY package*.json ./
 # Install npm dependencies
 RUN npm ci
 
-# Copy application code needed for build
-COPY . .
+# Copy application code and vendor from builder (needed for Flux CSS)
+COPY --from=builder /var/www /var/www
 
 # Build frontend assets
 RUN npm run build
