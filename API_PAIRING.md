@@ -11,6 +11,7 @@ Complete API documentation for the GrowDash device pairing flow with 6-digit cod
 Agent calls this endpoint on first startup to register the device.
 
 **Request:**
+
 ```json
 {
     "bootstrap_id": "esp32-abc123def456",
@@ -19,6 +20,7 @@ Agent calls this endpoint on first startup to register the device.
 ```
 
 **Response (device not yet paired):**
+
 ```json
 {
     "status": "unpaired",
@@ -28,6 +30,7 @@ Agent calls this endpoint on first startup to register the device.
 ```
 
 **Response (device already paired):**
+
 ```json
 {
     "status": "paired",
@@ -47,15 +50,18 @@ Agent calls this endpoint on first startup to register the device.
 Agent polls this endpoint to check if user has completed pairing.
 
 **Query Parameters:**
-- `bootstrap_id` (required): Hardware ID sent during bootstrap
-- `bootstrap_code` (required): 6-digit code from bootstrap response
+
+-   `bootstrap_id` (required): Hardware ID sent during bootstrap
+-   `bootstrap_code` (required): 6-digit code from bootstrap response
 
 **Request Example:**
+
 ```
 GET /api/agents/pairing/status?bootstrap_id=esp32-abc123&bootstrap_code=XY42Z7
 ```
 
 **Response (pending - not yet paired):**
+
 ```json
 {
     "status": "pending"
@@ -63,6 +69,7 @@ GET /api/agents/pairing/status?bootstrap_id=esp32-abc123&bootstrap_code=XY42Z7
 ```
 
 **Response (paired - user completed pairing):**
+
 ```json
 {
     "status": "paired",
@@ -74,6 +81,7 @@ GET /api/agents/pairing/status?bootstrap_id=esp32-abc123&bootstrap_code=XY42Z7
 ```
 
 **Response (error - invalid code):**
+
 ```json
 {
     "status": "error",
@@ -82,9 +90,10 @@ GET /api/agents/pairing/status?bootstrap_id=esp32-abc123&bootstrap_code=XY42Z7
 ```
 
 **Polling Strategy:**
-- Poll every **5 seconds**
-- Timeout after **5 minutes** (300 seconds)
-- Stop polling once `status: "paired"` received
+
+-   Poll every **5 seconds**
+-   Timeout after **5 minutes** (300 seconds)
+-   Stop polling once `status: "paired"` received
 
 ---
 
@@ -97,6 +106,7 @@ Web UI calls this endpoint when user enters the 6-digit code.
 **Authentication:** Requires `auth:web` (Laravel session cookie)
 
 **Request:**
+
 ```json
 {
     "bootstrap_code": "XY42Z7"
@@ -104,6 +114,7 @@ Web UI calls this endpoint when user enters the 6-digit code.
 ```
 
 **Response (success):**
+
 ```json
 {
     "success": true,
@@ -119,6 +130,7 @@ Web UI calls this endpoint when user enters the 6-digit code.
 ```
 
 **Response (error - invalid code):**
+
 ```json
 {
     "success": false,
@@ -127,9 +139,10 @@ Web UI calls this endpoint when user enters the 6-digit code.
 ```
 
 **Validation:**
-- `bootstrap_code`: required, string, exactly 6 characters
-- Code must exist and not be expired (< 5 minutes old)
-- Device must not already be paired
+
+-   `bootstrap_code`: required, string, exactly 6 characters
+-   Code must exist and not be expired (< 5 minutes old)
+-   Device must not already be paired
 
 ---
 
@@ -140,6 +153,7 @@ List all devices waiting for pairing (admin/debug only).
 **Authentication:** Requires `auth:web`
 
 **Response:**
+
 ```json
 {
     "devices": [
@@ -165,11 +179,12 @@ User-facing pairing page built with Livewire.
 **Authentication:** Requires `auth:web`
 
 **Features:**
-- Input field for 6-digit code (auto-uppercase, max 6 chars)
-- Real-time validation
-- Success/error messages
-- Instructions for pairing process
-- Auto-redirect to dashboard on success
+
+-   Input field for 6-digit code (auto-uppercase, max 6 chars)
+-   Real-time validation
+-   Success/error messages
+-   Instructions for pairing process
+-   Auto-redirect to dashboard on success
 
 **File:** `resources/views/livewire/devices/pair.blade.php`
 
@@ -178,16 +193,20 @@ User-facing pairing page built with Livewire.
 ## 🔐 Security Features
 
 ### 1. Code Expiration
-- Pairing codes expire **5 minutes** after device registration
-- Expired codes return 404 error
+
+-   Pairing codes expire **5 minutes** after device registration
+-   Expired codes return 404 error
 
 ### 2. Token Hashing
-- Agent receives **plaintext token** (only once)
-- Laravel stores **SHA256 hash** in database
-- Verification: `hash_equals($storedHash, hash('sha256', $receivedToken))`
+
+-   Agent receives **plaintext token** (only once)
+-   Laravel stores **SHA256 hash** in database
+-   Verification: `hash_equals($storedHash, hash('sha256', $receivedToken))`
 
 ### 3. One-Time Token Delivery
+
 Plaintext `agent_token` is returned **only** in these scenarios:
+
 1. Initial pairing (POST `/api/devices/pair`)
 2. Status polling when pairing completes (GET `/api/agents/pairing/status`)
 3. Re-bootstrap (POST `/api/agents/bootstrap` for already-paired device)
@@ -195,10 +214,12 @@ Plaintext `agent_token` is returned **only** in these scenarios:
 After receiving the token, agent must save it to `.env` immediately.
 
 ### 4. Rate Limiting
+
 All pairing endpoints use throttling:
-- Bootstrap: 10 requests per minute
-- Status polling: 20 requests per minute
-- User pairing: 5 requests per minute
+
+-   Bootstrap: 10 requests per minute
+-   Status polling: 20 requests per minute
+-   User pairing: 5 requests per minute
 
 ---
 
@@ -227,7 +248,7 @@ else:
     code = data["bootstrap_code"]
     print(f"Pairing Code: {code}")
     print(f"Go to: {LARAVEL_BASE_URL}/devices/pair")
-    
+
     # 2. Poll for pairing
     timeout = time.time() + 300  # 5 minutes
     while time.time() < timeout:
@@ -239,12 +260,12 @@ else:
             }
         )
         data = response.json()
-        
+
         if data["status"] == "paired":
             print("✅ Paired successfully!")
             save_to_env(data["public_id"], data["agent_token"])
             break
-        
+
         time.sleep(5)
 
 def save_to_env(public_id, token):
@@ -294,8 +315,8 @@ If device loses credentials or needs re-pairing:
 1. Agent calls `/api/agents/bootstrap` with **same** `bootstrap_id`
 2. Laravel recognizes existing device
 3. If device is already paired:
-   - Regenerates `agent_token`
-   - Returns new token immediately
+    - Regenerates `agent_token`
+    - Returns new token immediately
 4. Agent saves new token to `.env`
 
 **No user intervention needed** if device was previously paired.
@@ -304,11 +325,11 @@ If device loses credentials or needs re-pairing:
 
 ## 📚 Related Documentation
 
-- `PAIRING_FLOW.md` - Complete visual flow diagram
-- `README.md` - Project overview and ER diagram
-- `app/Http/Controllers/BootstrapController.php` - Bootstrap implementation
-- `app/Http/Controllers/DevicePairingController.php` - User pairing implementation
-- `app/Models/Device.php` - Device model with pairing methods
+-   `PAIRING_FLOW.md` - Complete visual flow diagram
+-   `README.md` - Project overview and ER diagram
+-   `app/Http/Controllers/BootstrapController.php` - Bootstrap implementation
+-   `app/Http/Controllers/DevicePairingController.php` - User pairing implementation
+-   `app/Models/Device.php` - Device model with pairing methods
 
 ---
 
