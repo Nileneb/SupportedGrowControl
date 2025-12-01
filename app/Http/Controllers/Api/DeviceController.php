@@ -24,6 +24,13 @@ class DeviceController extends Controller
     {
         $user = $request->user(); // via Sanctum
         
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+        
         $validated = $request->validate([
             'bootstrap_id' => 'required|string|max:255',
             'name' => 'nullable|string|max:255',
@@ -54,18 +61,31 @@ class DeviceController extends Controller
         $publicId = (string) Str::uuid();
         $agentTokenPlain = Str::random(64);
         
-        $device = Device::create([
-            'user_id' => $user->id,
-            'public_id' => $publicId,
-            'bootstrap_id' => $validated['bootstrap_id'],
-            'name' => $validated['name'] ?? 'GrowDash Device',
-            'slug' => Str::slug($validated['name'] ?? 'GrowDash Device') . '-' . substr($validated['bootstrap_id'], 0, 6),
-            'agent_token' => hash('sha256', $agentTokenPlain),
-            'device_info' => $validated['device_info'] ?? [],
-            'status' => 'paired',
-            'paired_at' => now(),
-            'bootstrap_code' => strtoupper(Str::random(6)),
-        ]);
+        // Generate unique slug
+        $baseSlug = Str::slug($validated['name'] ?? 'GrowDash Device');
+        $slug = $baseSlug . '-' . Str::random(8);
+        
+        try {
+            $device = Device::create([
+                'user_id' => $user->id,
+                'public_id' => $publicId,
+                'bootstrap_id' => $validated['bootstrap_id'],
+                'name' => $validated['name'] ?? 'GrowDash Device',
+                'slug' => $slug,
+                'agent_token' => hash('sha256', $agentTokenPlain),
+                'device_info' => $validated['device_info'] ?? [],
+                'status' => 'paired',
+                'paired_at' => now(),
+                'bootstrap_code' => strtoupper(Str::random(6)),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Device creation failed', [
+                'bootstrap_id' => $validated['bootstrap_id'],
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
         
         return response()->json([
             'success' => true,
