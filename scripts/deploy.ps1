@@ -11,9 +11,9 @@ Prereqs:
   - .env configured (DB, cache, queue, broadcasting)
 #>
 param(
-  [string]$Env = "Production",
-  [switch]$StartReverb,
-  [switch]$StartQueue
+    [string]$Env = "Production",
+    [switch]$StartReverb,
+    [switch]$StartQueue
 )
 
 function Write-Step($msg) { Write-Host "[+] $msg" -ForegroundColor Cyan }
@@ -67,17 +67,17 @@ if ($LASTEXITCODE -ne 0) { Fail "Migrations failed" }
 
 # Optional services
 if ($StartReverb) {
-  Write-Step "Starting Reverb server"
-  $host = $env:REVERB_HOST
-  $port = $env:REVERB_PORT
-  if (-not $host) { $host = "127.0.0.1" }
-  if (-not $port) { $port = 6001 }
-  php artisan reverb:start --host "$host" --port $port
+    Write-Step "Starting Reverb server"
+    $host = $env:REVERB_HOST
+    $port = $env:REVERB_PORT
+    if (-not $host) { $host = "127.0.0.1" }
+    if (-not $port) { $port = 6001 }
+    php artisan reverb:start --host "$host" --port $port
 }
 
 if ($StartQueue) {
-  Write-Step "Starting queue worker"
-  php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    Write-Step "Starting queue worker"
+    php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 }
 
 Write-Host "[✓] Deploy completed" -ForegroundColor Green

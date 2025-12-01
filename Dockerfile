@@ -36,9 +36,9 @@ COPY --from=vendor /app/vendor /var/www/html/vendor
 # Laravel optimize (runtime)
 ENV APP_ENV=production
 RUN php artisan key:generate || true \
- && php artisan config:cache \
- && php artisan route:cache \
- && php artisan view:cache \
- && php artisan event:cache || true
+    && php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache \
+    && php artisan event:cache || true
 
 CMD ["php-fpm"]
