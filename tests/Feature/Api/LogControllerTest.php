@@ -10,9 +10,13 @@ use function Pest\Laravel\postJson;
 describe('LogController', function () {
     test('stores device logs successfully', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $payload = [
             'logs' => [
@@ -42,14 +46,18 @@ describe('LogController', function () {
 
         expect(DeviceLog::count())->toBe(2);
         expect(DeviceLog::first()->level)->toBe('info');
-        expect(DeviceLog::latest()->first()->level)->toBe('error');
+        expect(DeviceLog::orderBy('id', 'desc')->first()->level)->toBe('error');
     });
 
     test('rejects invalid log level', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $payload = [
             'logs' => [

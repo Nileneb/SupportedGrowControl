@@ -11,9 +11,13 @@ use function Pest\Laravel\postJson;
 describe('CommandController', function () {
     test('retrieves pending commands for device', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         // Create pending and completed commands
         Command::create([
@@ -48,9 +52,13 @@ describe('CommandController', function () {
 
     test('updates command status successfully', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $command = Command::create([
             'device_id' => $device->id,
@@ -83,9 +91,13 @@ describe('CommandController', function () {
 
     test('rejects invalid command status', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $command = Command::create([
             'device_id' => $device->id,

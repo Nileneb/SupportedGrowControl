@@ -274,6 +274,10 @@ class Device extends Model
      */
     public function verifyAgentToken(string $plaintextToken): bool
     {
+        if ($this->agent_token === null) {
+            return false;
+        }
+
         return hash_equals($this->agent_token, hash('sha256', $plaintextToken));
     }
 }

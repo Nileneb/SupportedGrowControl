@@ -10,9 +10,13 @@ use function Pest\Laravel\postJson;
 describe('TelemetryController', function () {
     test('stores telemetry data successfully', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id, 'paired_at' => now()]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $payload = [
             'readings' => [
@@ -48,9 +52,13 @@ describe('TelemetryController', function () {
 
     test('rejects invalid telemetry data', function () {
         $user = User::factory()->create();
-        $device = Device::factory()->create(['user_id' => $user->id, 'paired_at' => now()]);
         $plaintextToken = Str::random(64);
-        $device->update(['agent_token' => hash('sha256', $plaintextToken)]);
+
+        $device = Device::factory()->create([
+            'user_id' => $user->id,
+            'paired_at' => now(),
+            'agent_token' => hash('sha256', $plaintextToken),
+        ]);
 
         $payload = [
             'readings' => [
