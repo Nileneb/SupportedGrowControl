@@ -203,28 +203,39 @@ Agent sendet beim ersten Start seine Hardware-ID und wartet auf Pairing.
 Für automatisierte Provisionierung ohne 6-stelligen Code kann ein Agent (oder Setup-Skript) sich temporär mit Benutzer-Credentials anmelden und direkt ein Device registrieren.
 
 #### 0️⃣ Login (Sanctum Token erhalten)
+
 **POST** `/api/auth/login`
+
 ```json
 { "email": "admin@growdash.local", "password": "password" }
 ```
+
 **Response:**
+
 ```json
 { "access_token": "<Bearer Token>", "token_type": "Bearer" }
 ```
 
 #### 1️⃣ Device-Registrierung
+
 **POST** `/api/growdash/devices/register-from-agent`
 Header: `Authorization: Bearer <token>`
+
 ```json
 {
     "bootstrap_id": "esp32-abc123def456",
     "name": "GrowBox Kitchen",
     "board_type": "ESP32",
-    "capabilities": { "sensors": ["water_level","tds","temperature"], "actuators": ["spray","fill"] },
+    "capabilities": {
+        "sensors": ["water_level", "tds", "temperature"],
+        "actuators": ["spray", "fill"]
+    },
     "revoke_user_token": true
 }
 ```
+
 **Response (neu erstellt, 201):**
+
 ```json
 {
     "success": true,
@@ -239,7 +250,9 @@ Header: `Authorization: Bearer <token>`
     "agent_token": "7f3d9a8b...64-char-plaintext-token...c2e1f4a6"
 }
 ```
+
 **Response (bereits vorhanden, 200):**
+
 ```json
 {
     "success": true,
@@ -249,19 +262,22 @@ Header: `Authorization: Bearer <token>`
 ```
 
 #### Sicherheits-Hinweise
-- Token direkt nach Registrierung mit `revoke_user_token=true` ungültig machen (Hardening)
-- Nur für kontrollierte Provisionierung (z.B. interner Setup-Agent) verwenden
-- Der reguläre 6-stellige Pairing-Flow bleibt Standard für Endgeräte
+
+-   Token direkt nach Registrierung mit `revoke_user_token=true` ungültig machen (Hardening)
+-   Nur für kontrollierte Provisionierung (z.B. interner Setup-Agent) verwenden
+-   Der reguläre 6-stellige Pairing-Flow bleibt Standard für Endgeräte
 
 #### Vorteile
+
 ✅ Schnelle automatisierte Provisionierung bei Massen-Deployment
 ✅ Kein manuelles Pairing notwendig
 ✅ Gleiche Auth-Mechanik (X-Device-ID + X-Device-Token) ab dem ersten Request
 
 #### Wann nutzen?
-- CI/CD Setup für vorkonfigurierte Device-Pakete
-- Lab- / Testumgebung mit skriptgesteuerter Geräteanlage
-- Temporäre einmalige Migration alter Geräte in das neue System
+
+-   CI/CD Setup für vorkonfigurierte Device-Pakete
+-   Lab- / Testumgebung mit skriptgesteuerter Geräteanlage
+-   Temporäre einmalige Migration alter Geräte in das neue System
 
 ---
 
