@@ -80,4 +80,65 @@ class BootstrapController extends Controller
             'message' => "Device waiting for pairing. Use code: {$device->bootstrap_code}",
         ]);
     }
+
+    /**
+     * Pairing status polling endpoint for agents.
+     *
+     * GET /api/agents/pairing/status?bootstrap_id=xxx&bootstrap_code=xxx
+     *
+     * Agent polls this endpoint to check if user has paired the device.
+     *
+     * Response (pending):
+     * {
+     *   "status": "pending"
+     * }
+     *
+     * Response (paired):
+     * {
+     *   "status": "paired",
+     *   "public_id": "uuid",
+     *   "agent_token": "long-token",
+     *   "device_name": "My Device",
+     *   "user_email": "user@example.com"
+     * }
+     */
+    public function status(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'bootstrap_id' => 'required|string|max:64',
+            'bootstrap_code' => 'required|string|size:6',
+        ]);
+
+        $device = Device::where('bootstrap_id', $data['bootstrap_id'])
+            ->where('bootstrap_code', $data['bootstrap_code'])
+            ->first();
+
+        if (!$device) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid bootstrap_id or bootstrap_code',
+            ], 404);
+        }
+
+        // Not yet paired
+        if (!$device->isPaired()) {
+            return response()->json([
+                'status' => 'pending',
+            ]);
+        }
+
+        // Paired! Return credentials (only once after pairing)
+        // Generate new token for security
+        $plaintextToken = Str::random(64);
+        $device->agent_token = hash('sha256', $plaintextToken);
+        $device->save();
+
+        return response()->json([
+            'status' => 'paired',
+            'public_id' => $device->public_id,
+            'agent_token' => $plaintextToken,
+            'device_name' => $device->name,
+            'user_email' => $device->user->email ?? null,
+        ]);
+    }
 }

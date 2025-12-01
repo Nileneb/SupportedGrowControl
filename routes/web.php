@@ -29,4 +29,7 @@ Route::middleware(['auth'])->group(function () {
             ),
         )
         ->name('two-factor.show');
+
+    // Device pairing page
+    Volt::route('devices/pair', 'devices.pair')->name('devices.pair');
 });

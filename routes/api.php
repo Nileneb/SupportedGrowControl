@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Route;
 // Public bootstrap endpoint for agents (no auth required)
 Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
 
+// Pairing status polling endpoint (agent checks if user paired)
+Route::get('/agents/pairing/status', [BootstrapController::class, 'status']);
+
 // Device pairing endpoints (require user authentication)
 Route::middleware('auth:web')->prefix('devices')->group(function () {
     Route::post('/pair', [DevicePairingController::class, 'pair']);
