@@ -30,5 +30,5 @@ docker compose -f "$COMPOSE_FILE" exec php-cli php artisan view:cache
 
 echo ">>> GrowDash Laravel production deployment finished."
 echo "    -> Intern:    http://web:80"
-echo "    -> Extern:    http://192.168.178.12:6479 (vor Reverse Proxy)"
+echo "    -> Extern:    http://192.168.178.12:6480 (vor Reverse Proxy)"
 echo "    -> Public:    https://grow.linn.games (über Synology Reverse Proxy)"

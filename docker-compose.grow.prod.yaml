@@ -13,8 +13,8 @@ services:
       - grow-laravel-production
       - axia-shared-network
     ports:
-      # NEU: eigener Port für grow.linn.games (Axia nutzt 6478)
-      - "6479:80"
+      # NEU: eigener Port für grow.linn.games (Axia nutzt 6478, getaxia nutzt 6479)
+      - "6480:80"
     depends_on:
       - php-fpm
 
