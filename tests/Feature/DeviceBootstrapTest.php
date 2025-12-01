@@ -132,7 +132,7 @@ test('pairing with invalid code returns 404', function () {
 test('pairing already paired device returns 404', function () {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
-    
+
     $device = Device::create([
         'bootstrap_id' => 'agent-already-paired',
         'name' => 'Already Paired',

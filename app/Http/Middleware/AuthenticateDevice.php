@@ -11,7 +11,7 @@ class AuthenticateDevice
 {
     /**
      * Handle an incoming request.
-     * 
+     *
      * Validates X-Device-ID and X-Device-Token headers.
      * Sets $request->device for controllers.
      *

@@ -22,15 +22,15 @@
                     Bootstrap Code
                 </label>
                 <div class="flex gap-3">
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         id="bootstrapCode"
                         wire:model="bootstrapCode"
                         placeholder="ABC123"
                         maxlength="6"
                         class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase text-lg tracking-widest"
                     >
-                    <button 
+                    <button
                         type="submit"
                         class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                     >

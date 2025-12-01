@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    
+
     $this->device = Device::create([
         'user_id' => $this->user->id,
         'name' => 'Test Growdash',
@@ -31,10 +31,10 @@ test('status endpoint requires authentication', function () {
 
 test('status endpoint denies access to other users devices', function () {
     $otherUser = User::factory()->create();
-    
+
     $response = $this->actingAs($otherUser)
         ->getJson('/api/growdash/status?device_slug=test-growdash');
-    
+
     $response->assertStatus(403);
 });
 

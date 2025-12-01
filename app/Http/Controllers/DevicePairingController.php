@@ -11,11 +11,11 @@ class DevicePairingController extends Controller
 {
     /**
      * Pair a device with the authenticated user.
-     * 
+     *
      * POST /api/devices/pair
-     * 
+     *
      * Request: { "bootstrap_code": "ABC123" }
-     * 
+     *
      * Response:
      * {
      *   "success": true,
@@ -59,7 +59,7 @@ class DevicePairingController extends Controller
 
     /**
      * List all unclaimed devices (for debugging/admin).
-     * 
+     *
      * GET /api/devices/unclaimed
      */
     public function unclaimed(): JsonResponse

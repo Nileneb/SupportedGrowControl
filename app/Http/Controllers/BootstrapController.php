@@ -10,18 +10,18 @@ class BootstrapController extends Controller
 {
     /**
      * Bootstrap endpoint for agents.
-     * 
+     *
      * POST /api/agents/bootstrap
-     * 
+     *
      * Request: { "bootstrap_id": "agent-unique-id", "name": "optional-device-name" }
-     * 
+     *
      * Response (unpaired):
      * {
      *   "status": "unpaired",
      *   "bootstrap_code": "ABC123",
      *   "message": "Device registered. Please pair via web UI with code: ABC123"
      * }
-     * 
+     *
      * Response (paired):
      * {
      *   "status": "paired",

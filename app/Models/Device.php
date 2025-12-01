@@ -70,7 +70,7 @@ class Device extends Model
         do {
             $code = strtoupper(Str::random(6));
         } while (static::where('bootstrap_code', $code)->exists());
-        
+
         return $code;
     }
 
@@ -83,7 +83,7 @@ class Device extends Model
         $this->public_id = (string) Str::uuid();
         $this->agent_token = Str::random(64);
         $this->paired_at = now();
-        
+
         return $this->save();
     }
 

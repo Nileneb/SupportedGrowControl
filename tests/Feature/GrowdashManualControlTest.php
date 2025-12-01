@@ -8,7 +8,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
-    
+
     $this->device = Device::create([
         'user_id' => $this->user->id,
         'name' => 'Test Growdash',
