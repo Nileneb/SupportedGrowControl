@@ -198,6 +198,75 @@ Agent sendet beim ersten Start seine Hardware-ID und wartet auf Pairing.
 
 ---
 
+### 🔄 Alternative: Direkte Registrierung (Sanctum)
+
+Für automatisierte Provisionierung ohne 6-stelligen Code kann ein Agent (oder Setup-Skript) sich temporär mit Benutzer-Credentials anmelden und direkt ein Device registrieren.
+
+#### 0️⃣ Login (Sanctum Token erhalten)
+**POST** `/api/auth/login`
+```json
+{ "email": "admin@growdash.local", "password": "password" }
+```
+**Response:**
+```json
+{ "access_token": "<Bearer Token>", "token_type": "Bearer" }
+```
+
+#### 1️⃣ Device-Registrierung
+**POST** `/api/growdash/devices/register-from-agent`
+Header: `Authorization: Bearer <token>`
+```json
+{
+    "bootstrap_id": "esp32-abc123def456",
+    "name": "GrowBox Kitchen",
+    "board_type": "ESP32",
+    "capabilities": { "sensors": ["water_level","tds","temperature"], "actuators": ["spray","fill"] },
+    "revoke_user_token": true
+}
+```
+**Response (neu erstellt, 201):**
+```json
+{
+    "success": true,
+    "device": {
+        "id": 7,
+        "name": "GrowBox Kitchen",
+        "public_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+        "bootstrap_id": "esp32-abc123def456",
+        "paired_at": "2025-12-01T20:15:00Z",
+        "reused": false
+    },
+    "agent_token": "7f3d9a8b...64-char-plaintext-token...c2e1f4a6"
+}
+```
+**Response (bereits vorhanden, 200):**
+```json
+{
+    "success": true,
+    "device": { "id": 7, "reused": true, "public_id": "..." },
+    "agent_token": "<evtl. neu wenn regenerate_token=true>"
+}
+```
+
+#### Sicherheits-Hinweise
+- Token direkt nach Registrierung mit `revoke_user_token=true` ungültig machen (Hardening)
+- Nur für kontrollierte Provisionierung (z.B. interner Setup-Agent) verwenden
+- Der reguläre 6-stellige Pairing-Flow bleibt Standard für Endgeräte
+
+#### Vorteile
+✅ Schnelle automatisierte Provisionierung bei Massen-Deployment
+✅ Kein manuelles Pairing notwendig
+✅ Gleiche Auth-Mechanik (X-Device-ID + X-Device-Token) ab dem ersten Request
+
+#### Wann nutzen?
+- CI/CD Setup für vorkonfigurierte Device-Pakete
+- Lab- / Testumgebung mit skriptgesteuerter Geräteanlage
+- Temporäre einmalige Migration alter Geräte in das neue System
+
+---
+
+---
+
 #### 2️⃣ User Pairing (auth:web)
 
 **POST** `/api/devices/pair`

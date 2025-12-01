@@ -3,6 +3,8 @@
 use App\Http\Controllers\BootstrapController;
 use App\Http\Controllers\DevicePairingController;
 use App\Http\Controllers\GrowdashWebhookController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DeviceRegistrationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,6 +16,14 @@ use Illuminate\Support\Facades\Route;
 | public API endpoints for retrieving device status and historical data.
 |
 */
+
+// ==================== Auth & Device Registration ====================
+
+// API login (Sanctum token issuance)
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Direct device registration from an authenticated agent (alternative to pairing flow)
+Route::middleware('auth:sanctum')->post('/growdash/devices/register-from-agent', [DeviceRegistrationController::class, 'registerFromAgent']);
 
 // ==================== Bootstrap & Pairing ====================
 
