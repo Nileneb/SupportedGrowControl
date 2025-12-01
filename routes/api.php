@@ -23,6 +23,9 @@ use Illuminate\Support\Facades\Route;
 // API login (Sanctum token issuance)
 Route::post('/auth/login', [AuthController::class, 'login']);
 
+// API logout (token revocation)
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+
 // Direct device registration from an authenticated agent (alternative to pairing flow)
 Route::middleware('auth:sanctum')->post('/growdash/devices/register-from-agent', [DeviceRegistrationController::class, 'registerFromAgent']);
 // Alias für Agent-Kompatibilität (Direct-Login-Flow)

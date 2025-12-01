@@ -18,12 +18,21 @@ class Device extends Model
      */
     protected $fillable = [
         'user_id',
+        'public_id',
         'name',
         'slug',
         'ip_address',
         'serial_port',
         'bootstrap_id',
         'bootstrap_code',
+        'agent_token',
+        'device_info',
+        'status',
+        'paired_at',
+        'last_seen_at',
+        'board_type',
+        'capabilities',
+        'last_state',
     ];
 
     /**
@@ -48,6 +57,7 @@ class Device extends Model
             'last_seen_at' => 'datetime',
             'capabilities' => 'array',
             'last_state' => 'array',
+            'device_info' => 'array',
         ];
     }
 

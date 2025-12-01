@@ -35,13 +35,27 @@ class AuthController extends Controller
         $plainToken = $user->createToken($tokenName)->plainTextToken;
 
         return response()->json([
-            'access_token' => $plainToken,
-            'token_type' => 'Bearer',
+            'success' => true,
+            'token' => $plainToken,
             'user' => [
                 'id' => $user->id,
                 'email' => $user->email,
                 'name' => $user->name,
             ],
+        ]);
+    }
+
+    /**
+     * Revoke the current Sanctum token (logout).
+     * POST /api/auth/logout
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully',
         ]);
     }
 }
