@@ -18,7 +18,7 @@ return new class extends Migration
                 ->after('paired_at');
 
             // Device Status
-            $table->enum('status', ['online', 'offline', 'error'])
+            $table->enum('status', ['paired', 'online', 'offline', 'error'])
                 ->default('offline')
                 ->after('board_type');
 

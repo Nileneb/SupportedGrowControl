@@ -4,6 +4,7 @@ use App\Http\Controllers\BootstrapController;
 use App\Http\Controllers\DevicePairingController;
 use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +26,9 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 // Direct device registration from an authenticated agent (alternative to pairing flow)
 Route::middleware('auth:sanctum')->post('/growdash/devices/register-from-agent', [DeviceRegistrationController::class, 'registerFromAgent']);
 // Alias für Agent-Kompatibilität (Direct-Login-Flow)
-Route::middleware('auth:sanctum')->post('/growdash/devices/register', [DeviceRegistrationController::class, 'registerFromAgent']);
+Route::middleware('auth:sanctum')->prefix('growdash')->group(function () {
+    Route::post('/devices/register', [DeviceController::class, 'register']);
+});
 
 // ==================== Bootstrap & Pairing ====================
 
