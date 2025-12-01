@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Pfad zum Grow-Laravel-Projekt anpassen, falls nötig
-PROJECT_DIR="/home/nileneb/supportedgrowcontrol"
+PROJECT_DIR="/home/nileneb/SupportedGrowControl"
 COMPOSE_FILE="docker-compose.grow.prod.yaml"
 
 cd "$PROJECT_DIR"
