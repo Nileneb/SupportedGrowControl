@@ -1,10 +1,12 @@
 # Growdash Multi-Tenant IoT Platform - Architecture
 
+> Decisions (2025-12-01): Team sharing via `users_devices` pivot; agent auth with Sanctum; commands over WebSocket; migrate legacy sensor tables into unified `measurements` and clean up.
+
 ## System Overview
 
 **Domain**: `https://grow.linn.games`  
 **API Prefix**: `/api/growdash`  
-**Auth**: Multi-Tenant (User → Devices), Device Token-based for Agents
+**Auth**: Multi-Tenant (User → Devices), Device Token-based for Agents, plus Sanctum API tokens for agents/users
 
 ## Core Principles
 
@@ -12,7 +14,9 @@
 2. **Dynamic Capabilities**: Keine hardcodierten Sensoren - alles über `capabilities` JSON
 3. **Real-time State**: `device_latest_states` Caching für schnelle Dashboards
 4. **Secure Pairing**: Time-limited Pair-Codes für Device-Registrierung
-5. **Command Queue**: Bidirektionale Communication (UI → Agent via Polling)
+5. **Command Queue**: Prefer WebSocket delivery (Reverb); keep HTTP long-poll fallback
+
+6. **Team Sharing**: Optional multi-user device access via `users_devices` pivot
 
 ---
 
@@ -79,6 +83,15 @@ unit, raw (JSON for complex data), measured_at
 
 Index: `(device_id, sensor_key, measured_at)`
 
+#### `measurements` (normalized, replaces legacy water/tds/etc.)
+
+```sql
+id, device_id (FK), sensor_key (string), value (decimal),
+unit (nullable), raw (JSON nullable), measured_at (datetime indexed)
+```
+
+Index: `(device_id, sensor_key, measured_at)`
+
 #### `commands`
 
 ```sql
@@ -101,6 +114,12 @@ message, context (JSON), created_at
 ```sql
 id, user_id (FK), code (6-char unique),
 device_name, expires_at, used_at, device_id (nullable)
+
+#### `users_devices` (sharing pivot)
+
+```sql
+user_id (FK), device_id (FK), role (viewer/operator/owner), created_at, updated_at
+```
 ```
 
 ---
@@ -173,6 +192,8 @@ device_name, expires_at, used_at, device_id (nullable)
 }
 ```
 
+WebSocket delivery: Commands are also broadcast on channel `devices.{public_id}` as `CommandCreated` events; devices ACK via `CommandUpdated`.
+
 #### `POST /api/growdash/commands/{id}/result`
 
 **Request**:
@@ -185,9 +206,13 @@ device_name, expires_at, used_at, device_id (nullable)
 }
 ```
 
+On success, emits `CommandUpdated` over Reverb.
+
 #### `POST /api/growdash/devices/capabilities`
 
 **Request**: `{ "capabilities": { /* JSON */ } }`
+
+Persists to `devices.capabilities` and may update `last_state`; emits `DeviceStateUpdated`.
 
 #### `POST /api/growdash/logs`
 

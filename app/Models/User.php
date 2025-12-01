@@ -61,4 +61,22 @@ class User extends Authenticatable
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
+
+    /**
+     * Devices owned directly by the user.
+     */
+    public function devices()
+    {
+        return $this->hasMany(Device::class);
+    }
+
+    /**
+     * Devices shared with the user via pivot.
+     */
+    public function sharedDevices()
+    {
+        return $this->belongsToMany(Device::class, 'users_devices')
+            ->withTimestamps()
+            ->withPivot('role');
+    }
 }

@@ -112,6 +112,16 @@ class Device extends Model
     }
 
     /**
+     * Users with shared access via pivot.
+     */
+    public function sharedUsers()
+    {
+        return $this->belongsToMany(User::class, 'users_devices')
+            ->withTimestamps()
+            ->withPivot('role');
+    }
+
+    /**
      * Get all water level measurements for this device.
      */
     public function waterLevels(): HasMany
