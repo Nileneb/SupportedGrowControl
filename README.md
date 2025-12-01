@@ -471,15 +471,25 @@ Arduino-Logs.
 -   [x] Device Model: sharedUsers() BelongsToMany-Relation
 -   [x] User Model: devices() + sharedDevices() Relations
 -   [x] BootstrapController: bootstrap() Endpoint (öffentlich)
+-   [x] BootstrapController: status() Endpoint für Agent-Polling (öffentlich)
 -   [x] DevicePairingController: pair() Endpoint (auth:web)
 -   [x] AuthenticateDevice Middleware für Agent-Auth (X-Device-ID + X-Device-Token)
--   [x] API Routes: /api/agents/bootstrap, /api/devices/pair, /api/growdash/agent/\*
+-   [x] API Routes: /api/agents/bootstrap, /api/agents/pairing/status, /api/devices/pair, /api/growdash/agent/\*
+-   [x] Web Route: /devices/pair mit Livewire Pairing UI
+-   [x] Livewire Component: devices.pair für Code-Eingabe
 -   [x] DevicePolicy: view/update/delete prüfen user_id oder users_devices pivot
 -   [x] DevicePolicy: control() erlaubt owner + shared users mit editor/owner role
 -   [x] Policy in AppServiceProvider registriert
 -   [x] README.md mit ER-Diagramm und API-Dokumentation aktualisiert
+-   [x] PAIRING_FLOW.md mit vollständigem Ablauf-Diagramm und Implementierungsdetails
 
-**Status**: ✅ Phase 11 abgeschlossen! Bootstrap/Pairing-Flow funktioniert, Agent-Auth implementiert, Multi-Tenant-Policies aktiv.
+**Status**: ✅ Phase 11 **vollständig abgeschlossen**! Bootstrap/Pairing-Flow mit 6-stelligem Code implementiert, Agent-Polling funktioniert, Web-UI für Code-Eingabe vorhanden, Multi-Tenant-Policies aktiv.
+
+**Pairing-Flow:**
+
+1. Agent: `python pairing.py` → Generiert 6-stelligen Code (z.B. "XY42Z7")
+2. User: Öffnet `https://grow.linn.games/devices/pair` → Gibt Code ein → Device wird mit User verknüpft
+3. Agent: Polling erkennt Pairing → Speichert Token in `.env` → Startet Main-Loop mit authentifizierten Requests
 
 ---
 
