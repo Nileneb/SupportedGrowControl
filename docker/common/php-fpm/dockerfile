@@ -36,6 +36,23 @@ COPY . /var/www
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
+# Stage 1.5: Build frontend assets with Node.js
+FROM node:20-alpine AS node-builder
+
+WORKDIR /var/www
+
+# Copy package files
+COPY package*.json ./
+
+# Install npm dependencies
+RUN npm ci
+
+# Copy application code needed for build
+COPY . .
+
+# Build frontend assets
+RUN npm run build
+
 # Stage 2: Production environment
 FROM php:8.4-fpm AS production
 
@@ -56,6 +73,9 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 # Copy the application code and dependencies from the build stage
 COPY --from=builder /var/www /var/www
+
+# Copy built frontend assets from node-builder
+COPY --from=node-builder /var/www/public/build /var/www/public/build
 
 # Set working directory
 WORKDIR /var/www
