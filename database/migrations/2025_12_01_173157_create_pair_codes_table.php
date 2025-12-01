@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pair_codes', function (Blueprint $table) {
             $table->id();
-            
+
             // User Relation
             $table->foreignId('user_id')
                 ->constrained()

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('telemetry_readings', function (Blueprint $table) {
             $table->id();
-            
+
             // Device Relation
             $table->foreignId('device_id')
                 ->constrained()

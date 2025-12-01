@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('commands', function (Blueprint $table) {
             $table->id();
-            
+
             // Device Relation
             $table->foreignId('device_id')
                 ->constrained()
