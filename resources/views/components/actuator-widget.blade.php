@@ -98,7 +98,7 @@
     @endif
     
     <!-- Control Interface -->
-    <form class="space-y-3" onsubmit="sendActuatorCommand(event, '{{ $device->public_id }}', '{{ $actuatorId }}', this)">
+    <form class="space-y-3" data-actuator="{{ $actuatorId }}" onsubmit="sendActuatorCommand(event, '{{ $device->public_id }}', '{{ $actuatorId }}', this)">
         @csrf
         
         <!-- Parameter Input -->
@@ -195,6 +195,78 @@ function setDuration(form, value) {
     if (input) input.value = value;
 }
 
+// Track active commands for this actuator
+if (!window.actuatorCommands) {
+    window.actuatorCommands = {};
+}
+
+// WebSocket listener for actuator command updates (set up once per page)
+if (!window.actuatorWebSocketInitialized) {
+    window.actuatorWebSocketInitialized = true;
+    
+    // Listen for global command status updates
+    document.addEventListener('actuator-command-update', (e) => {
+        const { command_id, type, status, result_message } = e.detail;
+        
+        // Find the actuator widget for this command type
+        const statusDot = document.getElementById(`status-${type}`);
+        const statusText = document.getElementById(`status-text-${type}`);
+        const lastAction = document.getElementById(`last-action-${type}`);
+        const lastActionTime = document.getElementById(`last-action-time-${type}`);
+        const button = document.querySelector(`form[data-actuator="${type}"] button[type="submit"]`);
+        
+        if (!statusDot || !statusText) return;
+        
+        // Update UI based on command status
+        if (status === 'executing') {
+            statusDot.className = 'w-2 h-2 bg-yellow-500 rounded-full animate-pulse';
+            statusText.textContent = 'Executing';
+            statusText.className = 'text-xs text-yellow-600 dark:text-yellow-400';
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Executing...';
+            }
+        } else if (status === 'completed') {
+            statusDot.className = 'w-2 h-2 bg-green-500 rounded-full';
+            statusText.textContent = 'Success';
+            statusText.className = 'text-xs text-green-600 dark:text-green-400';
+            
+            if (lastAction && lastActionTime) {
+                lastAction.classList.remove('hidden');
+                lastActionTime.textContent = 'Just now';
+            }
+            
+            if (button) {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || 'Execute';
+            }
+            
+            // Reset to idle after 3 seconds
+            setTimeout(() => {
+                statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+                statusText.textContent = 'Idle';
+                statusText.className = 'text-xs text-gray-500 dark:text-gray-400';
+            }, 3000);
+        } else if (status === 'failed') {
+            statusDot.className = 'w-2 h-2 bg-red-500 rounded-full';
+            statusText.textContent = result_message ? 'Failed' : 'Error';
+            statusText.className = 'text-xs text-red-600 dark:text-red-400';
+            
+            if (button) {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || 'Execute';
+            }
+            
+            // Reset to idle after 5 seconds
+            setTimeout(() => {
+                statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+                statusText.textContent = 'Idle';
+                statusText.className = 'text-xs text-gray-500 dark:text-gray-400';
+            }, 5000);
+        }
+    });
+}
+
 async function sendActuatorCommand(event, deviceId, actuatorId, form) {
     event.preventDefault();
     
@@ -209,15 +281,13 @@ async function sendActuatorCommand(event, deviceId, actuatorId, form) {
     const button = form.querySelector('button[type="submit"]');
     const statusDot = document.getElementById(`status-${actuatorId}`);
     const statusText = document.getElementById(`status-text-${actuatorId}`);
-    const lastAction = document.getElementById(`last-action-${actuatorId}`);
-    const lastActionTime = document.getElementById(`last-action-time-${actuatorId}`);
     
-    // Update UI to "executing"
+    // Update UI to "queued"
     button.disabled = true;
-    button.textContent = 'Executing...';
-    statusDot.className = 'w-2 h-2 bg-yellow-500 rounded-full animate-pulse';
-    statusText.textContent = 'Executing';
-    statusText.className = 'text-xs text-yellow-600 dark:text-yellow-400';
+    button.textContent = 'Queuing...';
+    statusDot.className = 'w-2 h-2 bg-blue-500 rounded-full animate-pulse';
+    statusText.textContent = 'Queued';
+    statusText.className = 'text-xs text-blue-600 dark:text-blue-400';
     
     try {
         const response = await fetch(`/api/growdash/devices/${deviceId}/commands`, {
@@ -238,23 +308,30 @@ async function sendActuatorCommand(event, deviceId, actuatorId, form) {
         
         const data = await response.json();
         
-        // Success
-        statusDot.className = 'w-2 h-2 bg-green-500 rounded-full';
-        statusText.textContent = 'Success';
-        statusText.className = 'text-xs text-green-600 dark:text-green-400';
+        // Track command ID for this actuator
+        window.actuatorCommands[actuatorId] = data.command.id;
         
-        // Show last action
-        lastAction.classList.remove('hidden');
-        lastActionTime.textContent = 'Just now';
+        // Command queued successfully - WebSocket will handle status updates
+        console.log(`✓ Command ${data.command.id} queued for actuator ${actuatorId}`);
         
-        // Reset after delay
-        setTimeout(() => {
-            statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
-            statusText.textContent = 'Idle';
-            statusText.className = 'text-xs text-gray-500 dark:text-gray-400';
-        }, 3000);
+        // If no WebSocket, show immediate success
+        if (!window.wsConnected) {
+            statusDot.className = 'w-2 h-2 bg-green-500 rounded-full';
+            statusText.textContent = 'Sent';
+            statusText.className = 'text-xs text-green-600 dark:text-green-400';
+            
+            setTimeout(() => {
+                statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
+                statusText.textContent = 'Idle';
+                statusText.className = 'text-xs text-gray-500 dark:text-gray-400';
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || 'Execute';
+            }, 2000);
+        }
+        // Otherwise, WebSocket event will update the UI
         
     } catch (error) {
+        console.error('Failed to send actuator command:', error);
         statusDot.className = 'w-2 h-2 bg-red-500 rounded-full';
         statusText.textContent = 'Error';
         statusText.className = 'text-xs text-red-600 dark:text-red-400';
@@ -263,10 +340,9 @@ async function sendActuatorCommand(event, deviceId, actuatorId, form) {
             statusDot.className = 'w-2 h-2 bg-gray-400 rounded-full';
             statusText.textContent = 'Idle';
             statusText.className = 'text-xs text-gray-500 dark:text-gray-400';
+            button.disabled = false;
+            button.textContent = button.dataset.originalText || 'Execute';
         }, 3000);
-    } finally {
-        button.disabled = false;
-        button.textContent = form.querySelector('button[type="submit"]').dataset.originalText || 'Execute';
     }
 }
 </script>

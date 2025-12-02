@@ -249,7 +249,12 @@
         }
 
         function handleCommandStatusUpdate(event) {
-            const { command_id, status, result_message } = event;
+            const { command_id, type, status, result_message } = event;
+
+            // Dispatch custom event for actuator widgets
+            document.dispatchEvent(new CustomEvent('actuator-command-update', {
+                detail: { command_id, type, status, result_message }
+            }));
 
             // Update command in history if visible
             refreshCommandHistory();
