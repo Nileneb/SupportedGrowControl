@@ -442,13 +442,36 @@
             }
         });
 
+        // WebSocket status event listeners
+        let wsStatusMessageShown = false;
+        
+        window.addEventListener('ws-connected', () => {
+            if (!wsStatusMessageShown) {
+                addToOutput('✓ WebSocket connected - real-time updates enabled', 'text-green-500');
+                wsStatusMessageShown = true;
+            }
+        });
+
+        window.addEventListener('ws-disconnected', () => {
+            addToOutput('⚠ WebSocket disconnected - using polling fallback', 'text-yellow-500');
+        });
+
+        window.addEventListener('ws-error', (e) => {
+            addToOutput(`✗ WebSocket error - using polling fallback`, 'text-red-500');
+            console.error('WebSocket error details:', e.detail);
+        });
+
         // Initial message
         addToOutput('# Serial console ready. Type commands and press Enter.', 'text-neutral-500');
-        if (window.wsConnected) {
-            addToOutput('✓ WebSocket connected - real-time updates enabled', 'text-green-500');
-        } else {
-            addToOutput('⚠ WebSocket not connected - using polling fallback', 'text-yellow-500');
-        }
+        addToOutput('⏳ Connecting to WebSocket...', 'text-blue-400');
+        
+        // Fallback timeout if WebSocket doesn't connect within 5 seconds
+        setTimeout(() => {
+            if (!window.wsConnected && !wsStatusMessageShown) {
+                addToOutput('⚠ WebSocket not connected - using polling fallback', 'text-yellow-500');
+                wsStatusMessageShown = true;
+            }
+        }, 5000);
     </script>
     @endif
 </x-layouts.app>

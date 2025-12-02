@@ -81,6 +81,15 @@ class Device extends Model
     }
 
     /**
+     * Get the route key name for Laravel route model binding.
+     * Use public_id instead of id for all route bindings.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
+
+    /**
      * Generate a unique 6-digit bootstrap code.
      */
     public static function generateBootstrapCode(): string
