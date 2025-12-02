@@ -12,7 +12,9 @@ class DeviceViewController extends Controller
         // Optimize: Only select needed columns, don't load relationships
         $device = Device::select([
             'id', 'public_id', 'name', 'status', 'user_id', 'bootstrap_id',
-            'last_seen_at', 'capabilities', 'device_info', 'board_type', 'paired_at'
+            'last_seen_at', 'capabilities', 'device_info', 'board_type', 'paired_at',
+            'created_at', 'updated_at', 'shelly_device_id', 'shelly_auth_token',
+            'shelly_config', 'shelly_last_webhook_at'
         ])
             ->where('public_id', $deviceId)
             ->where('user_id', $request->user()->id)

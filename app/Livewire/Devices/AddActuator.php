@@ -38,8 +38,8 @@ class AddActuator extends Component
         // Auto-populate channel_key suggestion
         $actuatorType = ActuatorType::find($actuatorTypeId);
         if ($actuatorType) {
-            $this->channelKey = $actuatorType->id;
-            $this->minInterval = $actuatorType->min_interval ?? 0;
+            $this->channelKey = $actuatorType->key;
+            $this->minInterval = 1;
         }
 
         $this->currentStep = 2;

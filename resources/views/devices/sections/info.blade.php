@@ -173,14 +173,14 @@
                     <div>
                         <label class="block text-sm font-medium text-neutral-500 dark:text-neutral-400">Created</label>
                         <p class="mt-1 text-sm text-neutral-900 dark:text-neutral-100">
-                            {{ $device->created_at->format('Y-m-d H:i:s') }}
+                            {{ optional($device->created_at)?->format('Y-m-d H:i:s') ?? '—' }}
                         </p>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-medium text-neutral-500 dark:text-neutral-400">Last Updated</label>
                         <p class="mt-1 text-sm text-neutral-900 dark:text-neutral-100">
-                            {{ $device->updated_at->format('Y-m-d H:i:s') }}
+                            {{ optional($device->updated_at)?->format('Y-m-d H:i:s') ?? '—' }}
                         </p>
                     </div>
                 </div>
@@ -189,12 +189,15 @@
             <!-- Actions -->
             <div class="pt-4 border-t border-neutral-200 dark:border-neutral-700">
                 <h4 class="font-medium text-neutral-900 dark:text-neutral-100 mb-3">Actions</h4>
-                <div class="flex gap-2">
-                    <a href="/devices/{{ $device->id }}/edit" 
+                <div class="flex flex-wrap gap-2">
+                    <a href="/devices/{{ $device->public_id }}/sensors/add"
                        class="inline-flex items-center px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600">
-                        Edit Device
+                        Manage Sensors
                     </a>
-                    
+                    <a href="/devices/{{ $device->public_id }}/actuators/add"
+                       class="inline-flex items-center px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600">
+                        Manage Actuators
+                    </a>
                     <button 
                         onclick="refreshCapabilities()"
                         class="inline-flex items-center px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-600">
@@ -219,7 +222,14 @@
             if (response.ok) {
                 alert('Capabilities refresh requested. The device will update on its next connection.');
             } else {
-                alert('Failed to request capabilities refresh');
+                if (response.status === 401) {
+                    alert('Not authorized. Please log in again.');
+                } else if (response.status === 403) {
+                    alert('Access denied for this device.');
+                } else {
+                    const text = await response.text();
+                    alert('Failed to request capabilities refresh: ' + text);
+                }
             }
         } catch (error) {
             alert('Error: ' + error.message);

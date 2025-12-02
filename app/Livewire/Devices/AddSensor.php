@@ -40,9 +40,9 @@ class AddSensor extends Component
         // Auto-populate channel_key suggestion
         $sensorType = SensorType::find($sensorTypeId);
         if ($sensorType) {
-            $this->channelKey = $sensorType->id;
-            $this->minInterval = $sensorType->meta['min_interval'] ?? 10;
-            $this->critical = $sensorType->critical ?? false;
+            $this->channelKey = $sensorType->key;
+            $this->minInterval = $sensorType->read_interval_seconds ?? 10;
+            $this->critical = false;
         }
 
         $this->currentStep = 2;

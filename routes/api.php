@@ -6,6 +6,7 @@ use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
+use App\Http\Controllers\Api\ShellyWebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -165,6 +166,10 @@ Route::post('/devices/{device}/refresh-capabilities', function (Request $request
 })->middleware('auth:sanctum');
 
 // ==================== Legacy Webhook Endpoints ====================
+
+// Shelly device webhooks (public endpoint with token authentication)
+Route::post('/shelly/webhook/{public_id}', [ShellyWebhookController::class, 'handle'])
+    ->name('api.shelly.webhook');
 
 // Protected webhook endpoints (require X-Growdash-Token header)
 Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {
