@@ -214,7 +214,9 @@
         // WebSocket Event Listeners
         function initializeWebSocketListeners() {
             if (!window.Echo) {
-                console.warn('Echo not initialized, falling back to polling only');
+                console.warn('Echo not initialized yet, waiting...');
+                // Retry after a short delay
+                setTimeout(initializeWebSocketListeners, 100);
                 return;
             }
 

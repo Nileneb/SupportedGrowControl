@@ -137,6 +137,11 @@ Route::middleware('auth:sanctum')->post('/user/devices/{device}/regenerate-token
     ]);
 });
 
+// Send command to device (web UI → device)
+Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'send'])
+    ->middleware('auth:web')
+    ->name('api.devices.commands.create');
+
 // ==================== Legacy Webhook Endpoints ====================
 
 // Protected webhook endpoints (require X-Growdash-Token header)

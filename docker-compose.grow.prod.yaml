@@ -93,6 +93,21 @@ services:
       timeout: 5s
       retries: 3
 
+  reverb:
+    build:
+      context: .
+      dockerfile: ./docker/common/Dockerfile
+      target: php-fpm
+    restart: unless-stopped
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    env_file:
+      - .env
+    networks:
+      - grow-laravel-production
+    depends_on:
+      redis:
+        condition: service_healthy
+
 networks:
   grow-laravel-production:
     driver: bridge
