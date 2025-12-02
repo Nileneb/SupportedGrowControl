@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTOs\DeviceCapabilities;
 use App\Events\DeviceTelemetryReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
@@ -55,10 +56,56 @@ class TelemetryController extends Controller
             ], 422);
         }
 
+        // Load device capabilities for validation
+        $capabilitiesDTO = null;
+        if ($device->capabilities) {
+            try {
+                $capabilitiesDTO = DeviceCapabilities::fromArray($device->capabilities);
+            } catch (\Exception $e) {
+                // Continue without validation if capabilities malformed
+            }
+        }
+
         $readings = $request->input('readings');
         $inserted = [];
+        $skipped = [];
+        $lastStateUpdates = [];
 
         foreach ($readings as $reading) {
+            $sensorKey = $reading['sensor_key'];
+            
+            // Validate sensor exists in capabilities (if available)
+            if ($capabilitiesDTO) {
+                $sensor = $capabilitiesDTO->getSensorById($sensorKey);
+                
+                if (!$sensor) {
+                    $skipped[] = [
+                        'sensor_key' => $sensorKey,
+                        'reason' => 'Sensor not found in device capabilities',
+                    ];
+                    continue;
+                }
+                
+                // Validate value against sensor spec
+                if (!$sensor->validateValue($reading['value'])) {
+                    $skipped[] = [
+                        'sensor_key' => $sensorKey,
+                        'reason' => 'Value out of range or invalid type',
+                    ];
+                    continue;
+                }
+                
+                // Validate unit matches
+                if (isset($reading['unit']) && $reading['unit'] !== $sensor->unit) {
+                    $skipped[] = [
+                        'sensor_key' => $sensorKey,
+                        'reason' => "Unit mismatch (expected: {$sensor->unit}, got: {$reading['unit']})",
+                    ];
+                    continue;
+                }
+            }
+
+            // Store telemetry
             $telemetry = $device->telemetryReadings()->create([
                 'sensor_key' => $reading['sensor_key'],
                 'value' => $reading['value'],
@@ -68,6 +115,21 @@ class TelemetryController extends Controller
             ]);
 
             $inserted[] = $telemetry->id;
+            
+            // Update last_state cache
+            $lastStateUpdates[$sensorKey] = [
+                'value' => $reading['value'],
+                'unit' => $reading['unit'] ?? null,
+                'timestamp' => $reading['measured_at'],
+            ];
+        }
+
+        // Update device last_state JSON with latest sensor values
+        if (!empty($lastStateUpdates)) {
+            $currentLastState = $device->last_state ?? [];
+            $device->update([
+                'last_state' => array_merge($currentLastState, $lastStateUpdates),
+            ]);
         }
 
         // Broadcast WebSocket event
@@ -77,7 +139,9 @@ class TelemetryController extends Controller
             'success' => true,
             'message' => 'Telemetry data stored successfully',
             'inserted_count' => count($inserted),
+            'skipped_count' => count($skipped),
             'ids' => $inserted,
+            'skipped' => $skipped,
         ], 201);
     }
 }

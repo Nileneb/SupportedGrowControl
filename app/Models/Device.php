@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\DTOs\ActuatorCapability;
+use App\DTOs\DeviceCapabilities;
+use App\DTOs\SensorCapability;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -289,5 +292,120 @@ class Device extends Model
         }
 
         return hash_equals($this->agent_token, hash('sha256', $plaintextToken));
+    }
+
+    /**
+     * Get device capabilities as DTO.
+     */
+    public function getCapabilitiesDTO(): ?DeviceCapabilities
+    {
+        if (!$this->capabilities) {
+            return null;
+        }
+
+        try {
+            return DeviceCapabilities::fromArray($this->capabilities);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Get sensor by ID from capabilities.
+     */
+    public function getSensorById(string $sensorId): ?SensorCapability
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto?->getSensorById($sensorId);
+    }
+
+    /**
+     * Get actuator by ID from capabilities.
+     */
+    public function getActuatorById(string $actuatorId): ?ActuatorCapability
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto?->getActuatorById($actuatorId);
+    }
+
+    /**
+     * Get sensors by category.
+     */
+    public function getSensorsByCategory(string $category): array
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto ? $dto->getSensorsByCategory($category) : [];
+    }
+
+    /**
+     * Get actuators by category.
+     */
+    public function getActuatorsByCategory(string $category): array
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto ? $dto->getActuatorsByCategory($category) : [];
+    }
+
+    /**
+     * Get all categories from capabilities.
+     */
+    public function getAllCategories(): array
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto ? $dto->getAllCategories() : [];
+    }
+
+    /**
+     * Get critical sensors.
+     */
+    public function getCriticalSensors(): array
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto ? $dto->getCriticalSensors() : [];
+    }
+
+    /**
+     * Get critical actuators.
+     */
+    public function getCriticalActuators(): array
+    {
+        $dto = $this->getCapabilitiesDTO();
+        return $dto ? $dto->getCriticalActuators() : [];
+    }
+
+    /**
+     * Validate telemetry reading against sensor capabilities.
+     */
+    public function validateTelemetryReading(string $sensorKey, mixed $value, ?string $unit = null): bool
+    {
+        $sensor = $this->getSensorById($sensorKey);
+        
+        if (!$sensor) {
+            return false; // Sensor not in capabilities
+        }
+        
+        if (!$sensor->validateValue($value)) {
+            return false; // Value validation failed
+        }
+        
+        if ($unit !== null && $unit !== $sensor->unit) {
+            return false; // Unit mismatch
+        }
+        
+        return true;
+    }
+
+    /**
+     * Validate command params against actuator capabilities.
+     */
+    public function validateCommandParams(string $actuatorId, array $params): array
+    {
+        $actuator = $this->getActuatorById($actuatorId);
+        
+        if (!$actuator) {
+            return ['actuator' => 'Actuator not found in device capabilities'];
+        }
+        
+        return $actuator->validateParams($params);
     }
 }

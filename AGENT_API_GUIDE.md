@@ -152,6 +152,8 @@ Content-Type: application/json
 
 ### Update Capabilities
 
+**Complete Capabilities Schema:**
+
 ```http
 POST /api/growdash/agent/capabilities
 X-Device-ID: <public_id>
@@ -160,12 +162,136 @@ Content-Type: application/json
 
 {
   "capabilities": {
-    "board_name": "arduino_uno",
-    "sensors": ["water_level", "tds", "temperature", "ph"],
-    "actuators": ["spray_pump", "fill_valve", "led_grow"]
+    "board": {
+      "id": "arduino_uno",
+      "vendor": "Arduino",
+      "model": "UNO R3",
+      "connection": "serial",
+      "firmware": "growdash-unified-v1.0.0"
+    },
+    "sensors": [
+      {
+        "id": "water_level",
+        "display_name": "Water Level",
+        "category": "environment",
+        "unit": "%",
+        "value_type": "float",
+        "range": [0, 100],
+        "min_interval": 10,
+        "critical": true
+      },
+      {
+        "id": "tds",
+        "display_name": "TDS",
+        "category": "nutrients",
+        "unit": "ppm",
+        "value_type": "int",
+        "range": null,
+        "min_interval": 60,
+        "critical": false
+      },
+      {
+        "id": "temperature",
+        "display_name": "Temperature",
+        "category": "environment",
+        "unit": "°C",
+        "value_type": "float",
+        "range": [-10, 50],
+        "min_interval": 30,
+        "critical": true
+      }
+    ],
+    "actuators": [
+      {
+        "id": "spray_pump",
+        "display_name": "Spray Pump",
+        "category": "irrigation",
+        "command_type": "duration",
+        "params": [
+          {
+            "name": "seconds",
+            "type": "int",
+            "min": 1,
+            "max": 120
+          }
+        ],
+        "min_interval": 30,
+        "critical": true
+      },
+      {
+        "id": "fill_valve",
+        "display_name": "Fill Valve",
+        "category": "irrigation",
+        "command_type": "target",
+        "params": [
+          {
+            "name": "target_level",
+            "type": "float",
+            "min": 0,
+            "max": 100,
+            "unit": "%"
+          }
+        ],
+        "min_interval": 60,
+        "critical": true
+      },
+      {
+        "id": "led_grow",
+        "display_name": "Grow Light",
+        "category": "lighting",
+        "command_type": "toggle",
+        "params": [
+          {
+            "name": "state",
+            "type": "bool"
+          },
+          {
+            "name": "brightness",
+            "type": "int",
+            "min": 0,
+            "max": 100,
+            "unit": "%"
+          }
+        ],
+        "min_interval": 5,
+        "critical": false
+      }
+    ]
   }
 }
 ```
+
+**Capabilities Field Definitions:**
+
+**Board:**
+- `id`: Unique board identifier (matches BoardType.id in database)
+- `vendor`: Manufacturer name (Arduino, Espressif, etc.)
+- `model`: Board model name
+- `connection`: Connection type (serial, wifi, ethernet, bluetooth)
+- `firmware`: Firmware version string
+
+**Sensors:**
+- `id`: Unique sensor identifier (used in telemetry as `sensor_key`)
+- `display_name`: Human-readable name for UI
+- `category`: Grouping category (environment, nutrients, lighting, irrigation, system, custom)
+- `unit`: Measurement unit (%, ppm, °C, etc.)
+- `value_type`: Data type (float, int, string, bool)
+- `range`: Optional [min, max] array for value validation
+- `min_interval`: Minimum seconds between readings (agent-enforced)
+- `critical`: If true, prioritize for alerts and dashboards
+
+**Actuators:**
+- `id`: Unique actuator identifier (used as command `type`)
+- `display_name`: Human-readable name for UI
+- `category`: Grouping category (same as sensors)
+- `command_type`: Command style (toggle, duration, target, custom)
+- `params`: Array of parameter definitions
+  - `name`: Parameter key
+  - `type`: Data type (int, float, string, bool)
+  - `min`/`max`: Optional range constraints
+  - `unit`: Optional unit label
+- `min_interval`: Minimum seconds between commands (agent-enforced)
+- `critical`: If true, highlight in UI
 
 **Response (200):**
 
@@ -174,11 +300,10 @@ Content-Type: application/json
     "success": true,
     "message": "Device capabilities updated",
     "board_type": "arduino_uno",
-    "capabilities": {
-        "board_name": "arduino_uno",
-        "sensors": ["water_level", "tds", "temperature", "ph"],
-        "actuators": ["spray_pump", "fill_valve", "led_grow"]
-    }
+    "capabilities": { /* full schema echoed back */ },
+    "sensor_count": 3,
+    "actuator_count": 3,
+    "categories": ["environment", "nutrients", "irrigation", "lighting"]
 }
 ```
 

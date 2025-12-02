@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTOs\DeviceCapabilities;
 use App\Events\CommandStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Command;
@@ -109,6 +110,43 @@ class CommandController extends Controller
                     'message' => 'Device is not online',
                     'device_status' => $device->status,
                 ], 400);
+            }
+
+            // Validate command type and params against device capabilities
+            if ($device->capabilities) {
+                try {
+                    $capabilitiesDTO = DeviceCapabilities::fromArray($device->capabilities);
+                    $actuator = $capabilitiesDTO->getActuatorById($validated['type']);
+
+                    if (!$actuator) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Unknown actuator: {$validated['type']}",
+                            'available_actuators' => array_map(
+                                fn($a) => $a->id,
+                                $capabilitiesDTO->actuators
+                            ),
+                        ], 422);
+                    }
+
+                    // Validate params against actuator spec
+                    $providedParams = $validated['params'] ?? [];
+                    $paramErrors = $actuator->validateParams($providedParams);
+
+                    if (!empty($paramErrors)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Invalid command parameters',
+                            'errors' => $paramErrors,
+                        ], 422);
+                    }
+                } catch (\Exception $e) {
+                    // If capabilities validation fails, continue without it
+                    Log::warning('Failed to validate command against capabilities', [
+                        'device_id' => $device->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // Create command

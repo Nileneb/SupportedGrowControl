@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTOs\DeviceCapabilities;
 use App\Events\DeviceCapabilitiesUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
@@ -15,12 +16,41 @@ class DeviceManagementController extends Controller
      * Update device capabilities (sensors/actuators)
      * POST /api/growdash/agent/capabilities
      *
-     * Expected payload:
+     * Expected payload (complete schema):
      * {
      *   "capabilities": {
-     *     "board_name": "arduino_uno",
-     *     "sensors": ["water_level", "tds", "temperature"],
-     *     "actuators": ["spray_pump", "fill_valve"]
+     *     "board": {
+     *       "id": "arduino_uno",
+     *       "vendor": "Arduino",
+     *       "model": "UNO R3",
+     *       "connection": "serial",
+     *       "firmware": "growdash-unified-v1.0.0"
+     *     },
+     *     "sensors": [
+     *       {
+     *         "id": "water_level",
+     *         "display_name": "Water Level",
+     *         "category": "environment",
+     *         "unit": "%",
+     *         "value_type": "float",
+     *         "range": [0, 100],
+     *         "min_interval": 10,
+     *         "critical": true
+     *       }
+     *     ],
+     *     "actuators": [
+     *       {
+     *         "id": "spray_pump",
+     *         "display_name": "Spray Pump",
+     *         "category": "irrigation",
+     *         "command_type": "duration",
+     *         "params": [
+     *           { "name": "seconds", "type": "int", "min": 1, "max": 120 }
+     *         ],
+     *         "min_interval": 30,
+     *         "critical": true
+     *       }
+     *     ]
      *   }
      * }
      */
@@ -31,9 +61,41 @@ class DeviceManagementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'capabilities' => 'required|array',
-            'capabilities.board_name' => 'nullable|string|max:50',
+            
+            // Board validation
+            'capabilities.board' => 'nullable|array',
+            'capabilities.board.id' => 'required_with:capabilities.board|string|max:50',
+            'capabilities.board.vendor' => 'nullable|string|max:100',
+            'capabilities.board.model' => 'nullable|string|max:100',
+            'capabilities.board.connection' => 'nullable|string|in:serial,wifi,ethernet,bluetooth',
+            'capabilities.board.firmware' => 'nullable|string|max:100',
+            
+            // Sensors validation
             'capabilities.sensors' => 'nullable|array',
+            'capabilities.sensors.*.id' => 'required|string|max:50',
+            'capabilities.sensors.*.display_name' => 'required|string|max:100',
+            'capabilities.sensors.*.category' => 'required|string|in:environment,nutrients,lighting,irrigation,system,custom',
+            'capabilities.sensors.*.unit' => 'required|string|max:20',
+            'capabilities.sensors.*.value_type' => 'required|string|in:float,int,string,bool',
+            'capabilities.sensors.*.range' => 'nullable|array|size:2',
+            'capabilities.sensors.*.range.*' => 'nullable|numeric',
+            'capabilities.sensors.*.min_interval' => 'nullable|integer|min:1',
+            'capabilities.sensors.*.critical' => 'boolean',
+            
+            // Actuators validation
             'capabilities.actuators' => 'nullable|array',
+            'capabilities.actuators.*.id' => 'required|string|max:50',
+            'capabilities.actuators.*.display_name' => 'required|string|max:100',
+            'capabilities.actuators.*.category' => 'required|string|in:environment,nutrients,lighting,irrigation,system,custom',
+            'capabilities.actuators.*.command_type' => 'required|string|in:toggle,duration,target,custom',
+            'capabilities.actuators.*.params' => 'nullable|array',
+            'capabilities.actuators.*.params.*.name' => 'required|string|max:50',
+            'capabilities.actuators.*.params.*.type' => 'required|string|in:int,float,string,bool',
+            'capabilities.actuators.*.params.*.min' => 'nullable|numeric',
+            'capabilities.actuators.*.params.*.max' => 'nullable|numeric',
+            'capabilities.actuators.*.params.*.unit' => 'nullable|string|max:20',
+            'capabilities.actuators.*.min_interval' => 'nullable|integer|min:1',
+            'capabilities.actuators.*.critical' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -43,13 +105,24 @@ class DeviceManagementController extends Controller
             ], 422);
         }
 
+        // Create DTO to validate structure
+        try {
+            $capabilitiesDTO = DeviceCapabilities::fromArray($request->input('capabilities'));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Invalid capabilities structure',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
         $updateData = [
             'capabilities' => $request->input('capabilities'),
         ];
 
-        // Extract board_name from capabilities and store in dedicated column
-        if ($request->input('capabilities.board_name')) {
-            $updateData['board_type'] = $request->input('capabilities.board_name');
+        // Extract board ID and store in board_type column
+        if (isset($request->input('capabilities')['board']['id'])) {
+            $updateData['board_type'] = $request->input('capabilities')['board']['id'];
         }
 
         $device->update($updateData);
@@ -62,6 +135,9 @@ class DeviceManagementController extends Controller
             'message' => 'Device capabilities updated',
             'board_type' => $device->board_type,
             'capabilities' => $device->capabilities,
+            'sensor_count' => count($capabilitiesDTO->sensors),
+            'actuator_count' => count($capabilitiesDTO->actuators),
+            'categories' => $capabilitiesDTO->getAllCategories(),
         ]);
     }
 
