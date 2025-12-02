@@ -580,12 +580,14 @@ Arduino-Logs.
 
 ### 📋 Phase 12: Agent-API Controller implementieren
 
--   [ ] TelemetryController: store() für /api/growdash/agent/telemetry
--   [ ] CommandController: pending() für /api/growdash/agent/commands/pending
--   [ ] CommandController: result() für /api/growdash/agent/commands/{id}/result
--   [ ] DeviceManagementController: updateCapabilities(), heartbeat()
--   [ ] LogController: store() für /api/growdash/agent/logs
--   [ ] API Routes aktivieren (aktuell auskommentiert)
+-   [x] TelemetryController: store() für /api/growdash/agent/telemetry
+-   [x] CommandController: pending() für /api/growdash/agent/commands/pending
+-   [x] CommandController: result() für /api/growdash/agent/commands/{id}/result
+-   [x] CommandController: send() & history() für User-Commands
+-   [x] DeviceManagementController: updateCapabilities() mit board_name Support
+-   [x] DeviceManagementController: heartbeat() für last_seen_at Updates
+-   [x] LogController: store() für /api/growdash/agent/logs
+-   [x] API Routes vollständig aktiviert und getestet
 
 ### 📋 Phase 13: Data Migration & Cleanup
 
@@ -624,9 +626,9 @@ Arduino-Logs.
 ## Offene Punkte
 
 1. **Reverb Installation**: ⚠️ `php artisan reverb:install` hängt - manuell publishen oder fix
-2. **Agent-API Controller**: TelemetryController, CommandController, DeviceManagementController implementieren
-3. **Frontend**: Livewire Components für Device-List, Pairing-UI, Dashboard
-4. **WebSocket Events**: DeviceStatusUpdated, CommandCreated, TelemetryReceived
+2. **Frontend**: Livewire Command Console, Telemetrie-Charts, Real-Time-Updates
+3. **WebSocket Events**: DeviceStatusUpdated, CommandCreated, TelemetryReceived Integration
+4. **BoardType-UI**: Board-Auswahl im Device-Detail, Firmware-Update-Flow
 
 ---
 
@@ -654,7 +656,8 @@ Arduino-Logs.
 
 ---
 
-**Projekt-Status**: 🚀 **Phase 11 abgeschlossen** - Bootstrap/Pairing/Agent-Auth implementiert, Multi-Tenant-Policies aktiv  
-**Nächste Phase**: Phase 12 - Agent-API Controller (Telemetry, Commands, Logs)  
+**Projekt-Status**: 🚀 **Phase 12 abgeschlossen** - Agent-API vollständig implementiert, Board-Automation vorbereitet, Multi-Tenant-Tests aktiv  
+**Nächste Phase**: Phase 13 - Data Migration & Frontend-Integration (Livewire Charts, WebSockets)  
 **Production-Deployment**: ✅ Docker Compose ready (Port 6480, isoliertes Netzwerk, Nginx mit gzip)  
-**Letzte Aktualisierung**: 2025-12-01 18:30
+**Agent-Integration**: ✅ Alle Endpoints aktiv (Telemetrie, Commands, Capabilities, Heartbeat, Logs)  
+**Letzte Aktualisierung**: 2025-12-02 03:10
