@@ -87,8 +87,9 @@ composer install --optimize-autoloader --no-dev
 ```
 
 **Flags erklärt:**
-- `--optimize-autoloader`: Erstellt optimierte Autoload-Klassen
-- `--no-dev`: Installiert keine Development-Dependencies
+
+-   `--optimize-autoloader`: Erstellt optimierte Autoload-Klassen
+-   `--no-dev`: Installiert keine Development-Dependencies
 
 ### 4. Node.js Dependencies installieren
 
@@ -109,11 +110,13 @@ npm run build
 ```
 
 **Was passiert:**
-- Vite kompiliert `resources/js/app.js` + `resources/css/app.css`
-- Output: `public/build/` mit optimierten Assets
-- Manifest wird erstellt für Asset-Versioning
+
+-   Vite kompiliert `resources/js/app.js` + `resources/css/app.css`
+-   Output: `public/build/` mit optimierten Assets
+-   Manifest wird erstellt für Asset-Versioning
 
 **Erwartete Ausgabe:**
+
 ```
 vite v7.0.6 building for production...
 ✓ 42 modules transformed.
@@ -155,9 +158,10 @@ php artisan event:cache
 ```
 
 **Was wird gecacht:**
-- `bootstrap/cache/config.php` - Alle Configs
-- `bootstrap/cache/routes-v7.php` - Alle Routes
-- `storage/framework/views/` - Compilierte Blade-Templates
+
+-   `bootstrap/cache/config.php` - Alle Configs
+-   `bootstrap/cache/routes-v7.php` - Alle Routes
+-   `storage/framework/views/` - Compilierte Blade-Templates
 
 ### 3. Storage Link erstellen
 
@@ -244,7 +248,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name yourdomain.com www.yourdomain.com;
-    
+
     # Redirect to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -490,16 +494,19 @@ tail -n 50 storage/logs/laravel.log
 ### WebSocket nicht verbunden
 
 **Check 1: Reverb läuft?**
+
 ```bash
 sudo supervisorctl status growdash-reverb:*
 ```
 
 **Check 2: Nginx Proxy korrekt?**
+
 ```bash
 curl -I http://127.0.0.1:8080/app/zkzj14faofpwi4hhad9w
 ```
 
 **Check 3: Firewall offen?**
+
 ```bash
 sudo ufw status | grep 8080
 ```
@@ -585,29 +592,33 @@ REDIS_PORT=6379
 ## Zusammenfassung: Production Checklist
 
 **VOR dem Build:**
-- ✅ Git pull/clone
-- ✅ .env konfigurieren (Production-Werte!)
-- ✅ `composer install --optimize-autoloader --no-dev`
-- ✅ `npm ci`
+
+-   ✅ Git pull/clone
+-   ✅ .env konfigurieren (Production-Werte!)
+-   ✅ `composer install --optimize-autoloader --no-dev`
+-   ✅ `npm ci`
 
 **Build:**
-- ✅ `npm run build`
+
+-   ✅ `npm run build`
 
 **NACH dem Build:**
-- ✅ `php artisan migrate --force`
-- ✅ `php artisan config:cache`
-- ✅ `php artisan route:cache`
-- ✅ `php artisan view:cache`
-- ✅ `php artisan storage:link`
-- ✅ Permissions: `chmod -R 775 storage bootstrap/cache`
-- ✅ Supervisor: Reverb + Queue Worker
-- ✅ Nginx/Apache konfigurieren
-- ✅ SSL Zertifikat (Let's Encrypt)
-- ✅ Firewall (UFW)
+
+-   ✅ `php artisan migrate --force`
+-   ✅ `php artisan config:cache`
+-   ✅ `php artisan route:cache`
+-   ✅ `php artisan view:cache`
+-   ✅ `php artisan storage:link`
+-   ✅ Permissions: `chmod -R 775 storage bootstrap/cache`
+-   ✅ Supervisor: Reverb + Queue Worker
+-   ✅ Nginx/Apache konfigurieren
+-   ✅ SSL Zertifikat (Let's Encrypt)
+-   ✅ Firewall (UFW)
 
 **Bei jedem Update:**
-- ✅ `./deploy.sh` ausführen
-- ✅ Logs prüfen
-- ✅ Health Checks
+
+-   ✅ `./deploy.sh` ausführen
+-   ✅ Logs prüfen
+-   ✅ Health Checks
 
 🚀 **Production ist bereit!**
