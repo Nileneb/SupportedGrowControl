@@ -61,7 +61,7 @@ class DeviceManagementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'capabilities' => 'required|array',
-            
+
             // Board validation
             'capabilities.board' => 'nullable|array',
             'capabilities.board.id' => 'required_with:capabilities.board|string|max:50',
@@ -69,7 +69,7 @@ class DeviceManagementController extends Controller
             'capabilities.board.model' => 'nullable|string|max:100',
             'capabilities.board.connection' => 'nullable|string|in:serial,wifi,ethernet,bluetooth',
             'capabilities.board.firmware' => 'nullable|string|max:100',
-            
+
             // Sensors validation
             'capabilities.sensors' => 'nullable|array',
             'capabilities.sensors.*.id' => 'required|string|max:50',
@@ -81,7 +81,7 @@ class DeviceManagementController extends Controller
             'capabilities.sensors.*.range.*' => 'nullable|numeric',
             'capabilities.sensors.*.min_interval' => 'nullable|integer|min:1',
             'capabilities.sensors.*.critical' => 'boolean',
-            
+
             // Actuators validation
             'capabilities.actuators' => 'nullable|array',
             'capabilities.actuators.*.id' => 'required|string|max:50',

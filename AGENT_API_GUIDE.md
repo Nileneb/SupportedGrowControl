@@ -264,34 +264,37 @@ Content-Type: application/json
 **Capabilities Field Definitions:**
 
 **Board:**
-- `id`: Unique board identifier (matches BoardType.id in database)
-- `vendor`: Manufacturer name (Arduino, Espressif, etc.)
-- `model`: Board model name
-- `connection`: Connection type (serial, wifi, ethernet, bluetooth)
-- `firmware`: Firmware version string
+
+-   `id`: Unique board identifier (matches BoardType.id in database)
+-   `vendor`: Manufacturer name (Arduino, Espressif, etc.)
+-   `model`: Board model name
+-   `connection`: Connection type (serial, wifi, ethernet, bluetooth)
+-   `firmware`: Firmware version string
 
 **Sensors:**
-- `id`: Unique sensor identifier (used in telemetry as `sensor_key`)
-- `display_name`: Human-readable name for UI
-- `category`: Grouping category (environment, nutrients, lighting, irrigation, system, custom)
-- `unit`: Measurement unit (%, ppm, °C, etc.)
-- `value_type`: Data type (float, int, string, bool)
-- `range`: Optional [min, max] array for value validation
-- `min_interval`: Minimum seconds between readings (agent-enforced)
-- `critical`: If true, prioritize for alerts and dashboards
+
+-   `id`: Unique sensor identifier (used in telemetry as `sensor_key`)
+-   `display_name`: Human-readable name for UI
+-   `category`: Grouping category (environment, nutrients, lighting, irrigation, system, custom)
+-   `unit`: Measurement unit (%, ppm, °C, etc.)
+-   `value_type`: Data type (float, int, string, bool)
+-   `range`: Optional [min, max] array for value validation
+-   `min_interval`: Minimum seconds between readings (agent-enforced)
+-   `critical`: If true, prioritize for alerts and dashboards
 
 **Actuators:**
-- `id`: Unique actuator identifier (used as command `type`)
-- `display_name`: Human-readable name for UI
-- `category`: Grouping category (same as sensors)
-- `command_type`: Command style (toggle, duration, target, custom)
-- `params`: Array of parameter definitions
-  - `name`: Parameter key
-  - `type`: Data type (int, float, string, bool)
-  - `min`/`max`: Optional range constraints
-  - `unit`: Optional unit label
-- `min_interval`: Minimum seconds between commands (agent-enforced)
-- `critical`: If true, highlight in UI
+
+-   `id`: Unique actuator identifier (used as command `type`)
+-   `display_name`: Human-readable name for UI
+-   `category`: Grouping category (same as sensors)
+-   `command_type`: Command style (toggle, duration, target, custom)
+-   `params`: Array of parameter definitions
+    -   `name`: Parameter key
+    -   `type`: Data type (int, float, string, bool)
+    -   `min`/`max`: Optional range constraints
+    -   `unit`: Optional unit label
+-   `min_interval`: Minimum seconds between commands (agent-enforced)
+-   `critical`: If true, highlight in UI
 
 **Response (200):**
 
@@ -300,7 +303,9 @@ Content-Type: application/json
     "success": true,
     "message": "Device capabilities updated",
     "board_type": "arduino_uno",
-    "capabilities": { /* full schema echoed back */ },
+    "capabilities": {
+        /* full schema echoed back */
+    },
     "sensor_count": 3,
     "actuator_count": 3,
     "categories": ["environment", "nutrients", "irrigation", "lighting"]

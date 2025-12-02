@@ -73,11 +73,11 @@ class TelemetryController extends Controller
 
         foreach ($readings as $reading) {
             $sensorKey = $reading['sensor_key'];
-            
+
             // Validate sensor exists in capabilities (if available)
             if ($capabilitiesDTO) {
                 $sensor = $capabilitiesDTO->getSensorById($sensorKey);
-                
+
                 if (!$sensor) {
                     $skipped[] = [
                         'sensor_key' => $sensorKey,
@@ -85,7 +85,7 @@ class TelemetryController extends Controller
                     ];
                     continue;
                 }
-                
+
                 // Validate value against sensor spec
                 if (!$sensor->validateValue($reading['value'])) {
                     $skipped[] = [
@@ -94,7 +94,7 @@ class TelemetryController extends Controller
                     ];
                     continue;
                 }
-                
+
                 // Validate unit matches
                 if (isset($reading['unit']) && $reading['unit'] !== $sensor->unit) {
                     $skipped[] = [
@@ -115,7 +115,7 @@ class TelemetryController extends Controller
             ]);
 
             $inserted[] = $telemetry->id;
-            
+
             // Update last_state cache
             $lastStateUpdates[$sensorKey] = [
                 'value' => $reading['value'],

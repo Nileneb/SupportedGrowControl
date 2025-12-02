@@ -22,7 +22,7 @@ class Commands extends Component
     public function mount(Device $device)
     {
         $this->device = $device;
-        
+
         if ($device->capabilities) {
             try {
                 $this->capabilities = DeviceCapabilities::fromArray($device->capabilities);
@@ -117,7 +117,7 @@ class Commands extends Component
     public function render()
     {
         $actuatorsByCategory = [];
-        
+
         if ($this->capabilities) {
             foreach ($this->categories as $category) {
                 $actuatorsByCategory[$category] = $this->capabilities->getActuatorsByCategory($category);

@@ -32,13 +32,13 @@ class SensorCapability(BaseModel):
             return False
         if self.value_type == "int" and not isinstance(value, int):
             return False
-        
+
         # Range validation
         if self.range is not None:
             min_val, max_val = self.range
             if value < min_val or value > max_val:
                 return False
-        
+
         return True
 
 class ActuatorParam(BaseModel):
@@ -59,14 +59,14 @@ class ActuatorParam(BaseModel):
             return False
         if self.type == "bool" and not isinstance(value, bool):
             return False
-        
+
         # Range validation for numeric types
         if self.type in ["int", "float"]:
             if self.min is not None and value < self.min:
                 return False
             if self.max is not None and value > self.max:
                 return False
-        
+
         return True
 
 class ActuatorCapability(BaseModel):
@@ -80,18 +80,18 @@ class ActuatorCapability(BaseModel):
 
     def validate_params(self, provided_params: dict) -> dict:
         """Validate command params against actuator spec
-        
+
         Returns:
             dict: Empty if valid, otherwise error messages keyed by param name
         """
         errors = {}
-        
+
         for param_def in self.params:
             if param_def.name not in provided_params:
                 errors[param_def.name] = f"Missing required parameter: {param_def.name}"
             elif not param_def.validate_value(provided_params[param_def.name]):
                 errors[param_def.name] = f"Invalid value for parameter: {param_def.name}"
-        
+
         return errors
 
 class DeviceCapabilities(BaseModel):
@@ -209,7 +209,7 @@ class HardwareAgent:
     def send_capabilities(self):
         """Send capabilities to Laravel backend"""
         self.capabilities = self.build_capabilities()
-        
+
         response = requests.post(
             f"{self.base_url}/api/growdash/agent/capabilities",
             headers={
@@ -226,33 +226,33 @@ class HardwareAgent:
         """Collect telemetry from hardware and send to backend"""
         if not self.capabilities:
             return
-        
+
         now = time.time()
         readings = []
-        
+
         for sensor in self.capabilities.sensors:
             # Check min_interval
             last_sent = self.last_sent_at.get(sensor.id, 0)
             if sensor.min_interval and (now - last_sent) < sensor.min_interval:
                 continue
-            
+
             # Read sensor value (implement per your hardware)
             value = self.read_sensor(sensor.id)
-            
+
             # Validate value
             if not sensor.validate_value(value):
                 print(f"Invalid value {value} for sensor {sensor.id}")
                 continue
-            
+
             readings.append({
                 "sensor_key": sensor.id,
                 "value": value,
                 "unit": sensor.unit,
                 "measured_at": datetime.utcnow().isoformat() + "Z"
             })
-            
+
             self.last_sent_at[sensor.id] = now
-        
+
         if readings:
             response = requests.post(
                 f"{self.base_url}/api/growdash/agent/telemetry",
@@ -275,29 +275,29 @@ class HardwareAgent:
             }
         )
         response.raise_for_status()
-        
+
         commands = response.json()["commands"]
-        
+
         for cmd in commands:
             actuator = self.capabilities.get_actuator_by_id(cmd["type"])
-            
+
             if not actuator:
                 self.report_command_result(cmd["id"], "failed", f"Unknown actuator: {cmd['type']}")
                 continue
-            
+
             # Validate params
             param_errors = actuator.validate_params(cmd["params"])
             if param_errors:
                 self.report_command_result(cmd["id"], "failed", f"Invalid params: {param_errors}")
                 continue
-            
+
             # Check min_interval
             now = time.time()
             last_cmd = self.last_command_at.get(actuator.id, 0)
             if actuator.min_interval and (now - last_cmd) < actuator.min_interval:
                 self.report_command_result(cmd["id"], "failed", "Min interval not elapsed")
                 continue
-            
+
             # Execute command
             try:
                 self.report_command_result(cmd["id"], "executing", "Starting execution")
@@ -336,18 +336,18 @@ class HardwareAgent:
         """Main agent loop"""
         # Send capabilities once on startup
         self.send_capabilities()
-        
+
         while True:
             try:
                 # Send telemetry (every 10s, min_interval enforced per sensor)
                 self.collect_and_send_telemetry()
-                
+
                 # Poll commands (every 5s)
                 self.poll_and_execute_commands()
-                
+
                 # Heartbeat (every 30s, tracked separately)
                 # ...
-                
+
                 time.sleep(5)
             except Exception as e:
                 print(f"Error in main loop: {e}")

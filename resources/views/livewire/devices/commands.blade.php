@@ -62,8 +62,8 @@
                                         </flux:label>
 
                                         @if ($param->type === 'int' || $param->type === 'float')
-                                            <flux:input 
-                                                type="number" 
+                                            <flux:input
+                                                type="number"
                                                 wire:model="commandParams.{{ $param->name }}"
                                                 min="{{ $param->min }}"
                                                 max="{{ $param->max }}"
@@ -75,8 +75,8 @@
                                         @elseif ($param->type === 'bool')
                                             <flux:checkbox wire:model="commandParams.{{ $param->name }}" />
                                         @else
-                                            <flux:input 
-                                                type="text" 
+                                            <flux:input
+                                                type="text"
                                                 wire:model="commandParams.{{ $param->name }}"
                                             />
                                         @endif
@@ -84,8 +84,8 @@
                                 @endforeach
 
                                 <div class="flex gap-2 mt-4">
-                                    <flux:button 
-                                        variant="primary" 
+                                    <flux:button
+                                        variant="primary"
                                         wire:click="sendCommand"
                                         :disabled="$device->status !== 'online'"
                                     >
@@ -102,8 +102,8 @@
                             </div>
                         @else
                             {{-- Quick Action Button --}}
-                            <flux:button 
-                                class="mt-3" 
+                            <flux:button
+                                class="mt-3"
                                 wire:click="selectActuator('{{ $actuator->id }}')"
                                 :disabled="$device->status !== 'online'"
                             >

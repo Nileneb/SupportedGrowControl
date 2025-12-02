@@ -379,19 +379,19 @@ class Device extends Model
     public function validateTelemetryReading(string $sensorKey, mixed $value, ?string $unit = null): bool
     {
         $sensor = $this->getSensorById($sensorKey);
-        
+
         if (!$sensor) {
             return false; // Sensor not in capabilities
         }
-        
+
         if (!$sensor->validateValue($value)) {
             return false; // Value validation failed
         }
-        
+
         if ($unit !== null && $unit !== $sensor->unit) {
             return false; // Unit mismatch
         }
-        
+
         return true;
     }
 
@@ -401,11 +401,11 @@ class Device extends Model
     public function validateCommandParams(string $actuatorId, array $params): array
     {
         $actuator = $this->getActuatorById($actuatorId);
-        
+
         if (!$actuator) {
             return ['actuator' => 'Actuator not found in device capabilities'];
         }
-        
+
         return $actuator->validateParams($params);
     }
 }
