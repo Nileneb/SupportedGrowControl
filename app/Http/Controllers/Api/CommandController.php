@@ -76,6 +76,12 @@ class CommandController extends Controller
                 : null,
         ]);
 
+        Log::info('Command status updated', [
+            'command_id' => $command->id,
+            'device_id' => $device->id,
+            'status' => $request->input('status'),
+        ]);
+
         // Broadcast WebSocket event
         broadcast(new CommandStatusUpdated($command));
 
@@ -199,6 +205,13 @@ class CommandController extends Controller
                 'type' => $validated['type'],
                 'params' => $validated['params'] ?? [],
                 'status' => 'pending',
+            ]);
+
+            Log::info('Command created', [
+                'command_id' => $command->id,
+                'device_id' => $device->id,
+                'type' => $command->type,
+                'created_by' => Auth::id(),
             ]);
 
             return response()->json([
