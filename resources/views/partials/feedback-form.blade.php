@@ -6,7 +6,7 @@
 
 <flux:card>
     <flux:heading size="md" class="mb-4">Quick Feedback</flux:heading>
-    
+
     <form method="POST" action="{{ route('feedback.store') }}" class="space-y-4">
         @csrf
 

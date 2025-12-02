@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->json('meta')->nullable();     // optional: browser, device_id, board_type, etc.
 
             $table->timestamps();
-            
+
             $table->index('user_id');
             $table->index('context');
             $table->index('created_at');
