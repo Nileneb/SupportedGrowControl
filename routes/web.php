@@ -32,6 +32,11 @@ Route::middleware(['auth', 'verified'])->prefix('devices')->group(function () {
     Route::post('/{device}/shelly/control', [ShellySyncController::class, 'control'])->name('devices.shelly.control');
 });
 
+// Shelly Devices Management
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/shelly', App\Livewire\Shelly\Index::class)->name('shelly.index');
+});
+
 // API command endpoints using session auth (web guard) to allow Blade console without Sanctum token
 Route::middleware(['auth'])->prefix('api/growdash/devices')->group(function () {
     Route::post('/{device}/commands', [CommandController::class, 'send']);

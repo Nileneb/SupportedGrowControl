@@ -168,7 +168,7 @@ Route::post('/devices/{device}/refresh-capabilities', function (Request $request
 // ==================== Legacy Webhook Endpoints ====================
 
 // Shelly device webhooks (public endpoint with token authentication)
-Route::post('/shelly/webhook/{public_id}', [ShellyWebhookController::class, 'handle'])
+Route::post('/shelly/webhook/{shelly}', [ShellyWebhookController::class, 'handle'])
     ->name('api.shelly.webhook');
 
 // Protected webhook endpoints (require X-Growdash-Token header)

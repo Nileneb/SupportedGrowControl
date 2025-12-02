@@ -28,7 +28,7 @@ class AddActuator extends Component
     public function mount(Device $device): void
     {
         $this->device = $device;
-        $this->actuatorTypes = ActuatorType::orderBy('category')->orderBy('display_name')->get();
+        $this->actuatorTypes = ActuatorType::orderBy('category')->orderBy('name')->get();
     }
 
     public function selectActuatorType(string $actuatorTypeId): void

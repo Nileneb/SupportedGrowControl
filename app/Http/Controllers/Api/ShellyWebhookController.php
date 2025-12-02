@@ -14,7 +14,7 @@ class ShellyWebhookController extends Controller
     /**
      * Handle incoming Shelly webhook.
      * 
-     * Endpoint: POST /api/shelly/webhook/{public_id}
+     * Endpoint: POST /api/shelly/webhook/{shelly_id}
      * 
      * Expected payload from Shelly device:
      * {
@@ -28,40 +28,28 @@ class ShellyWebhookController extends Controller
      *   "overtemperature": false
      * }
      */
-    public function handle(Request $request, string $publicId): JsonResponse
+    public function handle(Request $request, int $shellyId): JsonResponse
     {
-        // Find device by public_id
-        $device = Device::findByPublicId($publicId);
+        // Find Shelly device by ID
+        $shelly = \App\Models\ShellyDevice::find($shellyId);
 
-        if (!$device) {
+        if (!$shelly) {
             Log::warning('Shelly webhook: Device not found', [
-                'public_id' => $publicId,
+                'shelly_id' => $shellyId,
                 'ip' => $request->ip(),
             ]);
 
             return response()->json([
-                'error' => 'Device not found',
+                'error' => 'Shelly device not found',
             ], 404);
-        }
-
-        // Check if Shelly integration is configured
-        if (!$device->hasShellyIntegration()) {
-            Log::warning('Shelly webhook: Integration not configured', [
-                'device_id' => $device->id,
-                'public_id' => $publicId,
-            ]);
-
-            return response()->json([
-                'error' => 'Shelly integration not configured for this device',
-            ], 403);
         }
 
         // Verify authentication token from header or query parameter
         $token = $request->header('X-Shelly-Auth-Token') ?? $request->query('token');
 
-        if (!$token || !$device->verifyShellyToken($token)) {
+        if (!$token || !$shelly->verifyToken($token)) {
             Log::warning('Shelly webhook: Invalid authentication token', [
-                'device_id' => $device->id,
+                'shelly_id' => $shellyId,
                 'ip' => $request->ip(),
             ]);
 
@@ -74,38 +62,39 @@ class ShellyWebhookController extends Controller
         $payload = $request->all();
 
         Log::info('Shelly webhook received', [
-            'device_id' => $device->id,
+            'shelly_id' => $shellyId,
             'shelly_device' => $payload['device'] ?? 'unknown',
             'event' => $payload['event'] ?? 'unknown',
             'payload' => $payload,
         ]);
 
-        // Store telemetry readings
-        $this->storeTelemetryReadings($device, $payload);
+        // Store telemetry readings if device is linked
+        if ($shelly->device_id) {
+            $this->storeTelemetryReadings($shelly->device, $payload);
+        }
 
-        // Update device last_seen_at and record webhook timestamp
-        $device->update(['last_seen_at' => now()]);
-        $device->recordShellyWebhook();
+        // Record webhook received
+        $shelly->recordWebhook();
 
-        // Store raw webhook data in shelly_config for debugging
-        $config = $device->shelly_config ?? [];
+        // Store raw webhook data in config for debugging
+        $config = $shelly->config ?? [];
         $config['last_webhook'] = [
             'timestamp' => now()->toIso8601String(),
             'payload' => $payload,
         ];
-        $device->update(['shelly_config' => $config]);
+        $shelly->update(['config' => $config]);
 
         return response()->json([
             'success' => true,
             'message' => 'Webhook processed successfully',
-            'device' => $device->public_id,
+            'shelly_id' => $shellyId,
         ]);
     }
 
     /**
      * Store telemetry readings from Shelly webhook payload.
      */
-    private function storeTelemetryReadings(Device $device, array $payload): void
+    private function storeTelemetryReadings(\App\Models\Device $device, array $payload): void
     {
         $readings = [];
 

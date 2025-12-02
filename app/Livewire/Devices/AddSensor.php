@@ -30,7 +30,7 @@ class AddSensor extends Component
     public function mount(Device $device): void
     {
         $this->device = $device;
-        $this->sensorTypes = SensorType::orderBy('category')->orderBy('display_name')->get();
+        $this->sensorTypes = SensorType::orderBy('category')->orderBy('name')->get();
     }
 
     public function selectSensorType(string $sensorTypeId): void
