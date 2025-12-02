@@ -9,6 +9,7 @@
     "dependencies": {
         "@tailwindcss/vite": "^4.1.11",
         "autoprefixer": "^10.4.20",
+        "axios": "^1.7.9",
         "laravel-echo": "^2.2.6",
         "laravel-vite-plugin": "^2.0",
         "pusher-js": "^8.4.0",
