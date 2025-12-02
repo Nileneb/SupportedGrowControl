@@ -159,17 +159,17 @@ class DeviceManagementController extends Controller
 
     /**
      * Normalize capabilities from simplified agent format to full schema.
-     * 
+     *
      * Accepts:
      * - Simple format: {"board_name": "arduino_uno", "sensors": ["water_level"], "actuators": ["spray_pump"]}
      * - Full format: {"board": {...}, "sensors": [{id, display_name, ...}], "actuators": [{id, display_name, ...}]}
-     * 
+     *
      * Returns normalized full format (or passes through if already full).
      */
     private function normalizeCapabilities(array $capabilities): array
     {
         // Detect simple format (sensors/actuators as string arrays)
-        $hasSensorsAsStrings = isset($capabilities['sensors']) 
+        $hasSensorsAsStrings = isset($capabilities['sensors'])
             && is_array($capabilities['sensors'])
             && !empty($capabilities['sensors'])
             && is_string($capabilities['sensors'][0] ?? null);
@@ -290,7 +290,7 @@ class DeviceManagementController extends Controller
     /**
      * Get device capabilities in agent-ready flat format.
      * GET /api/growdash/agent/capabilities
-     * 
+     *
      * Returns flat structure for agent consumption with channel → pin → type mapping.
      */
     public function getCapabilities(Request $request): JsonResponse

@@ -36,7 +36,7 @@ class AddSensor extends Component
     public function selectSensorType(string $sensorTypeId): void
     {
         $this->selectedSensorTypeId = $sensorTypeId;
-        
+
         // Auto-populate channel_key suggestion
         $sensorType = SensorType::find($sensorTypeId);
         if ($sensorType) {
@@ -58,7 +58,7 @@ class AddSensor extends Component
     public function nextStep(): void
     {
         $this->validate();
-        
+
         if ($this->currentStep === 2) {
             $this->currentStep = 3; // Preview
         }
@@ -82,7 +82,7 @@ class AddSensor extends Component
         $this->device->syncCapabilitiesFromInstances();
 
         session()->flash('success', 'Sensor added successfully');
-        
+
         return $this->redirect(route('devices.show', $this->device), navigate: true);
     }
 

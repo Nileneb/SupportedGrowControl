@@ -34,7 +34,7 @@ class AddActuator extends Component
     public function selectActuatorType(string $actuatorTypeId): void
     {
         $this->selectedActuatorTypeId = $actuatorTypeId;
-        
+
         // Auto-populate channel_key suggestion
         $actuatorType = ActuatorType::find($actuatorTypeId);
         if ($actuatorType) {
@@ -55,7 +55,7 @@ class AddActuator extends Component
     public function nextStep(): void
     {
         $this->validate();
-        
+
         if ($this->currentStep === 2) {
             $this->currentStep = 3; // Preview
         }
@@ -78,7 +78,7 @@ class AddActuator extends Component
         $this->device->syncCapabilitiesFromInstances();
 
         session()->flash('success', 'Actuator added successfully');
-        
+
         return $this->redirect(route('devices.show', $this->device), navigate: true);
     }
 

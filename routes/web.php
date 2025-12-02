@@ -18,7 +18,7 @@ Route::middleware(['auth', 'verified'])->prefix('devices')->group(function () {
     Route::get('/', App\Livewire\Devices\Index::class)->name('devices.index');
     Volt::route('/pair', 'devices.pair')->name('devices.pair');
     Route::get('/{device}', [DeviceViewController::class, 'show'])->name('devices.show');
-    
+
     // Sensor/Actuator management wizards
     Route::get('/{device}/sensors/add', App\Livewire\Devices\AddSensor::class)->name('devices.sensors.add');
     Route::get('/{device}/actuators/add', App\Livewire\Devices\AddActuator::class)->name('devices.actuators.add');
