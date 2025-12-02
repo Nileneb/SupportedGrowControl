@@ -73,9 +73,9 @@
                     <flux:button type="submit" variant="primary">
                         Send Feedback
                     </flux:button>
-                    <flux:button type="button" variant="ghost" href="{{ route('dashboard') }}">
+                    <a href="{{ route('dashboard') }}" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                         Cancel
-                    </flux:button>
+                    </a>
                 </div>
             </form>
         </flux:card>

@@ -5,12 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreFeedbackRequest;
 use App\Models\Feedback;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Log;
 
 class FeedbackController extends Controller
 {
     public function store(StoreFeedbackRequest $request): RedirectResponse
     {
         $user = $request->user();
+
+        Log::info('Feedback submission attempt', [
+            'user_id' => $user->id,
+            'has_message' => $request->has('message'),
+            'message_value' => $request->input('message'),
+        ]);
 
         Feedback::create([
             'user_id' => $user->id,
@@ -24,6 +31,8 @@ class FeedbackController extends Controller
                 'referer'    => $request->header('referer'),
             ],
         ]);
+
+        Log::info('Feedback created successfully');
 
         return back()->with('status', 'Thank you for your feedback! We appreciate your input.');
     }
