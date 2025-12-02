@@ -26,6 +26,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed Growdash devices
         $this->call([
+            SensorTypeSeeder::class,
+            ActuatorTypeSeeder::class,
             DeviceSeeder::class,
         ]);
     }

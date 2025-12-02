@@ -1,0 +1,30 @@
+FROM composer:2.7 AS vendor
+WORKDIR /var/www/html
+COPY composer.json composer.lock ./
+RUN composer install --ignore-platform-reqs --no-scripts --no-autoloader
+
+FROM php:8.2-fpm-alpine
+WORKDIR /var/www/html
+
+# System dependencies
+RUN apk add --no-cache bash mysql-client icu-dev libzip-dev oniguruma-dev libpng-dev libjpeg-turbo-dev freetype-dev
+
+# PHP extensions
+RUN docker-php-ext-install pdo pdo_mysql intl zip gd
+
+# Node
+RUN apk add --no-cache nodejs npm
+
+# Copy vendor from build stage
+COPY --from=vendor /var/www/html/vendor /var/www/html/vendor
+
+# Copy app
+COPY . .
+
+# Permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Expose port
+EXPOSE 8000
+
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
