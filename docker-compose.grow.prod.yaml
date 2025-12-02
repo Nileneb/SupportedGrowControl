@@ -108,6 +108,23 @@ services:
       redis:
         condition: service_healthy
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: ./docker/common/Dockerfile
+      target: php-fpm
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file:
+      - .env
+    networks:
+      - grow-laravel-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 networks:
   grow-laravel-production:
     driver: bridge

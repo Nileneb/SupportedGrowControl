@@ -189,6 +189,36 @@ class CommandController extends Controller
                             'errors' => $paramErrors,
                         ], 422);
                     }
+                    
+                    // Map actuator command to Arduino serial command
+                    $arduinoCommand = $this->mapActuatorToArduinoCommand($validated['type'], $providedParams);
+                    
+                    // Create serial_command instead of actuator-specific type
+                    $command = Command::create([
+                        'device_id' => $device->id,
+                        'created_by_user_id' => Auth::id(),
+                        'type' => 'serial_command',
+                        'params' => ['command' => $arduinoCommand],
+                        'status' => 'pending',
+                    ]);
+
+                    Log::info('Actuator command mapped to serial', [
+                        'actuator_type' => $validated['type'],
+                        'arduino_command' => $arduinoCommand,
+                        'command_id' => $command->id,
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Command queued successfully',
+                        'command' => [
+                            'id' => $command->id,
+                            'type' => $command->type,
+                            'params' => $command->params,
+                            'status' => $command->status,
+                            'created_at' => $command->created_at->toISOString(),
+                        ]
+                    ], 201);
                 } catch (\Exception $e) {
                     // If capabilities validation fails, continue without it
                     Log::warning('Failed to validate command against capabilities', [
@@ -295,5 +325,69 @@ class CommandController extends Controller
                 'message' => 'Failed to retrieve command history'
             ], 500);
         }
+    }
+
+    /**
+     * Map actuator commands to Arduino serial commands
+     * Based on GrowDash agent expectations (see https://github.com/nileneb/growdash)
+     */
+    private function mapActuatorToArduinoCommand(string $actuatorType, array $params): string
+    {
+        return match($actuatorType) {
+            'spray_pump' => $this->buildSprayCommand($params),
+            'fill_valve' => $this->buildFillCommand($params),
+            'pump' => $this->buildPumpCommand($params),
+            'valve' => $this->buildValveCommand($params),
+            'light' => $this->buildLightCommand($params),
+            'fan' => $this->buildFanCommand($params),
+            default => "STATUS", // Fallback
+        };
+    }
+
+    private function buildSprayCommand(array $params): string
+    {
+        $durationMs = $params['duration_ms'] ?? 1000;
+        return "Spray {$durationMs}";
+    }
+
+    private function buildFillCommand(array $params): string
+    {
+        // Check if we have duration_ms (time-based) or target_liters (volume-based)
+        if (isset($params['target_liters'])) {
+            $liters = $params['target_liters'];
+            return "FillL {$liters}";
+        }
+        
+        // Duration-based fill (convert ms to seconds, use as rough estimate)
+        $durationMs = $params['duration_ms'] ?? 5000;
+        $durationSec = $durationMs / 1000;
+        $estimatedLiters = ($durationSec / 60) * 6.0; // Assume 6L/min fill rate
+        return "FillL " . number_format($estimatedLiters, 2);
+    }
+
+    private function buildPumpCommand(array $params): string
+    {
+        // Generic pump command
+        $durationMs = $params['duration_ms'] ?? 1000;
+        return "Spray {$durationMs}"; // Re-use spray pin for generic pump
+    }
+
+    private function buildValveCommand(array $params): string
+    {
+        $state = $params['state'] ?? 'on';
+        return $state === 'on' ? "TabON" : "TabOFF";
+    }
+
+    private function buildLightCommand(array $params): string
+    {
+        // Assuming custom light control command
+        $state = $params['state'] ?? 'on';
+        return $state === 'on' ? "LightON" : "LightOFF";
+    }
+
+    private function buildFanCommand(array $params): string
+    {
+        $durationMs = $params['duration_ms'] ?? 5000;
+        return "Fan {$durationMs}";
     }
 }

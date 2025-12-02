@@ -19,6 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+        // Timeout pending commands after 5 minutes
+        $schedule->command('commands:timeout --minutes=5')->everyMinute();
+        
+        // Timeout executing commands after 10 minutes
+        $schedule->command('commands:timeout-executing --minutes=10')->everyFiveMinutes();
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
