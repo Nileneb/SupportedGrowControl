@@ -6,6 +6,8 @@ use App\DTOs\DeviceCapabilities;
 use App\Events\DeviceCapabilitiesUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
+use App\Models\SensorType;
+use App\Models\ActuatorType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -130,6 +132,48 @@ class DeviceManagementController extends Controller
         // Broadcast WebSocket event
         broadcast(new DeviceCapabilitiesUpdated($device));
 
+        // Classify capabilities against canonical catalog
+        $sensorIds = array_map(fn($s) => $s->id, $capabilitiesDTO->sensors);
+        $actuatorIds = array_map(fn($a) => $a->id, $capabilitiesDTO->actuators);
+
+        $canonicalSensorIds = SensorType::query()->whereIn('id', $sensorIds)->pluck('id')->all();
+        $canonicalActuatorIds = ActuatorType::query()->whereIn('id', $actuatorIds)->pluck('id')->all();
+
+        $customSensorIds = array_values(array_diff($sensorIds, $canonicalSensorIds));
+        $customActuatorIds = array_values(array_diff($actuatorIds, $canonicalActuatorIds));
+
+        // Identify simple mismatches against catalog (non-fatal)
+        $sensorMismatches = [];
+        foreach ($capabilitiesDTO->sensors as $s) {
+            $type = SensorType::find($s->id);
+            if ($type) {
+                $mismatch = [];
+                if (!empty($s->unit) && $type->default_unit && $s->unit !== $type->default_unit) {
+                    $mismatch[] = 'unit';
+                }
+                if (!empty($s->value_type) && $s->value_type !== $type->value_type) {
+                    $mismatch[] = 'value_type';
+                }
+                if (!empty($mismatch)) {
+                    $sensorMismatches[$s->id] = $mismatch;
+                }
+            }
+        }
+
+        $actuatorMismatches = [];
+        foreach ($capabilitiesDTO->actuators as $a) {
+            $type = ActuatorType::find($a->id);
+            if ($type) {
+                $mismatch = [];
+                if (!empty($a->command_type) && $a->command_type !== $type->command_type) {
+                    $mismatch[] = 'command_type';
+                }
+                if (!empty($mismatch)) {
+                    $actuatorMismatches[$a->id] = $mismatch;
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Device capabilities updated',
@@ -138,6 +182,18 @@ class DeviceManagementController extends Controller
             'sensor_count' => count($capabilitiesDTO->sensors),
             'actuator_count' => count($capabilitiesDTO->actuators),
             'categories' => $capabilitiesDTO->getAllCategories(),
+            'catalog' => [
+                'sensors' => [
+                    'canonical' => $canonicalSensorIds,
+                    'custom' => $customSensorIds,
+                    'mismatches' => $sensorMismatches,
+                ],
+                'actuators' => [
+                    'canonical' => $canonicalActuatorIds,
+                    'custom' => $customActuatorIds,
+                    'mismatches' => $actuatorMismatches,
+                ],
+            ],
         ]);
     }
 
