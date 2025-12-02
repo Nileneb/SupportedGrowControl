@@ -1,4 +1,12 @@
 <x-layouts.app :title="$device->name">
+    @push('scripts')
+    <script>
+        // Global device context
+        window.deviceId = {{ $device->id }};
+        window.devicePublicId = '{{ $device->public_id }}';
+    </script>
+    @endpush
+    
     <div class="flex h-full w-full flex-1 gap-4">
         <!-- Sidebar Navigation -->
         <div class="w-64 flex-shrink-0 space-y-2">
@@ -128,8 +136,81 @@
             localStorage.setItem('device-view-section', sectionName);
         }
         
-        // Load last viewed section or default to terminal
+        // WebSocket initialization and global event handlers
         document.addEventListener('DOMContentLoaded', () => {
+            const deviceId = {{ $device->id }};
+            
+            // Initialize WebSocket status tracking
+            let wsConnected = false;
+            let wsStatusTimeout = null;
+            
+            // Set initial connecting status
+            const wsStatusEl = document.getElementById('ws-status');
+            if (wsStatusEl) {
+                wsStatusEl.innerHTML = '<span class="text-yellow-600 dark:text-yellow-400">⏳ Connecting...</span>';
+            }
+            
+            // Timeout fallback
+            wsStatusTimeout = setTimeout(() => {
+                if (!wsConnected && wsStatusEl) {
+                    wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Connection timeout</span>';
+                }
+            }, 5000);
+            
+            // Subscribe to device channel
+            if (window.Echo) {
+                try {
+                    window.Echo.private(`device.${deviceId}`)
+                        .listen('DeviceTelemetryReceived', (event) => {
+                            window.dispatchEvent(new CustomEvent('device-telemetry', { detail: event }));
+                        })
+                        .listen('CommandStatusUpdated', (event) => {
+                            window.dispatchEvent(new CustomEvent('command-status', { detail: event }));
+                        })
+                        .listen('DeviceCapabilitiesUpdated', (event) => {
+                            window.dispatchEvent(new CustomEvent('device-capabilities', { detail: event }));
+                        });
+                    
+                    // Listen for connection events
+                    if (window.Echo.connector && window.Echo.connector.pusher) {
+                        window.Echo.connector.pusher.connection.bind('connected', () => {
+                            wsConnected = true;
+                            if (wsStatusTimeout) clearTimeout(wsStatusTimeout);
+                            if (wsStatusEl) {
+                                wsStatusEl.innerHTML = '<span class="text-green-600 dark:text-green-400">✓ Connected</span>';
+                            }
+                            window.dispatchEvent(new CustomEvent('ws-connected'));
+                        });
+                        
+                        window.Echo.connector.pusher.connection.bind('disconnected', () => {
+                            wsConnected = false;
+                            if (wsStatusEl) {
+                                wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Disconnected</span>';
+                            }
+                            window.dispatchEvent(new CustomEvent('ws-disconnected'));
+                        });
+                        
+                        window.Echo.connector.pusher.connection.bind('error', (error) => {
+                            if (wsStatusEl) {
+                                wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Error</span>';
+                            }
+                            window.dispatchEvent(new CustomEvent('ws-error', { detail: error }));
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to subscribe to device channel:', error);
+                    if (wsStatusEl) {
+                        wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Failed to connect</span>';
+                    }
+                }
+            } else {
+                console.error('Echo not initialized');
+                if (wsStatusEl) {
+                    wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Echo not available</span>';
+                }
+            }
+            
+            // Load last viewed section or default to terminal
             const lastSection = localStorage.getItem('device-view-section') || 'terminal';
             showSection(lastSection);
         });

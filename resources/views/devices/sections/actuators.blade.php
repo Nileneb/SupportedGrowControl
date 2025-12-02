@@ -126,15 +126,20 @@
 </div>
 
 <script>
-    const deviceId = {{ $device->id }};
     const actuatorForms = document.querySelectorAll('.actuator-control-form');
     const activeCommands = new Map(); // Track active commands per actuator
+
+    // Listen for global command status events
+    window.addEventListener('command-status', (e) => {
+        updateActuatorStatus(e.detail);
+    });
 
     // Setup form handlers
     actuatorForms.forEach(form => {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            const deviceId = window.deviceId || {{ $device->id }};
             const actuatorId = form.dataset.actuatorId;
             const formData = new FormData(form);
             const submitBtn = form.querySelector('.actuator-submit-btn');
@@ -224,14 +229,6 @@
             }
         });
     });
-
-    // Subscribe to command status updates
-    if (window.Echo) {
-        window.Echo.private(`device.${deviceId}`)
-            .listen('CommandStatusUpdated', (event) => {
-                updateActuatorStatus(event);
-            });
-    }
 
     // Update actuator status from WebSocket
     function updateActuatorStatus(event) {

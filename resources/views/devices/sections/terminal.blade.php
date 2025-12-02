@@ -59,41 +59,30 @@
 <script>
     let serialLogCount = 0;
     const MAX_SERIAL_LOGS = 500;
-    const deviceId = {{ $device->id }};
     let commandHistory = [];
     const MAX_HISTORY = 20;
 
-    // WebSocket status updates
-    window.addEventListener('ws-connected', () => {
-        document.getElementById('ws-status').innerHTML = '<span class="text-green-600 dark:text-green-400">✓ Connected</span>';
+    // Listen for global device telemetry events
+    window.addEventListener('device-telemetry', (e) => {
+        const event = e.detail;
+        if (event.telemetry && event.telemetry.serial_output) {
+            addSerialLog(event.telemetry.serial_output, 'device');
+        }
     });
 
-    window.addEventListener('ws-disconnected', () => {
-        document.getElementById('ws-status').innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Disconnected</span>';
+    // Listen for global command status events
+    window.addEventListener('command-status', (e) => {
+        const event = e.detail;
+        if (event.type === 'serial_command') {
+            updateCommandHistory(event);
+        }
     });
-
-    window.addEventListener('ws-error', (event) => {
-        document.getElementById('ws-status').innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Error</span>';
-    });
-
-    // Subscribe to device channel
-    if (window.Echo) {
-        window.Echo.private(`device.${deviceId}`)
-            .listen('DeviceTelemetryReceived', (event) => {
-                if (event.telemetry && event.telemetry.serial_output) {
-                    addSerialLog(event.telemetry.serial_output, 'device');
-                }
-            })
-            .listen('CommandStatusUpdated', (event) => {
-                if (event.type === 'serial_command') {
-                    updateCommandHistory(event);
-                }
-            });
-    }
 
     // Add log to serial console
     function addSerialLog(message, source = 'device') {
         const console = document.getElementById('serial-console');
+        if (!console) return;
+        
         const timestamp = new Date().toLocaleTimeString();
         const color = source === 'user' ? 'text-blue-400' : 'text-green-400';
         const prefix = source === 'user' ? '→' : '←';
@@ -121,55 +110,59 @@
     }
 
     // Send serial command
-    document.getElementById('serial-command-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const input = document.getElementById('serial-command-input');
-        const command = input.value.trim();
-        
-        if (!command) return;
-        
-        try {
-            const response = await fetch(`/api/devices/${deviceId}/commands`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                    type: 'serial_command',
-                    params: {
-                        command: command
-                    }
-                })
-            });
+    const serialForm = document.getElementById('serial-command-form');
+    if (serialForm) {
+        serialForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            if (response.ok) {
-                const data = await response.json();
-                addSerialLog(command, 'user');
-                input.value = '';
-                
-                // Add to history
-                commandHistory.unshift({
-                    id: data.command_id,
-                    command: command,
-                    status: 'pending',
-                    timestamp: new Date()
+            const deviceId = window.deviceId || {{ $device->id }};
+            const input = document.getElementById('serial-command-input');
+            const command = input.value.trim();
+            
+            if (!command) return;
+            
+            try {
+                const response = await fetch(`/api/devices/${deviceId}/commands`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        type: 'serial_command',
+                        params: {
+                            command: command
+                        }
+                    })
                 });
                 
-                if (commandHistory.length > MAX_HISTORY) {
-                    commandHistory.pop();
+                if (response.ok) {
+                    const data = await response.json();
+                    addSerialLog(command, 'user');
+                    input.value = '';
+                    
+                    // Add to history
+                    commandHistory.unshift({
+                        id: data.command_id,
+                        command: command,
+                        status: 'pending',
+                        timestamp: new Date()
+                    });
+                    
+                    if (commandHistory.length > MAX_HISTORY) {
+                        commandHistory.pop();
+                    }
+                    
+                    renderCommandHistory();
+                } else {
+                    const error = await response.json();
+                    addSerialLog(`Error: ${error.message || 'Failed to send command'}`, 'user');
                 }
-                
-                renderCommandHistory();
-            } else {
-                const error = await response.json();
-                addSerialLog(`Error: ${error.message || 'Failed to send command'}`, 'user');
+            } catch (error) {
+                addSerialLog(`Error: ${error.message}`, 'user');
             }
-        } catch (error) {
-            addSerialLog(`Error: ${error.message}`, 'user');
-        }
-    });
+        });
+    }
 
     // Update command history from WebSocket
     function updateCommandHistory(event) {
@@ -189,27 +182,28 @@
     // Render command history
     function renderCommandHistory() {
         const container = document.getElementById('command-history');
+        if (!container) return;
         
         if (commandHistory.length === 0) {
             container.innerHTML = '<div class="text-xs text-neutral-500 dark:text-neutral-400">No commands sent yet</div>';
             return;
         }
         
+        const statusColors = {
+            pending: 'text-blue-600 dark:text-blue-400',
+            executing: 'text-yellow-600 dark:text-yellow-400',
+            success: 'text-green-600 dark:text-green-400',
+            failed: 'text-red-600 dark:text-red-400'
+        };
+        
+        const statusIcons = {
+            pending: '⏳',
+            executing: '⚙️',
+            success: '✓',
+            failed: '✗'
+        };
+        
         container.innerHTML = commandHistory.map(cmd => {
-            const statusColors = {
-                pending: 'text-blue-600 dark:text-blue-400',
-                executing: 'text-yellow-600 dark:text-yellow-400',
-                success: 'text-green-600 dark:text-green-400',
-                failed: 'text-red-600 dark:text-red-400'
-            };
-            
-            const statusIcons = {
-                pending: '⏳',
-                executing: '⚙️',
-                success: '✓',
-                failed: '✗'
-            };
-            
             return `
                 <div class="flex items-center gap-2 text-xs p-2 rounded bg-neutral-50 dark:bg-neutral-700/30">
                     <span class="${statusColors[cmd.status]}">${statusIcons[cmd.status]}</span>
