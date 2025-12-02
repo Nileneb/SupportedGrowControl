@@ -578,7 +578,7 @@ Arduino-Logs.
 
 ---
 
-### 📋 Phase 12: Agent-API Controller implementieren
+### ✅ Phase 12: Agent-API Controller implementieren
 
 -   [x] TelemetryController: store() für /api/growdash/agent/telemetry
 -   [x] CommandController: pending() für /api/growdash/agent/commands/pending
@@ -588,6 +588,27 @@ Arduino-Logs.
 -   [x] DeviceManagementController: heartbeat() für last_seen_at Updates
 -   [x] LogController: store() für /api/growdash/agent/logs
 -   [x] API Routes vollständig aktiviert und getestet
+
+### ✅ Phase 12.5: Unified Capabilities System (2025-12-02)
+
+-   [x] BoardInfo, SensorCapability, ActuatorCapability, DeviceCapabilities DTOs erstellt
+-   [x] DeviceManagementController: Vollständige Validierung für board/sensors/actuators
+-   [x] TelemetryController: Sensor-Validierung gegen capabilities, last_state Updates
+-   [x] CommandController: Actuator-Param-Validierung gegen capabilities
+-   [x] Device Model: Helper-Methoden (getSensorById, getActuatorById, validateTelemetry, validateCommand)
+-   [x] Livewire Commands Component: Dynamische Actuator-Controls mit Category-Tabs
+-   [x] AGENT_API_GUIDE.md: Komplettes Capabilities-Schema dokumentiert
+-   [x] PYTHON_AGENT_CAPABILITIES.md: Pydantic-Modelle und Agent-Implementation-Guide
+-   [x] CAPABILITIES_IMPLEMENTATION.md: Vollständige Implementierungs-Dokumentation
+
+**Features:**
+- Capabilities mit `category` (environment, nutrients, irrigation, lighting, system, custom)
+- `min_interval` für Sensor-Sampling und Command-Throttling (agent-enforced)
+- `critical` Flag für priorisierte Sensoren/Actuatoren
+- `range` Validierung für Sensor-Werte
+- `params[]` Validierung für Actuator-Commands mit min/max constraints
+- Dynamic UI: Actuator-Controls generieren sich automatisch aus capabilities
+- Backend-Validierung: Telemetrie und Commands werden gegen Capabilities validiert
 
 ### 📋 Phase 13: Data Migration & Cleanup
 
@@ -626,9 +647,10 @@ Arduino-Logs.
 ## Offene Punkte
 
 1. **Reverb Installation**: ⚠️ `php artisan reverb:install` hängt - manuell publishen oder fix
-2. **Frontend**: Livewire Command Console, Telemetrie-Charts, Real-Time-Updates
+2. **Frontend**: Livewire Telemetrie-Charts mit Category-Grouping, Real-Time-Updates
 3. **WebSocket Events**: DeviceStatusUpdated, CommandCreated, TelemetryReceived Integration
-4. **BoardType-UI**: Board-Auswahl im Device-Detail, Firmware-Update-Flow
+4. **Agent-Update**: Python-Agent mit neuer Capabilities-Struktur (Pydantic-Modelle vorhanden)
+5. **BoardType-UI**: Board-Auswahl im Device-Detail, Firmware-Update-Flow
 
 ---
 
@@ -647,17 +669,18 @@ Arduino-Logs.
 
 1. **Multi-Tenant**: Strikte User-Device-Isolation via Policies + Team-Sharing via Pivot
 2. **Secure Bootstrap**: 6-stelliger Pairing-Code + SHA256-Token-Hashing
-3. **Generische Telemetrie**: JSON-basierte Sensor-/Actuator-Konfiguration
+3. **Dynamische Capabilities**: Unified JSON-Schema mit category, min_interval, critical, params-Validierung
 4. **Event-Sourcing-Light**: Vollständige Historie aller Messungen in `telemetry_readings`
-5. **Command-Queue**: Bidirektionale Communication (UI → Agent → UI)
+5. **Command-Queue**: Bidirektionale Communication (UI → Agent → UI) mit Actuator-Validierung
 6. **API-Sicherheit**: Device-Token-Middleware + User-Auth + Policies
 7. **Provisioning-Flow**: Agent-Bootstrap → User-Pairing → Device-Auth
 8. **WebSocket-Ready**: Laravel Reverb für Echtzeit-Updates (pending setup)
 
 ---
 
-**Projekt-Status**: 🚀 **Phase 12 abgeschlossen** - Agent-API vollständig implementiert, Board-Automation vorbereitet, Multi-Tenant-Tests aktiv  
-**Nächste Phase**: Phase 13 - Data Migration & Frontend-Integration (Livewire Charts, WebSockets)  
+**Projekt-Status**: 🚀 **Phase 12.5 abgeschlossen** - Unified Capabilities System vollständig implementiert  
+**Nächste Phase**: Phase 13 - Agent-Update + Data Migration + Frontend Charts  
 **Production-Deployment**: ✅ Docker Compose ready (Port 6480, isoliertes Netzwerk, Nginx mit gzip)  
-**Agent-Integration**: ✅ Alle Endpoints aktiv (Telemetrie, Commands, Capabilities, Heartbeat, Logs)  
-**Letzte Aktualisierung**: 2025-12-02 03:10
+**Agent-Integration**: ✅ Alle Endpoints aktiv + Capabilities-Validierung implementiert  
+**Capabilities System**: ✅ Backend + DTOs + Livewire UI + Python-Guide vollständig  
+**Letzte Aktualisierung**: 2025-12-02 04:15
