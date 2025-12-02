@@ -18,6 +18,7 @@ class DeviceManagementController extends Controller
      * Expected payload:
      * {
      *   "capabilities": {
+     *     "board_name": "arduino_uno",
      *     "sensors": ["water_level", "tds", "temperature"],
      *     "actuators": ["spray_pump", "fill_valve"]
      *   }
@@ -30,6 +31,7 @@ class DeviceManagementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'capabilities' => 'required|array',
+            'capabilities.board_name' => 'nullable|string|max:50',
             'capabilities.sensors' => 'nullable|array',
             'capabilities.actuators' => 'nullable|array',
         ]);
@@ -41,9 +43,16 @@ class DeviceManagementController extends Controller
             ], 422);
         }
 
-        $device->update([
+        $updateData = [
             'capabilities' => $request->input('capabilities'),
-        ]);
+        ];
+
+        // Extract board_name from capabilities and store in dedicated column
+        if ($request->input('capabilities.board_name')) {
+            $updateData['board_type'] = $request->input('capabilities.board_name');
+        }
+
+        $device->update($updateData);
 
         // Broadcast WebSocket event
         broadcast(new DeviceCapabilitiesUpdated($device));
@@ -51,6 +60,7 @@ class DeviceManagementController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Device capabilities updated',
+            'board_type' => $device->board_type,
             'capabilities' => $device->capabilities,
         ]);
     }
