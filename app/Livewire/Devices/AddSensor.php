@@ -83,7 +83,7 @@ class AddSensor extends Component
 
         session()->flash('success', 'Sensor added successfully');
 
-        return $this->redirect(route('devices.show', $this->device), navigate: true);
+        $this->redirect(route('devices.show', $this->device), navigate: true);
     }
 
     public function rules(): array

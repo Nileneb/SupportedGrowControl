@@ -79,7 +79,7 @@ class AddActuator extends Component
 
         session()->flash('success', 'Actuator added successfully');
 
-        return $this->redirect(route('devices.show', $this->device), navigate: true);
+        $this->redirect(route('devices.show', $this->device), navigate: true);
     }
 
     public function rules(): array

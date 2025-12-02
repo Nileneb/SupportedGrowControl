@@ -112,9 +112,9 @@
 
                                     <flux:dropdown>
                                         <flux:button variant="ghost" size="sm" icon="ellipsis-vertical" />
-                                        
+
                                         <flux:menu>
-                                            <flux:menu.item 
+                                            <flux:menu.item
                                                 wire:click="delete({{ $feedback->id }})"
                                                 wire:confirm="Are you sure you want to delete this feedback?"
                                                 icon="trash"
