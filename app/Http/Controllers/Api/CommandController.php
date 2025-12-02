@@ -112,7 +112,50 @@ class CommandController extends Controller
                 ], 400);
             }
 
-            // Validate command type and params against device capabilities
+            // Special handling for interactive serial console commands
+            if ($validated['type'] === 'serial_command') {
+                $serialText = $validated['params']['command'] ?? null;
+                $serialText = is_string($serialText) ? trim($serialText) : null;
+
+                if (!$serialText) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Missing serial command text',
+                        'errors' => ['params.command' => ['Required string']],
+                    ], 422);
+                }
+
+                if (mb_strlen($serialText) > 256) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Serial command too long (max 256 chars)',
+                        'errors' => ['params.command' => ['Too long']],
+                    ], 422);
+                }
+
+                // Create command immediately and return (skip actuator capability validation)
+                $command = Command::create([
+                    'device_id' => $device->id,
+                    'created_by_user_id' => Auth::id(),
+                    'type' => 'serial_command',
+                    'params' => ['command' => $serialText],
+                    'status' => 'pending',
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Serial command queued',
+                    'command' => [
+                        'id' => $command->id,
+                        'type' => $command->type,
+                        'params' => $command->params,
+                        'status' => $command->status,
+                        'created_at' => $command->created_at->toISOString(),
+                    ]
+                ], 201);
+            }
+
+            // Validate actuator-based commands against device capabilities (skip for serial_command above)
             if ($device->capabilities) {
                 try {
                     $capabilitiesDTO = DeviceCapabilities::fromArray($device->capabilities);
