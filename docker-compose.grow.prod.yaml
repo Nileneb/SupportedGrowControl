@@ -4,6 +4,11 @@ services:
       context: .
       dockerfile: ./docker/common/Dockerfile
       target: web
+      args:
+        VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME}
     restart: unless-stopped
     volumes:
       - grow-laravel-storage-production:/var/www/storage:ro
@@ -24,6 +29,11 @@ services:
       context: .
       dockerfile: ./docker/common/Dockerfile
       target: php-fpm
+      args:
+        VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME}
     restart: unless-stopped
     volumes:
       - grow-laravel-storage-production:/var/www/storage

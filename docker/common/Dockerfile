@@ -25,6 +25,18 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 FROM node:20-alpine AS node-build
 WORKDIR /var/www
 
+# Build args for Vite environment variables
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT
+ARG VITE_REVERB_SCHEME
+
+# Make them available during build
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
+ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
+ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
+ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
 # Lockfile-based deterministic install
 COPY package.json package-lock.json vite.config.js /var/www/
 
