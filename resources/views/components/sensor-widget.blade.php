@@ -1,14 +1,15 @@
 @props(['sensor', 'latestReading' => null])
 
 @php
-    $category = $sensor['category'] ?? 'unknown';
-    $name = $sensor['name'] ?? 'Unknown Sensor';
+    $sensorId = $sensor['id'] ?? 'unknown';
+    $category = $sensor['category'] ?? 'environment';
+    $name = $sensor['display_name'] ?? $sensor['name'] ?? ucfirst(str_replace('_', ' ', $sensorId));
     $unit = $sensor['unit'] ?? '';
     $value = $latestReading?->value ?? null;
     $timestamp = $latestReading?->created_at ?? null;
     
-    // Define display config per category
-    $config = [
+    // Define display config per sensor ID (not category)
+    $sensorConfigs = [
         'temperature' => [
             'icon' => '🌡️',
             'color' => 'red',
@@ -53,18 +54,46 @@
         ],
     ];
     
-    $c = $config[$category] ?? $config['temperature'];
-    $percentage = $value !== null ? min(100, max(0, (($value - $c['min']) / ($c['max'] - $c['min'])) * 100)) : 0;
+    // Also check by category
+    $categoryConfigs = [
+        'irrigation' => [
+            'icon' => '💧',
+            'color' => 'blue',
+            'min' => 0,
+            'max' => 100,
+            'decimals' => 0,
+        ],
+        'nutrients' => [
+            'icon' => '⚗️',
+            'color' => 'purple',
+            'min' => 0,
+            'max' => 2000,
+            'decimals' => 0,
+        ],
+        'environment' => [
+            'icon' => '🌡️',
+            'color' => 'red',
+            'min' => 0,
+            'max' => 40,
+            'decimals' => 1,
+        ],
+    ];
+    
+    $config = $sensorConfigs[$sensorId] ?? $categoryConfigs[$category] ?? $sensorConfigs['temperature'];
+    
+    $percentage = $value !== null && ($config['max'] - $config['min']) > 0 
+        ? min(100, max(0, (($value - $config['min']) / ($config['max'] - $config['min'])) * 100)) 
+        : 0;
 @endphp
 
 <div class="relative rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4 hover:shadow-lg transition-shadow">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
-            <span class="text-2xl">{{ $c['icon'] }}</span>
+            <span class="text-2xl">{{ $config['icon'] }}</span>
             <div>
                 <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">{{ $name }}</h3>
-                <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ ucfirst($category) }}</p>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ ucfirst(str_replace('_', ' ', $category)) }}</p>
             </div>
         </div>
         @if($timestamp)
@@ -76,7 +105,7 @@
     <div class="mb-4">
         @if($value !== null)
             <div class="text-4xl font-bold text-neutral-900 dark:text-neutral-100">
-                {{ number_format($value, $c['decimals']) }}
+                {{ number_format($value, $config['decimals']) }}
                 <span class="text-xl text-neutral-500 dark:text-neutral-400">{{ $unit }}</span>
             </div>
         @else
@@ -87,18 +116,18 @@
     <!-- Visual Gauge -->
     <div class="space-y-2">
         <div class="flex justify-between text-xs text-neutral-500 dark:text-neutral-400">
-            <span>{{ $c['min'] }}{{ $unit }}</span>
-            <span>{{ $c['max'] }}{{ $unit }}</span>
+            <span>{{ $config['min'] }}{{ $unit }}</span>
+            <span>{{ $config['max'] }}{{ $unit }}</span>
         </div>
         <div class="relative h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
             <div 
                 class="absolute h-full rounded-full transition-all duration-500 
-                    @if($c['color'] === 'red') bg-gradient-to-r from-red-500 to-red-600
-                    @elseif($c['color'] === 'blue') bg-gradient-to-r from-blue-500 to-blue-600
-                    @elseif($c['color'] === 'purple') bg-gradient-to-r from-purple-500 to-purple-600
-                    @elseif($c['color'] === 'cyan') bg-gradient-to-r from-cyan-500 to-cyan-600
-                    @elseif($c['color'] === 'green') bg-gradient-to-r from-green-500 to-green-600
-                    @elseif($c['color'] === 'yellow') bg-gradient-to-r from-yellow-500 to-yellow-600
+                    @if($config['color'] === 'red') bg-gradient-to-r from-red-500 to-red-600
+                    @elseif($config['color'] === 'blue') bg-gradient-to-r from-blue-500 to-blue-600
+                    @elseif($config['color'] === 'purple') bg-gradient-to-r from-purple-500 to-purple-600
+                    @elseif($config['color'] === 'cyan') bg-gradient-to-r from-cyan-500 to-cyan-600
+                    @elseif($config['color'] === 'green') bg-gradient-to-r from-green-500 to-green-600
+                    @elseif($config['color'] === 'yellow') bg-gradient-to-r from-yellow-500 to-yellow-600
                     @endif"
                 style="width: {{ $percentage }}%"
             ></div>

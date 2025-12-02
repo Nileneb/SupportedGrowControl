@@ -1,75 +1,90 @@
 @props(['actuator', 'device'])
 
 @php
-    $type = $actuator['type'] ?? 'unknown';
-    $name = $actuator['name'] ?? 'Unknown Actuator';
+    $actuatorId = $actuator['id'] ?? 'unknown';
+    $name = $actuator['display_name'] ?? $actuator['name'] ?? ucfirst(str_replace('_', ' ', $actuatorId));
+    $category = $actuator['category'] ?? 'control';
+    $commandType = $actuator['command_type'] ?? 'duration';
     $description = $actuator['description'] ?? '';
-    $params = $actuator['params'] ?? [];
     
-    // Define display config per actuator type
-    $config = [
+    // Define display config per actuator ID
+    $actuatorConfigs = [
         'pump' => [
             'icon' => '⚙️',
             'color' => 'blue',
             'actionLabel' => 'Run Pump',
-            'paramLabel' => 'Duration (ms)',
-            'paramName' => 'duration_ms',
-            'defaultValue' => 1000,
         ],
         'spray_pump' => [
             'icon' => '💦',
             'color' => 'cyan',
             'actionLabel' => 'Spray',
-            'paramLabel' => 'Duration (ms)',
-            'paramName' => 'duration_ms',
-            'defaultValue' => 500,
         ],
         'fill_valve' => [
             'icon' => '🚰',
             'color' => 'blue',
             'actionLabel' => 'Fill',
-            'paramLabel' => 'Duration (ms)',
-            'paramName' => 'duration_ms',
-            'defaultValue' => 2000,
         ],
         'valve' => [
             'icon' => '🔧',
             'color' => 'indigo',
             'actionLabel' => 'Open Valve',
-            'paramLabel' => 'Duration (ms)',
-            'paramName' => 'duration_ms',
-            'defaultValue' => 1000,
         ],
         'light' => [
             'icon' => '💡',
             'color' => 'yellow',
             'actionLabel' => 'Toggle Light',
-            'paramLabel' => 'State',
-            'paramName' => 'state',
-            'defaultValue' => 'on',
         ],
         'fan' => [
             'icon' => '🌀',
             'color' => 'gray',
             'actionLabel' => 'Run Fan',
-            'paramLabel' => 'Speed (%)',
-            'paramName' => 'speed',
-            'defaultValue' => 100,
         ],
     ];
     
-    $c = $config[$type] ?? $config['pump'];
-    $actuatorId = $actuator['id'] ?? $actuator['name'];
+    $config = $actuatorConfigs[$actuatorId] ?? [
+        'icon' => '⚙️',
+        'color' => 'blue',
+        'actionLabel' => 'Execute',
+    ];
+    
+    // Determine param config based on command_type
+    if ($commandType === 'duration') {
+        $paramConfig = [
+            'label' => 'Duration (ms)',
+            'name' => 'duration_ms',
+            'type' => 'number',
+            'default' => 1000,
+            'min' => 0,
+            'max' => 60000,
+        ];
+    } elseif ($commandType === 'toggle') {
+        $paramConfig = [
+            'label' => 'State',
+            'name' => 'state',
+            'type' => 'select',
+            'default' => 'on',
+            'options' => ['on', 'off'],
+        ];
+    } else {
+        $paramConfig = [
+            'label' => 'Value',
+            'name' => 'value',
+            'type' => 'number',
+            'default' => 100,
+            'min' => 0,
+            'max' => 100,
+        ];
+    }
 @endphp
 
 <div class="relative rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4 hover:shadow-lg transition-shadow">
     <!-- Header -->
     <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
-            <span class="text-2xl">{{ $c['icon'] }}</span>
+            <span class="text-2xl">{{ $config['icon'] }}</span>
             <div>
                 <h3 class="font-semibold text-neutral-900 dark:text-neutral-100">{{ $name }}</h3>
-                <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ ucfirst(str_replace('_', ' ', $type)) }}</p>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ ucfirst(str_replace('_', ' ', $category)) }}</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -87,47 +102,41 @@
         @csrf
         
         <!-- Parameter Input -->
-        @if(isset($params[$c['paramName']]))
-            @php
-                $param = $params[$c['paramName']];
-                $paramType = $param['type'] ?? 'number';
-                $min = $param['min'] ?? 0;
-                $max = $param['max'] ?? 10000;
-            @endphp
+        <div>
+            <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                {{ $paramConfig['label'] }}
+            </label>
             
-            <div>
-                <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    {{ $c['paramLabel'] }}
-                </label>
-                
-                @if($paramType === 'boolean' || $c['paramName'] === 'state')
-                    <select 
-                        name="{{ $c['paramName'] }}" 
-                        class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="on">On</option>
-                        <option value="off">Off</option>
-                    </select>
-                @else
-                    <div class="flex gap-2">
-                        <input 
-                            type="number" 
-                            name="{{ $c['paramName'] }}" 
-                            value="{{ $c['defaultValue'] }}"
-                            min="{{ $min }}"
-                            max="{{ $max }}"
-                            class="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span class="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
-                            {{ $min }}-{{ $max }}
-                        </span>
-                    </div>
-                @endif
-            </div>
-        @endif
+            @if($paramConfig['type'] === 'select')
+                <select 
+                    name="{{ $paramConfig['name'] }}" 
+                    class="w-full px-3 py-2 bg-neutral-50 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
+                >
+                    @foreach($paramConfig['options'] as $option)
+                        <option value="{{ $option }}" {{ $option === $paramConfig['default'] ? 'selected' : '' }}>
+                            {{ ucfirst($option) }}
+                        </option>
+                    @endforeach
+                </select>
+            @else
+                <div class="flex gap-2">
+                    <input 
+                        type="number" 
+                        name="{{ $paramConfig['name'] }}" 
+                        value="{{ $paramConfig['default'] }}"
+                        min="{{ $paramConfig['min'] }}"
+                        max="{{ $paramConfig['max'] }}"
+                        class="flex-1 px-3 py-2 bg-neutral-50 dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded-lg text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span class="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
+                        {{ $paramConfig['min'] }}-{{ $paramConfig['max'] }}
+                    </span>
+                </div>
+            @endif
+        </div>
         
-        <!-- Quick Actions (for pumps/valves) -->
-        @if(in_array($type, ['pump', 'spray_pump', 'fill_valve', 'valve']))
+        <!-- Quick Actions (for duration-based commands) -->
+        @if($commandType === 'duration')
             <div class="grid grid-cols-3 gap-2">
                 <button 
                     type="button" 
@@ -157,16 +166,17 @@
         <button 
             type="submit" 
             class="w-full px-4 py-2.5 font-semibold rounded-lg transition-all
-                @if($c['color'] === 'blue') bg-blue-600 hover:bg-blue-700 text-white
-                @elseif($c['color'] === 'cyan') bg-cyan-600 hover:bg-cyan-700 text-white
-                @elseif($c['color'] === 'indigo') bg-indigo-600 hover:bg-indigo-700 text-white
-                @elseif($c['color'] === 'yellow') bg-yellow-500 hover:bg-yellow-600 text-black
-                @elseif($c['color'] === 'gray') bg-gray-600 hover:bg-gray-700 text-white
+                @if($config['color'] === 'blue') bg-blue-600 hover:bg-blue-700 text-white
+                @elseif($config['color'] === 'cyan') bg-cyan-600 hover:bg-cyan-700 text-white
+                @elseif($config['color'] === 'indigo') bg-indigo-600 hover:bg-indigo-700 text-white
+                @elseif($config['color'] === 'yellow') bg-yellow-500 hover:bg-yellow-600 text-black
+                @elseif($config['color'] === 'gray') bg-gray-600 hover:bg-gray-700 text-white
                 @else bg-blue-600 hover:bg-blue-700 text-white
                 @endif
                 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-original-text="{{ $config['actionLabel'] }}"
         >
-            {{ $c['actionLabel'] }}
+            {{ $config['actionLabel'] }}
         </button>
     </form>
     
