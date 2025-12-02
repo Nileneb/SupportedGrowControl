@@ -70,16 +70,13 @@
 </div>
 
 <script>
-    const deviceId = {{ $device->id }};
     const sensorIds = @json(array_column($sensors, 'id'));
 
-    // Subscribe to device telemetry
-    if (window.Echo) {
-        window.Echo.private(`device.${deviceId}`)
-            .listen('DeviceTelemetryReceived', (event) => {
-                updateSensorReadings(event.telemetry);
-            });
-    }
+    // Listen for global device telemetry events
+    window.addEventListener('device-telemetry', (e) => {
+        const event = e.detail;
+        updateSensorReadings(event.telemetry);
+    });
 
     // Update sensor readings from WebSocket
     function updateSensorReadings(telemetry) {
