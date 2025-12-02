@@ -286,4 +286,26 @@ class DeviceManagementController extends Controller
 
         return 'toggle';
     }
+
+    /**
+     * Get device capabilities in agent-ready flat format.
+     * GET /api/growdash/agent/capabilities
+     * 
+     * Returns flat structure for agent consumption with channel → pin → type mapping.
+     */
+    public function getCapabilities(Request $request): JsonResponse
+    {
+        /** @var Device $device */
+        $device = $request->user();
+
+        // Return agent-ready format from device_sensors and device_actuators
+        $agentCapabilities = $device->getAgentCapabilities();
+
+        return response()->json([
+            'success' => true,
+            'board_type' => $agentCapabilities['board_type'],
+            'sensors' => $agentCapabilities['sensors'],
+            'actuators' => $agentCapabilities['actuators'],
+        ]);
+    }
 }

@@ -63,6 +63,9 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
     // POST/PUT device capabilities (what sensors/actuators are available)
     Route::post('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'updateCapabilities']);
 
+    // GET device capabilities in agent-ready flat format
+    Route::get('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'getCapabilities']);
+
     // POST device logs
     Route::post('/logs', [\App\Http\Controllers\Api\LogController::class, 'store']);
 

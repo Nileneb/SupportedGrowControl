@@ -171,6 +171,22 @@ class Device extends Model
     }
 
     /**
+     * Get all configured sensors for this device (manual wizard instances).
+     */
+    public function deviceSensors(): HasMany
+    {
+        return $this->hasMany(DeviceSensor::class);
+    }
+
+    /**
+     * Get all configured actuators for this device (manual wizard instances).
+     */
+    public function deviceActuators(): HasMany
+    {
+        return $this->hasMany(DeviceActuator::class);
+    }
+
+    /**
      * Get all water level measurements for this device.
      */
     public function waterLevels(): HasMany
@@ -407,5 +423,60 @@ class Device extends Model
         }
 
         return $actuator->validateParams($params);
+    }
+
+    /**
+     * Rebuild capabilities JSON from configured device_sensors and device_actuators.
+     * Call this after wizard changes to sync capabilities for agent consumption.
+     */
+    public function syncCapabilitiesFromInstances(): void
+    {
+        $sensors = $this->deviceSensors()->with('sensorType')->get();
+        $actuators = $this->deviceActuators()->with('actuatorType')->get();
+
+        $capabilities = [
+            'board' => $this->capabilities['board'] ?? null,
+            'sensors' => $sensors->map(function (DeviceSensor $sensor) {
+                return [
+                    'id' => $sensor->sensor_type_id,
+                    'display_name' => $sensor->sensorType->display_name ?? $sensor->channel_key,
+                    'category' => $sensor->sensorType->category ?? 'custom',
+                    'unit' => $sensor->sensorType->default_unit ?? '',
+                    'value_type' => $sensor->sensorType->value_type ?? 'float',
+                    'range' => $sensor->sensorType->default_range,
+                    'min_interval' => $sensor->min_interval,
+                    'critical' => $sensor->critical,
+                ];
+            })->values()->all(),
+            'actuators' => $actuators->map(function (DeviceActuator $actuator) {
+                return [
+                    'id' => $actuator->actuator_type_id,
+                    'display_name' => $actuator->actuatorType->display_name ?? $actuator->channel_key,
+                    'category' => $actuator->actuatorType->category ?? 'custom',
+                    'command_type' => $actuator->actuatorType->command_type ?? 'toggle',
+                    'params' => $actuator->actuatorType->params_schema ?? [],
+                    'min_interval' => $actuator->min_interval,
+                    'critical' => false,
+                ];
+            })->values()->all(),
+        ];
+
+        $this->update(['capabilities' => $capabilities]);
+    }
+
+    /**
+     * Get agent-ready configuration from device instances.
+     * Returns flat structure with channel → pin → type mapping.
+     */
+    public function getAgentCapabilities(): array
+    {
+        $sensors = $this->deviceSensors()->with('sensorType')->get();
+        $actuators = $this->deviceActuators()->with('actuatorType')->get();
+
+        return [
+            'board_type' => $this->board_type ?? 'unknown',
+            'sensors' => $sensors->map->toAgentFormat()->values()->all(),
+            'actuators' => $actuators->map->toAgentFormat()->values()->all(),
+        ];
     }
 }
