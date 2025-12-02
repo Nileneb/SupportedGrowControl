@@ -602,13 +602,14 @@ Arduino-Logs.
 -   [x] CAPABILITIES_IMPLEMENTATION.md: Vollständige Implementierungs-Dokumentation
 
 **Features:**
-- Capabilities mit `category` (environment, nutrients, irrigation, lighting, system, custom)
-- `min_interval` für Sensor-Sampling und Command-Throttling (agent-enforced)
-- `critical` Flag für priorisierte Sensoren/Actuatoren
-- `range` Validierung für Sensor-Werte
-- `params[]` Validierung für Actuator-Commands mit min/max constraints
-- Dynamic UI: Actuator-Controls generieren sich automatisch aus capabilities
-- Backend-Validierung: Telemetrie und Commands werden gegen Capabilities validiert
+
+-   Capabilities mit `category` (environment, nutrients, irrigation, lighting, system, custom)
+-   `min_interval` für Sensor-Sampling und Command-Throttling (agent-enforced)
+-   `critical` Flag für priorisierte Sensoren/Actuatoren
+-   `range` Validierung für Sensor-Werte
+-   `params[]` Validierung für Actuator-Commands mit min/max constraints
+-   Dynamic UI: Actuator-Controls generieren sich automatisch aus capabilities
+-   Backend-Validierung: Telemetrie und Commands werden gegen Capabilities validiert
 
 ### 📋 Phase 13: Data Migration & Cleanup
 

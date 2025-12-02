@@ -4,40 +4,40 @@
 
 ```json
 {
-  "capabilities": {
-    "board": {
-      "id": "arduino_uno",
-      "vendor": "Arduino",
-      "model": "UNO R3",
-      "connection": "serial",
-      "firmware": "v1.0.0"
-    },
-    "sensors": [
-      {
-        "id": "water_level",
-        "display_name": "Water Level",
-        "category": "environment",
-        "unit": "%",
-        "value_type": "float",
-        "range": [0, 100],
-        "min_interval": 10,
-        "critical": true
-      }
-    ],
-    "actuators": [
-      {
-        "id": "spray_pump",
-        "display_name": "Spray Pump",
-        "category": "irrigation",
-        "command_type": "duration",
-        "params": [
-          {"name": "seconds", "type": "int", "min": 1, "max": 120}
+    "capabilities": {
+        "board": {
+            "id": "arduino_uno",
+            "vendor": "Arduino",
+            "model": "UNO R3",
+            "connection": "serial",
+            "firmware": "v1.0.0"
+        },
+        "sensors": [
+            {
+                "id": "water_level",
+                "display_name": "Water Level",
+                "category": "environment",
+                "unit": "%",
+                "value_type": "float",
+                "range": [0, 100],
+                "min_interval": 10,
+                "critical": true
+            }
         ],
-        "min_interval": 30,
-        "critical": true
-      }
-    ]
-  }
+        "actuators": [
+            {
+                "id": "spray_pump",
+                "display_name": "Spray Pump",
+                "category": "irrigation",
+                "command_type": "duration",
+                "params": [
+                    { "name": "seconds", "type": "int", "min": 1, "max": 120 }
+                ],
+                "min_interval": 30,
+                "critical": true
+            }
+        ]
+    }
 }
 ```
 
@@ -51,20 +51,23 @@
 ## Validation Rules
 
 ### Sensors
-- ✅ `range` validates telemetry value
-- ✅ `unit` must match in telemetry payload
-- ✅ `value_type` enforced (int/float/string/bool)
-- ⏱️ `min_interval` enforced by agent (not backend)
+
+-   ✅ `range` validates telemetry value
+-   ✅ `unit` must match in telemetry payload
+-   ✅ `value_type` enforced (int/float/string/bool)
+-   ⏱️ `min_interval` enforced by agent (not backend)
 
 ### Actuators
-- ✅ `params` must all be present in command
-- ✅ `min`/`max` constraints validated
-- ✅ `type` enforced for each param
-- ⏱️ `min_interval` enforced by agent
+
+-   ✅ `params` must all be present in command
+-   ✅ `min`/`max` constraints validated
+-   ✅ `type` enforced for each param
+-   ⏱️ `min_interval` enforced by agent
 
 ## API Endpoints
 
 ### Send Capabilities
+
 ```
 POST /api/growdash/agent/capabilities
 Headers: X-Device-ID, X-Device-Token
@@ -72,6 +75,7 @@ Body: { "capabilities": {...} }
 ```
 
 ### Send Telemetry (Validated)
+
 ```
 POST /api/growdash/agent/telemetry
 Body: {
@@ -83,6 +87,7 @@ Response: { "inserted_count": 1, "skipped_count": 0, "skipped": [] }
 ```
 
 ### Send Command (Validated)
+
 ```
 POST /api/growdash/devices/{device}/commands
 Body: {
@@ -114,12 +119,13 @@ $device->validateCommandParams('spray_pump', ['seconds' => 10]); // array (error
 ```
 
 **Features:**
-- Auto-generated category tabs
-- Dynamic forms per actuator
-- Type-specific inputs (number, checkbox, text)
-- Min/max constraints
-- Online/offline status
-- Recent commands history
+
+-   Auto-generated category tabs
+-   Dynamic forms per actuator
+-   Type-specific inputs (number, checkbox, text)
+-   Min/max constraints
+-   Online/offline status
+-   Recent commands history
 
 ## Python Agent (Pydantic)
 
@@ -148,10 +154,10 @@ requests.post("/api/growdash/agent/capabilities", json={"capabilities": capabili
 
 ## Documentation Files
 
-- **AGENT_API_GUIDE.md** - API reference + capabilities schema
-- **PYTHON_AGENT_CAPABILITIES.md** - Pydantic models + agent implementation
-- **CAPABILITIES_IMPLEMENTATION.md** - Complete implementation summary
-- **This file** - Quick reference
+-   **AGENT_API_GUIDE.md** - API reference + capabilities schema
+-   **PYTHON_AGENT_CAPABILITIES.md** - Pydantic models + agent implementation
+-   **CAPABILITIES_IMPLEMENTATION.md** - Complete implementation summary
+-   **This file** - Quick reference
 
 ---
 
