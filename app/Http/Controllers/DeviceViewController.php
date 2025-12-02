@@ -29,7 +29,7 @@ class DeviceViewController extends Controller
             $sensorId = $sensor['id'] ?? $sensor['name'] ?? null;
             if ($sensorId) {
                 $sensorReadings[$sensorId] = $device->telemetryReadings()
-                    ->where('sensor_id', $sensorId)
+                    ->where('sensor_key', $sensorId)
                     ->latest()
                     ->first();
             }
