@@ -61,6 +61,39 @@
         </div>
         @endif
 
+        <!-- Sensors & Actuators Visualization -->
+        @if(!empty($sensors) || !empty($actuators))
+        <div class="space-y-4">
+            <!-- Sensors Section -->
+            @if(!empty($sensors))
+            <div>
+                <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Sensors</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    @foreach($sensors as $sensor)
+                        @php
+                            $sensorId = $sensor['id'] ?? $sensor['name'] ?? null;
+                            $reading = $sensorReadings[$sensorId] ?? null;
+                        @endphp
+                        <x-sensor-widget :sensor="$sensor" :latestReading="$reading" />
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <!-- Actuators Section -->
+            @if(!empty($actuators))
+            <div>
+                <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Actuators</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach($actuators as $actuator)
+                        <x-actuator-widget :actuator="$actuator" :device="$device" />
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        </div>
+        @endif
+
         <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
             <!-- Serial Console -->
             <div class="flex flex-col rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden">

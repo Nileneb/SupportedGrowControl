@@ -18,6 +18,23 @@ class DeviceViewController extends Controller
             ->limit(100)
             ->get();
         
-        return view('devices.show', compact('device', 'logs'));
+        // Get capabilities
+        $capabilities = $device->capabilities ?? [];
+        $sensors = $capabilities['sensors'] ?? [];
+        $actuators = $capabilities['actuators'] ?? [];
+        
+        // Get latest readings for each sensor
+        $sensorReadings = [];
+        foreach ($sensors as $sensor) {
+            $sensorId = $sensor['id'] ?? $sensor['name'] ?? null;
+            if ($sensorId) {
+                $sensorReadings[$sensorId] = $device->telemetryReadings()
+                    ->where('sensor_id', $sensorId)
+                    ->latest()
+                    ->first();
+            }
+        }
+        
+        return view('devices.show', compact('device', 'logs', 'sensors', 'actuators', 'sensorReadings'));
     }
 }
