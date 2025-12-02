@@ -1,0 +1,68 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: growdash-app-dev
+    container_name: growdash-app-dev
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: 1
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_DATABASE: growdash
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      BROADCAST_CONNECTION: log
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      VITE_REVERB_APP_KEY: devkey
+      VITE_REVERB_HOST: localhost
+      VITE_REVERB_PORT: 8080
+      VITE_REVERB_SCHEME: http
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+
+  db:
+    image: mysql:8.0
+    container_name: growdash-db-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: growdash
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "33066:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  node:
+    image: node:20
+    container_name: growdash-node-dev
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: ["npm", "run", "dev"]
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: growdash-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    restart: unless-stopped
+
+volumes:
+  db_data:
