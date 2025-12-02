@@ -56,3 +56,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
     Route::view('/feedback', 'feedback.form')->name('feedback.form');
 });
+
+// Admin routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/feedback', App\Livewire\Admin\FeedbackList::class)->name('admin.feedback');
+});

@@ -16,6 +16,12 @@
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
                     <flux:navlist.item icon="cpu-chip" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>{{ __('Devices') }}</flux:navlist.item>
                 </flux:navlist.group>
+
+                @if(auth()->user()->is_admin)
+                    <flux:navlist.group :heading="__('Admin')" class="grid">
+                        <flux:navlist.item icon="document-text" :href="route('admin.feedback')" :current="request()->routeIs('admin.feedback')" wire:navigate>{{ __('Feedback') }}</flux:navlist.item>
+                    </flux:navlist.group>
+                @endif
             </flux:navlist>
 
             <flux:spacer />

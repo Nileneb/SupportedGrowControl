@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'growdash.webhook' => \App\Http\Middleware\VerifyGrowdashToken::class,
             'device.auth' => \App\Http\Middleware\AuthenticateDevice::class,
+            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
