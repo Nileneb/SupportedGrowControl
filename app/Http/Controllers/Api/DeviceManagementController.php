@@ -61,43 +61,16 @@ class DeviceManagementController extends Controller
         /** @var Device $device */
         $device = $request->user();
 
-        $validator = Validator::make($request->all(), [
+        // Detect and normalize capabilities format
+        $capabilities = $request->input('capabilities', []);
+        $capabilities = $this->normalizeCapabilities($capabilities);
+
+        // Validate normalized format (relaxed validation)
+        $validator = Validator::make(['capabilities' => $capabilities], [
             'capabilities' => 'required|array',
-
-            // Board validation
-            'capabilities.board' => 'nullable|array',
-            'capabilities.board.id' => 'required_with:capabilities.board|string|max:50',
-            'capabilities.board.vendor' => 'nullable|string|max:100',
-            'capabilities.board.model' => 'nullable|string|max:100',
-            'capabilities.board.connection' => 'nullable|string|in:serial,wifi,ethernet,bluetooth',
-            'capabilities.board.firmware' => 'nullable|string|max:100',
-
-            // Sensors validation
+            'capabilities.board' => 'nullable',
             'capabilities.sensors' => 'nullable|array',
-            'capabilities.sensors.*.id' => 'required|string|max:50',
-            'capabilities.sensors.*.display_name' => 'required|string|max:100',
-            'capabilities.sensors.*.category' => 'required|string|in:environment,nutrients,lighting,irrigation,system,custom',
-            'capabilities.sensors.*.unit' => 'required|string|max:20',
-            'capabilities.sensors.*.value_type' => 'required|string|in:float,int,string,bool',
-            'capabilities.sensors.*.range' => 'nullable|array|size:2',
-            'capabilities.sensors.*.range.*' => 'nullable|numeric',
-            'capabilities.sensors.*.min_interval' => 'nullable|integer|min:1',
-            'capabilities.sensors.*.critical' => 'boolean',
-
-            // Actuators validation
             'capabilities.actuators' => 'nullable|array',
-            'capabilities.actuators.*.id' => 'required|string|max:50',
-            'capabilities.actuators.*.display_name' => 'required|string|max:100',
-            'capabilities.actuators.*.category' => 'required|string|in:environment,nutrients,lighting,irrigation,system,custom',
-            'capabilities.actuators.*.command_type' => 'required|string|in:toggle,duration,target,custom',
-            'capabilities.actuators.*.params' => 'nullable|array',
-            'capabilities.actuators.*.params.*.name' => 'required|string|max:50',
-            'capabilities.actuators.*.params.*.type' => 'required|string|in:int,float,string,bool',
-            'capabilities.actuators.*.params.*.min' => 'nullable|numeric',
-            'capabilities.actuators.*.params.*.max' => 'nullable|numeric',
-            'capabilities.actuators.*.params.*.unit' => 'nullable|string|max:20',
-            'capabilities.actuators.*.min_interval' => 'nullable|integer|min:1',
-            'capabilities.actuators.*.critical' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -107,24 +80,16 @@ class DeviceManagementController extends Controller
             ], 422);
         }
 
-        // Create DTO to validate structure
-        try {
-            $capabilitiesDTO = DeviceCapabilities::fromArray($request->input('capabilities'));
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Invalid capabilities structure',
-                'message' => $e->getMessage(),
-            ], 422);
-        }
-
+        // Store normalized capabilities (skip DTO validation, just store raw)
         $updateData = [
-            'capabilities' => $request->input('capabilities'),
+            'capabilities' => $capabilities,
         ];
 
-        // Extract board ID and store in board_type column
-        if (isset($request->input('capabilities')['board']['id'])) {
-            $updateData['board_type'] = $request->input('capabilities')['board']['id'];
+        // Extract board ID/name and store in board_type column
+        if (isset($capabilities['board']['id'])) {
+            $updateData['board_type'] = $capabilities['board']['id'];
+        } elseif (isset($capabilities['board_name'])) {
+            $updateData['board_type'] = $capabilities['board_name'];
         }
 
         $device->update($updateData);
@@ -132,68 +97,16 @@ class DeviceManagementController extends Controller
         // Broadcast WebSocket event
         broadcast(new DeviceCapabilitiesUpdated($device));
 
-        // Classify capabilities against canonical catalog
-        $sensorIds = array_map(fn($s) => $s->id, $capabilitiesDTO->sensors);
-        $actuatorIds = array_map(fn($a) => $a->id, $capabilitiesDTO->actuators);
-
-        $canonicalSensorIds = SensorType::query()->whereIn('id', $sensorIds)->pluck('id')->all();
-        $canonicalActuatorIds = ActuatorType::query()->whereIn('id', $actuatorIds)->pluck('id')->all();
-
-        $customSensorIds = array_values(array_diff($sensorIds, $canonicalSensorIds));
-        $customActuatorIds = array_values(array_diff($actuatorIds, $canonicalActuatorIds));
-
-        // Identify simple mismatches against catalog (non-fatal)
-        $sensorMismatches = [];
-        foreach ($capabilitiesDTO->sensors as $s) {
-            $type = SensorType::find($s->id);
-            if ($type) {
-                $mismatch = [];
-                if (!empty($s->unit) && $type->default_unit && $s->unit !== $type->default_unit) {
-                    $mismatch[] = 'unit';
-                }
-                if (!empty($s->value_type) && $s->value_type !== $type->value_type) {
-                    $mismatch[] = 'value_type';
-                }
-                if (!empty($mismatch)) {
-                    $sensorMismatches[$s->id] = $mismatch;
-                }
-            }
-        }
-
-        $actuatorMismatches = [];
-        foreach ($capabilitiesDTO->actuators as $a) {
-            $type = ActuatorType::find($a->id);
-            if ($type) {
-                $mismatch = [];
-                if (!empty($a->command_type) && $a->command_type !== $type->command_type) {
-                    $mismatch[] = 'command_type';
-                }
-                if (!empty($mismatch)) {
-                    $actuatorMismatches[$a->id] = $mismatch;
-                }
-            }
-        }
+        // Count sensors and actuators
+        $sensorCount = is_array($capabilities['sensors'] ?? null) ? count($capabilities['sensors']) : 0;
+        $actuatorCount = is_array($capabilities['actuators'] ?? null) ? count($capabilities['actuators']) : 0;
 
         return response()->json([
             'success' => true,
             'message' => 'Device capabilities updated',
             'board_type' => $device->board_type,
-            'capabilities' => $device->capabilities,
-            'sensor_count' => count($capabilitiesDTO->sensors),
-            'actuator_count' => count($capabilitiesDTO->actuators),
-            'categories' => $capabilitiesDTO->getAllCategories(),
-            'catalog' => [
-                'sensors' => [
-                    'canonical' => $canonicalSensorIds,
-                    'custom' => $customSensorIds,
-                    'mismatches' => $sensorMismatches,
-                ],
-                'actuators' => [
-                    'canonical' => $canonicalActuatorIds,
-                    'custom' => $customActuatorIds,
-                    'mismatches' => $actuatorMismatches,
-                ],
-            ],
+            'sensor_count' => $sensorCount,
+            'actuator_count' => $actuatorCount,
         ]);
     }
 
@@ -242,5 +155,135 @@ class DeviceManagementController extends Controller
             'message' => 'Heartbeat received',
             'last_seen_at' => $device->last_seen_at,
         ]);
+    }
+
+    /**
+     * Normalize capabilities from simplified agent format to full schema.
+     * 
+     * Accepts:
+     * - Simple format: {"board_name": "arduino_uno", "sensors": ["water_level"], "actuators": ["spray_pump"]}
+     * - Full format: {"board": {...}, "sensors": [{id, display_name, ...}], "actuators": [{id, display_name, ...}]}
+     * 
+     * Returns normalized full format (or passes through if already full).
+     */
+    private function normalizeCapabilities(array $capabilities): array
+    {
+        // Detect simple format (sensors/actuators as string arrays)
+        $hasSensorsAsStrings = isset($capabilities['sensors']) 
+            && is_array($capabilities['sensors'])
+            && !empty($capabilities['sensors'])
+            && is_string($capabilities['sensors'][0] ?? null);
+
+        $hasActuatorsAsStrings = isset($capabilities['actuators'])
+            && is_array($capabilities['actuators'])
+            && !empty($capabilities['actuators'])
+            && is_string($capabilities['actuators'][0] ?? null);
+
+        // If already in full format, return as-is
+        if (!$hasSensorsAsStrings && !$hasActuatorsAsStrings) {
+            return $capabilities;
+        }
+
+        // Normalize to full format
+        $normalized = [];
+
+        // Board
+        if (isset($capabilities['board'])) {
+            $normalized['board'] = $capabilities['board'];
+        } elseif (isset($capabilities['board_name'])) {
+            $normalized['board'] = [
+                'id' => $capabilities['board_name'],
+                'vendor' => 'Unknown',
+                'model' => ucfirst($capabilities['board_name']),
+                'connection' => 'serial',
+            ];
+        }
+
+        // Sensors
+        if ($hasSensorsAsStrings) {
+            $normalized['sensors'] = array_map(function ($sensorId) {
+                return [
+                    'id' => $sensorId,
+                    'display_name' => ucwords(str_replace('_', ' ', $sensorId)),
+                    'category' => $this->guessCategory($sensorId),
+                    'unit' => $this->guessUnit($sensorId),
+                    'value_type' => 'float',
+                    'critical' => false,
+                ];
+            }, $capabilities['sensors']);
+        } elseif (isset($capabilities['sensors'])) {
+            $normalized['sensors'] = $capabilities['sensors'];
+        }
+
+        // Actuators
+        if ($hasActuatorsAsStrings) {
+            $normalized['actuators'] = array_map(function ($actuatorId) {
+                return [
+                    'id' => $actuatorId,
+                    'display_name' => ucwords(str_replace('_', ' ', $actuatorId)),
+                    'category' => $this->guessCategory($actuatorId),
+                    'command_type' => $this->guessCommandType($actuatorId),
+                    'critical' => false,
+                ];
+            }, $capabilities['actuators']);
+        } elseif (isset($capabilities['actuators'])) {
+            $normalized['actuators'] = $capabilities['actuators'];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Guess category from sensor/actuator ID.
+     */
+    private function guessCategory(string $id): string
+    {
+        $id = strtolower($id);
+
+        if (str_contains($id, 'water') || str_contains($id, 'spray') || str_contains($id, 'pump') || str_contains($id, 'fill')) {
+            return 'irrigation';
+        }
+        if (str_contains($id, 'tds') || str_contains($id, 'ph') || str_contains($id, 'ec')) {
+            return 'nutrients';
+        }
+        if (str_contains($id, 'temp') || str_contains($id, 'humid')) {
+            return 'environment';
+        }
+        if (str_contains($id, 'light') || str_contains($id, 'led')) {
+            return 'lighting';
+        }
+
+        return 'custom';
+    }
+
+    /**
+     * Guess unit from sensor ID.
+     */
+    private function guessUnit(string $id): string
+    {
+        $id = strtolower($id);
+
+        if (str_contains($id, 'temp')) return '°C';
+        if (str_contains($id, 'humid')) return '%';
+        if (str_contains($id, 'water') || str_contains($id, 'level')) return '%';
+        if (str_contains($id, 'tds')) return 'ppm';
+        if (str_contains($id, 'ph')) return 'pH';
+        if (str_contains($id, 'ec')) return 'mS/cm';
+
+        return 'unit';
+    }
+
+    /**
+     * Guess command type from actuator ID.
+     */
+    private function guessCommandType(string $id): string
+    {
+        $id = strtolower($id);
+
+        if (str_contains($id, 'pump') || str_contains($id, 'spray')) return 'duration';
+        if (str_contains($id, 'valve') || str_contains($id, 'fill')) return 'toggle';
+        if (str_contains($id, 'light') || str_contains($id, 'led')) return 'toggle';
+
+        return 'toggle';
     }
 }
