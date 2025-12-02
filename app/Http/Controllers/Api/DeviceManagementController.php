@@ -86,6 +86,7 @@ class DeviceManagementController extends Controller
 
         $updateData = [
             'last_seen_at' => now(),
+            'status' => 'online', // Set status to online on heartbeat
         ];
 
         if ($request->has('last_state')) {
