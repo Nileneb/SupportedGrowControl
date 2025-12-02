@@ -8,16 +8,24 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop foreign keys first
+        // Drop foreign keys first (silently fail if not exists)
         if (Schema::hasTable('device_sensors')) {
-            Schema::table('device_sensors', function (Blueprint $table) {
-                $table->dropForeign(['sensor_type_id']);
-            });
+            try {
+                Schema::table('device_sensors', function (Blueprint $table) {
+                    $table->dropForeign(['sensor_type_id']);
+                });
+            } catch (\Exception $e) {
+                // Foreign key might not exist, continue
+            }
         }
         if (Schema::hasTable('device_actuators')) {
-            Schema::table('device_actuators', function (Blueprint $table) {
-                $table->dropForeign(['actuator_type_id']);
-            });
+            try {
+                Schema::table('device_actuators', function (Blueprint $table) {
+                    $table->dropForeign(['actuator_type_id']);
+                });
+            } catch (\Exception $e) {
+                // Foreign key might not exist, continue
+            }
         }
         
         // Drop and recreate sensor_types with proper schema
