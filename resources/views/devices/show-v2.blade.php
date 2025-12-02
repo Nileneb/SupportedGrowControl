@@ -1,11 +1,9 @@
 <x-layouts.app :title="$device->name">
-    @push('scripts')
     <script>
-        // Global device context
+        // Global device context - MUST be defined before any sections load
         window.deviceId = {{ $device->id }};
         window.devicePublicId = '{{ $device->public_id }}';
     </script>
-    @endpush
     
     <div class="flex h-full w-full flex-1 gap-4">
         <!-- Sidebar Navigation -->

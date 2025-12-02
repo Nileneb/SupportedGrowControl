@@ -122,7 +122,7 @@
             if (!command) return;
             
             try {
-                const response = await fetch(`/api/devices/${deviceId}/commands`, {
+                const response = await fetch(`/api/growdash/devices/${window.devicePublicId}/commands`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

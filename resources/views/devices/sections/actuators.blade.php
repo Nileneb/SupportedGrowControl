@@ -171,7 +171,7 @@
                     statusDot.className = 'h-2 w-2 rounded-full bg-blue-500 animate-pulse';
                 }
                 
-                const response = await fetch(`/api/devices/${deviceId}/commands`, {
+                const response = await fetch(`/api/growdash/devices/${window.devicePublicId}/commands`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
