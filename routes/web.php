@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CommandController;
+use App\Http\Controllers\FeedbackController;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 use App\Http\Controllers\DeviceViewController;
@@ -50,4 +51,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Device pairing page
     Volt::route('devices/pair', 'devices.pair')->name('devices.pair');
+
+    // Feedback submission
+    Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+    Route::view('/feedback', 'feedback.form')->name('feedback.form');
 });
