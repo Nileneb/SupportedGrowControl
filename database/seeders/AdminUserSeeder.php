@@ -18,7 +18,7 @@ class AdminUserSeeder extends Seeder
             $this->command->info("User {$adminEmail} is now an admin.");
         } else {
             $this->command->warn("User {$adminEmail} not found. Creating admin user...");
-            
+
             User::create([
                 'name' => 'Bene Linn',
                 'email' => $adminEmail,
@@ -26,7 +26,7 @@ class AdminUserSeeder extends Seeder
                 'is_admin' => true,
                 'email_verified_at' => now(),
             ]);
-            
+
             $this->command->info("Admin user {$adminEmail} created successfully.");
         }
     }
