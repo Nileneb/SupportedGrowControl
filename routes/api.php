@@ -72,8 +72,8 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 
 // ==================== User API (Sanctum-Authenticated) ====================
 
-// Device command endpoints (require user authentication)
-Route::middleware('auth:sanctum')->prefix('growdash/devices')->group(function () {
+// Device command endpoints (used via Blade session -> switch to auth:web to avoid 401 when no Sanctum token present)
+Route::middleware('auth:web')->prefix('growdash/devices')->group(function () {
     // POST new command to device
     Route::post('/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'send']);
     
