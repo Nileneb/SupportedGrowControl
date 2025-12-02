@@ -13,9 +13,9 @@
                     <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ $device->bootstrap_id }}</p>
                 </div>
             </div>
-            
+
             <div class="flex items-center gap-3">
-                <span class="px-4 py-2 text-sm font-medium rounded-full 
+                <span class="px-4 py-2 text-sm font-medium rounded-full
                     @if($device->status === 'online') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
                     @elseif($device->status === 'paired') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
                     @elseif($device->status === 'offline') bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400
@@ -108,7 +108,7 @@
                         <span class="text-xs text-neutral-500 dark:text-neutral-400">Offline</span>
                     @endif
                 </div>
-                
+
                 <div class="flex-1 p-4 overflow-auto bg-neutral-900 text-green-400 font-mono text-sm">
                     @if($device->status === 'online')
                         <div id="serial-output" class="space-y-1">
@@ -118,18 +118,18 @@
                         <div class="text-neutral-500">Device is offline. Serial console unavailable.</div>
                     @endif
                 </div>
-                
+
                 @if($device->status === 'online')
                 <div class="p-3 border-t border-neutral-700">
                     <form id="serial-command-form" class="flex gap-2">
-                        <input 
-                            type="text" 
-                            id="serial-command" 
-                            placeholder="Enter serial command..." 
+                        <input
+                            type="text"
+                            id="serial-command"
+                            placeholder="Enter serial command..."
                             class="flex-1 px-3 py-2 bg-neutral-800 border border-neutral-600 rounded text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             Send
@@ -145,14 +145,14 @@
                 <div class="flex flex-col rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden max-h-[300px]">
                     <div class="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
                         <h2 class="font-semibold text-neutral-900 dark:text-neutral-100">Command History</h2>
-                        <button 
-                            onclick="refreshCommandHistory()" 
+                        <button
+                            onclick="refreshCommandHistory()"
                             class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                         >
                             Refresh
                         </button>
                     </div>
-                    
+
                     <div id="command-history" class="flex-1 p-4 overflow-auto space-y-2">
                         <div class="text-center py-4 text-neutral-500 dark:text-neutral-400 text-sm">
                             No commands sent yet
@@ -164,14 +164,14 @@
                 <div class="flex flex-col rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden flex-1">
                     <div class="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-700">
                         <h2 class="font-semibold text-neutral-900 dark:text-neutral-100">Device Logs</h2>
-                        <button 
-                            onclick="location.reload()" 
+                        <button
+                            onclick="location.reload()"
                             class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                         >
                             Refresh
                         </button>
                     </div>
-                    
+
                     <div class="flex-1 p-4 overflow-auto space-y-2">
                         @forelse($logs as $log)
                             <div class="flex gap-3 text-sm">
@@ -204,24 +204,76 @@
     @if($device->status === 'online')
     <script>
         const deviceId = '{{ $device->public_id }}';
+        const deviceDbId = {{ $device->id }};
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        
+
         // Command history
         let commandHistory = [];
         let pollingInterval = null;
-        
+
+        // WebSocket Event Listeners
+        function initializeWebSocketListeners() {
+            if (!window.Echo) {
+                console.warn('Echo not initialized, falling back to polling only');
+                return;
+            }
+
+            console.log(`Subscribing to private channel: device.${deviceDbId}`);
+
+            // Listen to device-specific private channel
+            window.Echo.private(`device.${deviceDbId}`)
+                .listen('.capabilities.updated', (event) => {
+                    console.log('Capabilities updated:', event);
+                    handleCapabilitiesUpdate(event);
+                })
+                .listen('.command.status.updated', (event) => {
+                    console.log('Command status updated:', event);
+                    handleCommandStatusUpdate(event);
+                })
+                .error((error) => {
+                    console.error('WebSocket channel error:', error);
+                });
+
+            console.log('✓ WebSocket listeners initialized');
+        }
+
+        function handleCapabilitiesUpdate(event) {
+            // Reload page to show updated capabilities (sensors/actuators)
+            console.log('Reloading page due to capabilities update...');
+            addToOutput('⚡ Device capabilities updated - reloading...', 'text-blue-400');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+
+        function handleCommandStatusUpdate(event) {
+            const { command_id, status, result_message } = event;
+
+            // Update command in history if visible
+            refreshCommandHistory();
+
+            // Add to serial output if completed/failed
+            if (status === 'completed') {
+                addToOutput(`✓ Command ${command_id} completed: ${result_message || 'OK'}`, 'text-green-500');
+            } else if (status === 'failed') {
+                addToOutput(`✗ Command ${command_id} failed: ${result_message || 'Unknown error'}`, 'text-red-500');
+            } else if (status === 'executing') {
+                addToOutput(`⏳ Command ${command_id} is executing...`, 'text-blue-400');
+            }
+        }
+
         // Send serial command to device
         document.getElementById('serial-command-form')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const input = document.getElementById('serial-command');
             const command = input.value.trim();
-            
+
             if (!command) return;
-            
+
             // Add command to output (sent)
             addToOutput(`> ${command}`, 'text-yellow-400');
             input.value = '';
-            
+
             try {
                 const response = await fetch(`/api/growdash/devices/${deviceId}/commands`, {
                     method: 'POST',
@@ -236,13 +288,12 @@
                         params: { command: command }
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     addToOutput(`✓ Command queued (ID: ${data.command.id})`, 'text-green-500');
-                    // Poll for result
-                    pollCommandResult(data.command.id);
+                    // WebSocket will handle the result update, no need to poll
                 } else {
                     addToOutput(`✗ Failed: ${data.message}`, 'text-red-500');
                 }
@@ -251,70 +302,32 @@
                 addToOutput(`✗ Error: ${error.message}`, 'text-red-500');
             }
         });
-        
+
         // Add line to serial output
         function addToOutput(text, className = 'text-green-400') {
             const output = document.getElementById('serial-output');
+            if (!output) return;
+
             const line = document.createElement('div');
             line.className = className;
             line.textContent = text;
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
-            
+
             // Limit output to 100 lines
             while (output.children.length > 100) {
                 output.removeChild(output.firstChild);
             }
         }
-        
-        // Poll for command result
-        function pollCommandResult(commandId, attempts = 0, maxAttempts = 30) {
-            if (attempts >= maxAttempts) {
-                addToOutput(`⚠ Command ${commandId} timeout`, 'text-yellow-500');
-                return;
-            }
-            
-            setTimeout(async () => {
-                try {
-                    const response = await fetch(`/api/growdash/devices/${deviceId}/commands?limit=1`, {
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json',
-                        },
-                        credentials: 'same-origin',
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.success && data.commands.length > 0) {
-                        const command = data.commands.find(c => c.id === commandId);
-                        
-                        if (command) {
-                            if (command.status === 'completed') {
-                                addToOutput(`← ${command.result_message || 'OK'}`, 'text-green-400');
-                                return;
-                            } else if (command.status === 'failed') {
-                                addToOutput(`✗ ${command.result_message || 'Failed'}`, 'text-red-500');
-                                return;
-                            } else if (command.status === 'executing') {
-                                addToOutput(`⏳ Executing...`, 'text-blue-400');
-                            }
-                        }
-                    }
-                    
-                    // Continue polling
-                    pollCommandResult(commandId, attempts + 1, maxAttempts);
-                    
-                } catch (error) {
-                    console.error('Error polling command:', error);
-                    pollCommandResult(commandId, attempts + 1, maxAttempts);
-                }
-            }, 2000); // Poll every 2 seconds
-        }
-        
-        // Auto-refresh command history every 10 seconds
+
+        // Auto-refresh command history every 10 seconds (fallback if WebSocket not available)
         function startCommandHistoryPolling() {
             pollingInterval = setInterval(async () => {
+                if (window.wsConnected) {
+                    // WebSocket is active, reduce polling frequency
+                    return;
+                }
+
                 try {
                     const response = await fetch(`/api/growdash/devices/${deviceId}/commands?limit=10`, {
                         headers: {
@@ -323,9 +336,9 @@
                         },
                         credentials: 'same-origin',
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     if (data.success) {
                         updateCommandHistory(data.commands);
                     }
@@ -334,28 +347,28 @@
                 }
             }, 10000);
         }
-        
+
         function updateCommandHistory(commands) {
             const container = document.getElementById('command-history');
-            
+
             if (!commands || commands.length === 0) {
                 container.innerHTML = '<div class="text-center py-4 text-neutral-500 dark:text-neutral-400 text-sm">No commands sent yet</div>';
                 return;
             }
-            
+
             container.innerHTML = '';
-            
+
             commands.forEach(cmd => {
                 const cmdEl = document.createElement('div');
                 cmdEl.className = 'p-3 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900';
-                
+
                 const statusColors = {
                     'pending': 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
                     'executing': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
                     'completed': 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
                     'failed': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 };
-                
+
                 cmdEl.innerHTML = `
                     <div class="flex items-start justify-between gap-2 mb-2">
                         <div class="flex-1">
@@ -373,23 +386,23 @@
                     </div>
                     ${cmd.result_message ? `<div class="text-xs text-neutral-600 dark:text-neutral-400 mt-1">${cmd.result_message}</div>` : ''}
                 `;
-                
+
                 container.appendChild(cmdEl);
             });
-            
+
             // Check for new completed commands (for terminal output)
             commands.forEach(cmd => {
                 if (cmd.status === 'completed' && !commandHistory.includes(cmd.id)) {
                     commandHistory.push(cmd.id);
                 }
             });
-            
+
             // Keep only last 50 command IDs in history
             if (commandHistory.length > 50) {
                 commandHistory = commandHistory.slice(-50);
             }
         }
-        
+
         // Refresh command history manually
         async function refreshCommandHistory() {
             try {
@@ -400,9 +413,9 @@
                     },
                     credentials: 'same-origin',
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     updateCommandHistory(data.commands);
                 }
@@ -410,20 +423,30 @@
                 console.error('Error fetching command history:', error);
             }
         }
-        
+
         // Start polling when page loads
+        initializeWebSocketListeners(); // Initialize WebSocket first
         startCommandHistoryPolling();
         refreshCommandHistory(); // Initial load
-        
+
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (pollingInterval) {
                 clearInterval(pollingInterval);
             }
+
+            if (window.Echo) {
+                window.Echo.leave(`device.${deviceDbId}`);
+            }
         });
-        
+
         // Initial message
         addToOutput('# Serial console ready. Type commands and press Enter.', 'text-neutral-500');
+        if (window.wsConnected) {
+            addToOutput('✓ WebSocket connected - real-time updates enabled', 'text-green-500');
+        } else {
+            addToOutput('⚠ WebSocket not connected - using polling fallback', 'text-yellow-500');
+        }
     </script>
     @endif
 </x-layouts.app>
