@@ -70,6 +70,17 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
 });
 
+// ==================== User API (Sanctum-Authenticated) ====================
+
+// Device command endpoints (require user authentication)
+Route::middleware('auth:sanctum')->prefix('growdash/devices')->group(function () {
+    // POST new command to device
+    Route::post('/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'send']);
+    
+    // GET command history for device
+    Route::get('/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'history']);
+});
+
 // ==================== Legacy Webhook Endpoints ====================
 
 // Protected webhook endpoints (require X-Growdash-Token header)

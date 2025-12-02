@@ -103,6 +103,87 @@ heartbeat.start()
 
 ## Other Agent Endpoints
 
+### Poll Pending Commands
+**The agent MUST regularly poll for pending commands to execute.**
+
+```
+GET /api/growdash/agent/commands/pending
+Headers: X-Device-ID, X-Device-Token
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "commands": [
+    {
+      "id": 42,
+      "type": "serial_command",
+      "params": {
+        "command": "STATUS"
+      },
+      "created_at": "2025-12-02T10:30:00Z"
+    }
+  ]
+}
+```
+
+**Recommended Implementation:**
+- Poll every 5-10 seconds when online
+- Process commands in order (FIFO)
+- Send result after execution
+
+**Python Example:**
+```python
+def poll_commands(base_url, device_id, agent_token):
+    response = requests.get(
+        f"{base_url}/api/growdash/agent/commands/pending",
+        headers={
+            "X-Device-ID": device_id,
+            "X-Device-Token": agent_token,
+        },
+        timeout=5
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        for cmd in data.get('commands', []):
+            execute_command(cmd)
+```
+
+### Submit Command Result
+```
+POST /api/growdash/agent/commands/{id}/result
+Headers: X-Device-ID, X-Device-Token
+Body: {
+  "status": "completed",
+  "result_message": "Command executed successfully"
+}
+```
+
+**Status values:**
+- `executing`: Command is being processed
+- `completed`: Command finished successfully
+- `failed`: Command execution failed
+
+**Python Example:**
+```python
+def submit_result(base_url, device_id, agent_token, command_id, status, message):
+    response = requests.post(
+        f"{base_url}/api/growdash/agent/commands/{command_id}/result",
+        headers={
+            "X-Device-ID": device_id,
+            "X-Device-Token": agent_token,
+        },
+        json={
+            "status": status,
+            "result_message": message
+        },
+        timeout=5
+    )
+    return response.json()
+```
+
 ### Send Telemetry Data
 ```
 POST /api/growdash/agent/telemetry
