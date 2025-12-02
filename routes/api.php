@@ -6,6 +6,7 @@ use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -75,6 +76,66 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 
 // ==================== User API (Sanctum-Authenticated) ====================
 
+// Get user's devices with credentials for testing/agent management
+Route::middleware('auth:sanctum')->get('/user/devices', function (Request $request) {
+    $devices = $request->user()->devices()
+        ->select('id', 'public_id', 'name', 'status', 'last_seen_at', 'capabilities', 'board_type')
+        ->get()
+        ->map(function ($device) {
+            return [
+                'id' => $device->id,
+                'public_id' => $device->public_id,
+                'name' => $device->name,
+                'status' => $device->status,
+                'last_seen_at' => $device->last_seen_at,
+                'board_type' => $device->board_type,
+                'capabilities' => $device->capabilities,
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'devices' => $devices,
+        'count' => $devices->count(),
+    ]);
+});
+
+// Delete a device (removes all associated data)
+Route::middleware('auth:sanctum')->delete('/user/devices/{device}', function (Request $request, \App\Models\Device $device) {
+    // Verify device belongs to authenticated user
+    if ($device->user_id !== $request->user()->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $deviceName = $device->name;
+    $device->delete(); // Cascading deletes will remove related data
+
+    return response()->json([
+        'success' => true,
+        'message' => "Device '{$deviceName}' deleted successfully",
+    ]);
+});
+
+// Regenerate agent token for testing (returns NEW plaintext token)
+Route::middleware('auth:sanctum')->post('/user/devices/{device}/regenerate-token', function (Request $request, \App\Models\Device $device) {
+    // Verify device belongs to authenticated user
+    if ($device->user_id !== $request->user()->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    // Generate new token
+    $plaintextToken = \Illuminate\Support\Str::random(64);
+    $device->agent_token = hash('sha256', $plaintextToken);
+    $device->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Agent token regenerated successfully',
+        'public_id' => $device->public_id,
+        'agent_token' => $plaintextToken,
+        'warning' => 'Store this token securely - it will not be shown again!',
+    ]);
+});
 
 // ==================== Legacy Webhook Endpoints ====================
 

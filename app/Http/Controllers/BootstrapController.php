@@ -46,7 +46,7 @@ class BootstrapController extends Controller
             $device = Device::create([
                 'bootstrap_id' => $bootstrapId,
                 'name' => $data['name'] ?? 'Unclaimed Device',
-                'slug' => 'device-' . substr($bootstrapId, 0, 8),
+                'slug' => 'device-' . Str::random(8),
             ]);
 
             return response()->json([
