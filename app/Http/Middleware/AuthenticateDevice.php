@@ -49,7 +49,11 @@ class AuthenticateDevice
         }
 
         // Attach device to request for controller access
+        // 1. Set as user resolver for $request->user() calls
         $request->setUserResolver(fn () => $device);
+        
+        // 2. Also set as 'device' attribute for explicit $request->device access
+        $request->attributes->set('device', $device);
 
         return $next($request);
     }

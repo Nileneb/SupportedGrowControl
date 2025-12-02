@@ -59,7 +59,7 @@ class DeviceManagementController extends Controller
     public function updateCapabilities(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->user('device');
+        $device = $request->user();
 
         $validator = Validator::make($request->all(), [
             'capabilities' => 'required|array',
@@ -213,7 +213,7 @@ class DeviceManagementController extends Controller
     public function heartbeat(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->user('device');
+        $device = $request->user();
 
         $validator = Validator::make($request->all(), [
             'last_state' => 'nullable|array',
