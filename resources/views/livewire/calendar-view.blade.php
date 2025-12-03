@@ -18,7 +18,10 @@
     @php
         $start = \Illuminate\Support\Carbon::parse($currentDate)->startOfMonth()->startOfWeek();
         $end = \Illuminate\Support\Carbon::parse($currentDate)->endOfMonth()->endOfWeek();
-        $eventsByDate = collect($events)->groupBy(fn($e) => \Illuminate\Support\Carbon::parse($e['start_at'])->toDateString());
+        // Guard against null start_at values to prevent 500 errors
+        $eventsByDate = collect($events)
+            ->filter(fn($e) => !empty($e['start_at']))
+            ->groupBy(fn($e) => \Illuminate\Support\Carbon::parse($e['start_at'])->toDateString());
 
         // Build weeks array: each week contains 7 Carbon dates
         $weeks = [];
@@ -115,5 +118,8 @@
         </div>
     </div>
 
-    @livewire('event-form')
+    @php($hasEventForm = class_exists(\App\Livewire\EventForm::class))
+    @if($hasEventForm)
+        @livewire('event-form')
+    @endif
 </div>
