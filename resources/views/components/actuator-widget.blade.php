@@ -55,7 +55,8 @@
             'type' => 'number',
             'default' => 1000,
             'min' => 0,
-            'max' => 60000,
+            // Increase max to support longer irrigation cycles (e.g., 4+ minutes)
+            'max' => 300000,
         ];
     } elseif ($commandType === 'toggle') {
         $paramConfig = [

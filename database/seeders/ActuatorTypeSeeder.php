@@ -16,7 +16,8 @@ class ActuatorTypeSeeder extends Seeder
                 'category' => 'irrigation',
                 'command_type' => 'duration',
                 'params_schema' => [
-                    ['name' => 'seconds', 'type' => 'int', 'min' => 1, 'max' => 120]
+                    // Allow longer spray durations; increase max to 600 seconds (10 minutes)
+                    ['name' => 'seconds', 'type' => 'int', 'min' => 1, 'max' => 600]
                 ],
                 'min_interval' => 30,
                 'critical' => true,
