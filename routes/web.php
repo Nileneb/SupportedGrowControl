@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->prefix('devices')->group(function () {
     // Sensor/Actuator management wizards
     Route::get('/{device}/sensors/add', App\Livewire\Devices\AddSensor::class)->name('devices.sensors.add');
     Route::get('/{device}/actuators/add', App\Livewire\Devices\AddActuator::class)->name('devices.actuators.add');
-    
+
     // Shelly integration routes
     Route::post('/{device}/shelly/setup', [ShellySyncController::class, 'setup'])->name('devices.shelly.setup');
     Route::post('/{device}/shelly/update', [ShellySyncController::class, 'update'])->name('devices.shelly.update');
@@ -72,4 +72,10 @@ Route::middleware(['auth'])->group(function () {
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/feedback', App\Livewire\Admin\FeedbackList::class)->name('admin.feedback');
+});
+
+// Calendar routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
+    Route::get('/calendar/events', [\App\Http\Controllers\CalendarController::class, 'events'])->name('calendar.events');
 });
