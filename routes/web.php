@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/feedback', App\Livewire\Admin\FeedbackList::class)->name('admin.feedback');
+    Route::get('/users', App\Livewire\Admin\UserManagement::class)->name('admin.users');
 });
 
 // Calendar routes

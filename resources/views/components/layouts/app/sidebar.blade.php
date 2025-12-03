@@ -22,6 +22,7 @@
                 @if(auth()->user()->is_admin)
                     <flux:navlist.group :heading="__('Admin')" class="grid">
                         <flux:navlist.item icon="document-text" :href="route('admin.feedback')" :current="request()->routeIs('admin.feedback')" wire:navigate>{{ __('Feedback') }}</flux:navlist.item>
+                        <flux:navlist.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Management') }}</flux:navlist.item>
                     </flux:navlist.group>
                 @endif
             </flux:navlist>
