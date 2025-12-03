@@ -13,7 +13,7 @@ class Event extends Model
 
     protected $fillable = [
         'user_id', 'device_id', 'calendar_id', 'title', 'description',
-        'start_at', 'end_at', 'all_day', 'status', 'color', 'meta',
+        'start_at', 'end_at', 'all_day', 'status', 'color', 'meta', 'rrule', 'last_executed_at',
     ];
 
     protected $casts = [
@@ -21,6 +21,7 @@ class Event extends Model
         'end_at' => 'datetime',
         'all_day' => 'boolean',
         'meta' => 'array',
+        'last_executed_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

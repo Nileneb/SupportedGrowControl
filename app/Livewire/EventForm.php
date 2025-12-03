@@ -23,8 +23,23 @@ class EventForm extends Component
     public ?string $color = null;
     public string $status = 'planned';
 
+    // Scheduling & command linkage
+    public ?string $rrule = null; // e.g., FREQ=DAILY;INTERVAL=2
+    public ?string $command_type = null; // e.g., spray_pump
+    public ?int $duration_minutes = null; // e.g., 4 -> 4 minutes
+
+    // Device list for dropdown
+    public array $devices = [];
+
     public function render()
     {
+        // preload user devices for selection
+        if (\Illuminate\Support\Facades\Schema::hasTable('devices')) {
+            $this->devices = \App\Models\Device::where('user_id', \Illuminate\Support\Facades\Auth::id())
+                ->orderBy('name')->get(['id','name'])->toArray();
+        } else {
+            $this->devices = [];
+        }
         return view('livewire.event-form');
     }
 
@@ -52,18 +67,41 @@ class EventForm extends Component
             'device_id' => ['nullable', 'integer'],
             'color' => ['nullable', 'string', 'max:32'],
             'status' => ['required', Rule::in(['planned','active','done','canceled'])],
+            'rrule' => ['nullable', 'string', 'max:255'],
+            'command_type' => ['nullable', 'string', 'max:50'],
+            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
         ]);
+
+        // Build meta from command fields
+        $meta = null;
+        if (!empty($validated['command_type'])) {
+            $durationMs = null;
+            if (!empty($validated['duration_minutes'])) {
+                $durationMs = (int)$validated['duration_minutes'] * 60 * 1000;
+            }
+            $meta = [
+                'command_type' => $validated['command_type'],
+                'params' => array_filter([
+                    'duration_ms' => $durationMs,
+                ], fn($v) => $v !== null),
+            ];
+        }
 
         if ($this->id) {
             $event = Event::where('user_id', Auth::id())->find($this->id);
             if (! $event || ! Auth::user()->can('update', $event)) {
                 return;
             }
-            $event->update($validated);
+            $event->update(array_merge($validated, [
+                'rrule' => $validated['rrule'] ?? $event->rrule,
+                'meta' => $meta ?? $event->meta,
+            ]));
             $this->dispatch('event-updated', ['id' => $event->id]);
         } else {
             $event = Event::create(array_merge($validated, [
                 'user_id' => Auth::id(),
+                'rrule' => $validated['rrule'] ?? null,
+                'meta' => $meta,
             ]));
             $this->dispatch('event-saved', ['id' => $event->id]);
         }
