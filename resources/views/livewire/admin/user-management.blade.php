@@ -19,10 +19,10 @@
     @endif
 
     <div class="mb-4">
-        <input 
-            type="text" 
-            wire:model.live="search" 
-            placeholder="Search users..." 
+        <input
+            type="text"
+            wire:model.live="search"
+            placeholder="Search users..."
             class="w-full px-4 py-2 border rounded dark:bg-gray-800 dark:border-gray-700"
         />
     </div>
@@ -51,31 +51,31 @@
                         <td class="px-4 py-3 text-sm">{{ $user->created_at->format('d.m.Y') }}</td>
                         <td class="px-4 py-3 text-sm">
                             <div class="flex gap-2">
-                                <button 
-                                    wire:click="openEditModal({{ $user->id }})" 
+                                <button
+                                    wire:click="openEditModal({{ $user->id }})"
                                     class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                                 >
                                     Edit
                                 </button>
-                                
+
                                 @if($user->id !== auth()->id())
-                                    <button 
-                                        wire:click="toggleAdmin({{ $user->id }})" 
+                                    <button
+                                        wire:click="toggleAdmin({{ $user->id }})"
                                         class="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
                                     >
                                         {{ $user->is_admin ? 'Remove Admin' : 'Make Admin' }}
                                     </button>
-                                    
-                                    <button 
-                                        wire:click="loginAsUser({{ $user->id }})" 
+
+                                    <button
+                                        wire:click="loginAsUser({{ $user->id }})"
                                         class="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
                                         title="Remote Support"
                                     >
                                         🔧 Support
                                     </button>
-                                    
-                                    <button 
-                                        wire:click="deleteUser({{ $user->id }})" 
+
+                                    <button
+                                        wire:click="deleteUser({{ $user->id }})"
                                         wire:confirm="Are you sure you want to delete this user?"
                                         class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                                     >
@@ -105,13 +105,13 @@
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
                 <h3 class="text-lg font-semibold mb-4">Create New User</h3>
-                
+
                 <form wire:submit.prevent="createUser" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Name</label>
-                        <input 
-                            type="text" 
-                            wire:model="name" 
+                        <input
+                            type="text"
+                            wire:model="name"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -119,9 +119,9 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Email</label>
-                        <input 
-                            type="email" 
-                            wire:model="email" 
+                        <input
+                            type="email"
+                            wire:model="email"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('email') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -129,9 +129,9 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Password</label>
-                        <input 
-                            type="password" 
-                            wire:model="password" 
+                        <input
+                            type="password"
+                            wire:model="password"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('password') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -145,15 +145,15 @@
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6">
-                        <button 
-                            type="button" 
-                            wire:click="closeCreateModal" 
+                        <button
+                            type="button"
+                            wire:click="closeCreateModal"
                             class="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                             Cancel
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
                             Create User
@@ -169,13 +169,13 @@
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
                 <h3 class="text-lg font-semibold mb-4">Edit User</h3>
-                
+
                 <form wire:submit.prevent="updateUser" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Name</label>
-                        <input 
-                            type="text" 
-                            wire:model="name" 
+                        <input
+                            type="text"
+                            wire:model="name"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('name') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -183,9 +183,9 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Email</label>
-                        <input 
-                            type="email" 
-                            wire:model="email" 
+                        <input
+                            type="email"
+                            wire:model="email"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('email') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -193,9 +193,9 @@
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Password (leave empty to keep current)</label>
-                        <input 
-                            type="password" 
-                            wire:model="password" 
+                        <input
+                            type="password"
+                            wire:model="password"
                             class="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600"
                         />
                         @error('password') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
@@ -209,15 +209,15 @@
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6">
-                        <button 
-                            type="button" 
-                            wire:click="closeEditModal" 
+                        <button
+                            type="button"
+                            wire:click="closeEditModal"
                             class="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                         >
                             Cancel
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                         >
                             Update User

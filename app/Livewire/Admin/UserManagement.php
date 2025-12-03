@@ -155,13 +155,13 @@ class UserManagement extends Component
         }
 
         $user = User::findOrFail($userId);
-        
+
         // Store the admin's ID in session for later restoration
         session()->put('admin_user_id', Auth::id());
         session()->put('remote_support_active', true);
-        
+
         Auth::login($user);
-        
+
         return redirect()->route('dashboard')->with('message', 'Remote support session started.');
     }
 

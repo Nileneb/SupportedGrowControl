@@ -19,13 +19,13 @@ class ExitRemoteSupport extends Component
         }
 
         $adminUserId = session()->get('admin_user_id');
-        
+
         // Clear remote support session
         session()->forget(['admin_user_id', 'remote_support_active']);
-        
+
         // Log back in as admin
         Auth::loginUsingId($adminUserId);
-        
+
         return redirect()->route('admin.users')->with('message', 'Remote support session ended.');
     }
 }

@@ -5,8 +5,8 @@
                 <span class="font-semibold">🔧 Remote Support Session Active</span>
                 <span class="text-sm">Admin is viewing this account</span>
             </div>
-            <button 
-                wire:click="exitRemoteSupport" 
+            <button
+                wire:click="exitRemoteSupport"
                 class="px-4 py-1 bg-black text-yellow-500 rounded hover:bg-gray-800 font-semibold"
             >
                 Exit Support Mode
