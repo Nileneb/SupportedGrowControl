@@ -15,6 +15,7 @@
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
                     <flux:navlist.item icon="cpu-chip" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>{{ __('Devices') }}</flux:navlist.item>
+                    <flux:navlist.item icon="bolt" :href="route('shelly.index')" :current="request()->routeIs('shelly.*')" wire:navigate>{{ __('Shelly Devices') }}</flux:navlist.item>
                 </flux:navlist.group>
 
                 @if(auth()->user()->is_admin)

@@ -1,11 +1,9 @@
 <x-layouts.app :title="$device->name">
-    @push('scripts')
     <script>
-        // Global device context
+        // Global device context - MUST be defined before any sections load
         window.deviceId = {{ $device->id }};
         window.devicePublicId = '{{ $device->public_id }}';
     </script>
-    @endpush
     
     <div class="flex h-full w-full flex-1 gap-4">
         <!-- Sidebar Navigation -->
@@ -73,6 +71,16 @@
                     >
                         <span class="mr-2">ℹ️</span> Device Info
                     </button>
+
+                    <!-- Shelly Integration -->
+                    <button 
+                        onclick="showSection('shelly')"
+                        data-section="shelly"
+                        class="nav-item w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                            text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+                    >
+                        <span class="mr-2">🔌</span> Shelly Integration
+                    </button>
                 </nav>
             </div>
         </div>
@@ -101,6 +109,11 @@
             <!-- Device Info Section -->
             <div id="section-info" class="content-section hidden">
                 @include('devices.sections.info', ['device' => $device])
+            </div>
+
+            <!-- Shelly Integration Section -->
+            <div id="section-shelly" class="content-section hidden">
+                @include('devices.sections.shelly', ['device' => $device])
             </div>
         </div>
     </div>

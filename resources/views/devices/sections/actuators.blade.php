@@ -25,32 +25,44 @@
                               data-actuator-id="{{ $actuator['id'] }}"
                               data-device-id="{{ $device->id }}">
                             @csrf
-                            
-                            @if(isset($actuator['duration_unit']))
-                                <div>
-                                    <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                                        {{ $actuator['duration_label'] ?? 'Duration' }}
-                                    </label>
-                                    <div class="flex gap-2">
-                                        <input 
-                                            type="number" 
-                                            name="duration"
-                                            min="{{ $actuator['min_duration'] ?? 100 }}"
-                                            max="{{ $actuator['max_duration'] ?? 30000 }}"
-                                            value="{{ $actuator['default_duration'] ?? 1000 }}"
-                                            class="flex-1 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-3 py-2 text-sm"
-                                        />
-                                        <span class="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
-                                            {{ $actuator['duration_unit'] }}
-                                        </span>
-                                    </div>
-                                    @if(isset($actuator['duration_help']))
-                                        <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                                            {{ $actuator['duration_help'] }}
-                                        </p>
-                                    @endif
+                            <div>
+                                <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                                    {{ $actuator['duration_label'] ?? 'Duration' }}
+                                </label>
+                                <div class="flex gap-2">
+                                    <input 
+                                        type="number" 
+                                        name="duration"
+                                        min="{{ $actuator['min_duration'] ?? 100 }}"
+                                        max="{{ $actuator['max_duration'] ?? 30000 }}"
+                                        value="{{ $actuator['default_duration'] ?? 1000 }}"
+                                        class="flex-1 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 px-3 py-2 text-sm"
+                                    />
+                                    <span class="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
+                                        {{ $actuator['duration_unit'] ?? 'ms' }}
+                                    </span>
                                 </div>
-                            @endif
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    @php
+                                        $minD = $actuator['min_duration'] ?? 100;
+                                        $maxD = $actuator['max_duration'] ?? 30000;
+                                        $presets = [250, 500, 1000, 2000, 5000];
+                                    @endphp
+                                    @foreach($presets as $preset)
+                                        @if($preset >= $minD && $preset <= $maxD)
+                                            <button type="button" class="duration-preset px-2 py-1 text-xs rounded bg-neutral-200 dark:bg-neutral-600 text-neutral-800 dark:text-neutral-200" data-value="{{ $preset }}">{{ $preset }} ms</button>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                    Range: {{ $minD }}–{{ $maxD }} ms
+                                </p>
+                                @if(isset($actuator['duration_help']))
+                                    <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                        {{ $actuator['duration_help'] }}
+                                    </p>
+                                @endif
+                            </div>
                             
                             @if(isset($actuator['amount_unit']))
                                 <div>
@@ -171,10 +183,11 @@
                     statusDot.className = 'h-2 w-2 rounded-full bg-blue-500 animate-pulse';
                 }
                 
-                const response = await fetch(`/api/devices/${deviceId}/commands`, {
+                const response = await fetch(`/api/growdash/devices/${window.devicePublicId}/commands`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify({
@@ -185,7 +198,9 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    activeCommands.set(actuatorId, data.command_id);
+                    // Track command id for status updates; handle multiple shapes
+                    const cmdId = data.command_id || data.command?.id || data.id;
+                    if (cmdId) activeCommands.set(actuatorId, cmdId);
                     
                     statusMsg.textContent = '⏳ Executing...';
                     statusMsg.className = 'actuator-status-message text-xs text-center text-yellow-600 dark:text-yellow-400';
@@ -234,8 +249,11 @@
     function updateActuatorStatus(event) {
         // Find which actuator this command belongs to
         let actuatorId = null;
+        const eventCommandId = event.command_id || event.command?.id || event.id;
+        const eventStatus = event.status || event.command?.status || event.result_status;
+        const eventMessage = event.result_message || event.command?.result_message;
         activeCommands.forEach((commandId, actId) => {
-            if (commandId === event.command_id) {
+            if (eventCommandId && commandId === eventCommandId) {
                 actuatorId = actId;
             }
         });
@@ -248,7 +266,7 @@
         const statusMsg = form.querySelector('.actuator-status-message');
         const statusDot = document.getElementById(`actuator-status-${actuatorId}`);
         
-        if (event.status === 'success') {
+        if (eventStatus === 'success' || eventStatus === 'completed') {
             statusMsg.textContent = '✓ Success';
             statusMsg.className = 'actuator-status-message text-xs text-center text-green-600 dark:text-green-400';
             
@@ -266,8 +284,8 @@
                 activeCommands.delete(actuatorId);
             }, 2000);
             
-        } else if (event.status === 'failed') {
-            statusMsg.textContent = `✗ ${event.result_message || 'Failed'}`;
+        } else if (eventStatus === 'failed') {
+            statusMsg.textContent = `✗ ${eventMessage || 'Failed'}`;
             statusMsg.className = 'actuator-status-message text-xs text-center text-red-600 dark:text-red-400';
             
             if (statusDot) {
@@ -285,4 +303,13 @@
             }, 3000);
         }
     }
+
+    // Preset buttons: set duration quickly
+    document.querySelectorAll('.duration-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const form = btn.closest('form');
+            const input = form?.querySelector('input[name="duration"]');
+            if (input) input.value = btn.dataset.value;
+        });
+    });
 </script>

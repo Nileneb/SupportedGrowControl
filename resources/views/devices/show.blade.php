@@ -176,7 +176,7 @@
                         @forelse($logs as $log)
                             <div class="flex gap-3 text-sm">
                                 <span class="text-xs text-neutral-400 dark:text-neutral-500 font-mono shrink-0">
-                                    {{ $log->created_at->format('H:i:s') }}
+                                    {{ optional($log->created_at)?->format('H:i:s') ?? '—' }}
                                 </span>
                                 <span class="px-2 py-0.5 text-xs font-medium rounded shrink-0
                                     @if($log->log_level === 'error') bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400

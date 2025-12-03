@@ -6,6 +6,7 @@ use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
+use App\Http\Controllers\Api\ShellyWebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -142,7 +143,33 @@ Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\Co
     ->middleware('auth:sanctum')
     ->name('api.devices.commands.create');
 
+// Refresh device capabilities (trigger agent to send updated capabilities)
+Route::post('/devices/{device}/refresh-capabilities', function (Request $request, \App\Models\Device $device) {
+    // Verify ownership
+    if ($device->user_id !== Auth::id()) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+    
+    // Create a command for the agent to refresh capabilities
+    \App\Models\Command::create([
+        'device_id' => $device->id,
+        'created_by_user_id' => Auth::id(),
+        'type' => 'refresh_capabilities',
+        'params' => [],
+        'status' => 'pending',
+    ]);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Capability refresh requested'
+    ]);
+})->middleware('auth:sanctum');
+
 // ==================== Legacy Webhook Endpoints ====================
+
+// Shelly device webhooks (public endpoint with token authentication)
+Route::post('/shelly/webhook/{shelly}', [ShellyWebhookController::class, 'handle'])
+    ->name('api.shelly.webhook');
 
 // Protected webhook endpoints (require X-Growdash-Token header)
 Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {

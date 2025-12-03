@@ -28,7 +28,7 @@ class AddActuator extends Component
     public function mount(Device $device): void
     {
         $this->device = $device;
-        $this->actuatorTypes = ActuatorType::orderBy('category')->orderBy('display_name')->get();
+        $this->actuatorTypes = ActuatorType::orderBy('category')->orderBy('name')->get();
     }
 
     public function selectActuatorType(string $actuatorTypeId): void
@@ -38,8 +38,8 @@ class AddActuator extends Component
         // Auto-populate channel_key suggestion
         $actuatorType = ActuatorType::find($actuatorTypeId);
         if ($actuatorType) {
-            $this->channelKey = $actuatorType->id;
-            $this->minInterval = $actuatorType->min_interval ?? 0;
+            $this->channelKey = $actuatorType->key;
+            $this->minInterval = 1;
         }
 
         $this->currentStep = 2;

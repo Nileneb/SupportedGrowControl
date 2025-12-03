@@ -1,9 +1,17 @@
 <x-layouts.app :title="__('Dashboard')">
     @php
-        $devices = auth()->user()->devices;
-        $totalDevices = $devices->count();
-        $onlineDevices = $devices->where('status', 'online')->count();
-        $pairedDevices = $devices->where('status', 'paired')->count();
+        // Optimize: Only load necessary columns and aggregate counts
+        $userId = auth()->id();
+        $totalDevices = \App\Models\Device::where('user_id', $userId)->count();
+        $onlineDevices = \App\Models\Device::where('user_id', $userId)->where('status', 'online')->count();
+        $pairedDevices = \App\Models\Device::where('user_id', $userId)->whereNotNull('paired_at')->count();
+        
+        // Only select needed columns for device list
+        $devices = \App\Models\Device::select(['id', 'public_id', 'name', 'status', 'bootstrap_id', 'device_info', 'last_seen_at'])
+            ->where('user_id', $userId)
+            ->orderBy('status', 'desc')
+            ->orderBy('name', 'asc')
+            ->get();
     @endphp
 
     <div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl">

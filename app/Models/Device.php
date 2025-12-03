@@ -36,6 +36,10 @@ class Device extends Model
         'board_type',
         'capabilities',
         'last_state',
+        'shelly_device_id',
+        'shelly_auth_token',
+        'shelly_config',
+        'shelly_last_webhook_at',
     ];
 
     /**
@@ -61,6 +65,8 @@ class Device extends Model
             'capabilities' => 'array',
             'last_state' => 'array',
             'device_info' => 'array',
+            'shelly_config' => 'array',
+            'shelly_last_webhook_at' => 'datetime',
         ];
     }
 
@@ -317,6 +323,34 @@ class Device extends Model
         }
 
         return hash_equals($this->agent_token, hash('sha256', $plaintextToken));
+    }
+
+    /**
+     * Check if device has Shelly integration configured.
+     */
+    public function hasShellyIntegration(): bool
+    {
+        return !is_null($this->shelly_device_id) && !is_null($this->shelly_auth_token);
+    }
+
+    /**
+     * Verify Shelly webhook token.
+     */
+    public function verifyShellyToken(string $token): bool
+    {
+        if ($this->shelly_auth_token === null) {
+            return false;
+        }
+
+        return hash_equals($this->shelly_auth_token, $token);
+    }
+
+    /**
+     * Update last webhook timestamp.
+     */
+    public function recordShellyWebhook(): void
+    {
+        $this->update(['shelly_last_webhook_at' => now()]);
     }
 
     /**

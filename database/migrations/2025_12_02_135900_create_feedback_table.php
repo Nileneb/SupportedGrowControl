@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('feedback')) {
+            return; // Table already exists, skip
+        }
+        
         Schema::create('feedback', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')

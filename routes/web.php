@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CommandController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\ShellySyncController;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 use App\Http\Controllers\DeviceViewController;
@@ -23,6 +24,17 @@ Route::middleware(['auth', 'verified'])->prefix('devices')->group(function () {
     // Sensor/Actuator management wizards
     Route::get('/{device}/sensors/add', App\Livewire\Devices\AddSensor::class)->name('devices.sensors.add');
     Route::get('/{device}/actuators/add', App\Livewire\Devices\AddActuator::class)->name('devices.actuators.add');
+    
+    // Shelly integration routes
+    Route::post('/{device}/shelly/setup', [ShellySyncController::class, 'setup'])->name('devices.shelly.setup');
+    Route::post('/{device}/shelly/update', [ShellySyncController::class, 'update'])->name('devices.shelly.update');
+    Route::post('/{device}/shelly/remove', [ShellySyncController::class, 'remove'])->name('devices.shelly.remove');
+    Route::post('/{device}/shelly/control', [ShellySyncController::class, 'control'])->name('devices.shelly.control');
+});
+
+// Shelly Devices Management
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/shelly', App\Livewire\Shelly\Index::class)->name('shelly.index');
 });
 
 // API command endpoints using session auth (web guard) to allow Blade console without Sanctum token
