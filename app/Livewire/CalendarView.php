@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use RRule\RRule;
 
 class CalendarView extends Component
 {
@@ -91,12 +92,9 @@ class CalendarView extends Component
             return;
         }
 
+        // Fetch all user events; we will expand RRULE occurrences within the range
         $query = Event::query()
-            ->where('user_id', Auth::id())
-            ->where('start_at', '<=', $end)
-            ->where(function ($q) use ($start) {
-                $q->whereNull('end_at')->orWhere('end_at', '>=', $start);
-            });
+            ->where('user_id', Auth::id());
 
         if ($this->selectedDeviceId) {
             $query->where('device_id', $this->selectedDeviceId);
@@ -105,19 +103,81 @@ class CalendarView extends Component
             $query->where('calendar_id', $this->selectedCalendarId);
         }
 
-        $this->events = $query->orderBy('start_at')->get()->map(function (Event $e) {
-            return [
-                'id' => $e->id,
-                'title' => $e->title,
-                'start_at' => $e->start_at?->toIso8601String(),
-                'end_at' => $e->end_at?->toIso8601String(),
-                'all_day' => (bool) $e->all_day,
-                'status' => $e->status,
-                'device_id' => $e->device_id,
-                'calendar_id' => $e->calendar_id,
-                'color' => $e->color,
-            ];
-        })->toArray();
+        $startC = Carbon::parse($start);
+        $endC = Carbon::parse($end);
+
+        $expanded = [];
+        foreach ($query->orderBy('start_at')->get() as $e) {
+            // Compute base duration from end_at or meta params
+            $durationSeconds = null;
+            if ($e->start_at && $e->end_at) {
+                $durationSeconds = $e->end_at->diffInSeconds($e->start_at);
+            } else {
+                $meta = $e->meta ?? [];
+                $params = is_array($meta) ? ($meta['params'] ?? []) : [];
+                if (isset($params['duration_ms'])) {
+                    $durationSeconds = (int) $params['duration_ms'] / 1000;
+                }
+            }
+
+            if (!empty($e->rrule) && $e->start_at) {
+                try {
+                    $rr = new RRule($e->rrule, $e->start_at->toDateTimeString());
+                    $occ = $rr->getOccurrencesBetween($startC->toDateTimeString(), $endC->toDateTimeString());
+                    foreach ($occ as $occurrence) {
+                        // $occurrence is DateTime
+                        $occStart = Carbon::instance($occurrence);
+                        $occEnd = null;
+                        if ($durationSeconds) {
+                            $occEnd = $occStart->copy()->addSeconds($durationSeconds);
+                        }
+                        $expanded[] = [
+                            'id' => $e->id,
+                            'title' => $e->title,
+                            'start_at' => $occStart->toIso8601String(),
+                            'end_at' => $occEnd?->toIso8601String(),
+                            'all_day' => (bool) $e->all_day,
+                            'status' => $e->status,
+                            'device_id' => $e->device_id,
+                            'calendar_id' => $e->calendar_id,
+                            'color' => $e->color,
+                        ];
+                    }
+                } catch (\Throwable $ex) {
+                    // Fallback: if RRULE fails, include the base event if it intersects the range
+                    if ($e->start_at->between($startC, $endC)) {
+                        $expanded[] = [
+                            'id' => $e->id,
+                            'title' => $e->title,
+                            'start_at' => $e->start_at?->toIso8601String(),
+                            'end_at' => $e->end_at?->toIso8601String(),
+                            'all_day' => (bool) $e->all_day,
+                            'status' => $e->status,
+                            'device_id' => $e->device_id,
+                            'calendar_id' => $e->calendar_id,
+                            'color' => $e->color,
+                        ];
+                    }
+                }
+            } else {
+                // Non-recurring: include if within the range
+                if ($e->start_at && $e->start_at->between($startC, $endC)) {
+                    $expanded[] = [
+                        'id' => $e->id,
+                        'title' => $e->title,
+                        'start_at' => $e->start_at?->toIso8601String(),
+                        'end_at' => $e->end_at?->toIso8601String(),
+                        'all_day' => (bool) $e->all_day,
+                        'status' => $e->status,
+                        'device_id' => $e->device_id,
+                        'calendar_id' => $e->calendar_id,
+                        'color' => $e->color,
+                    ];
+                }
+            }
+        }
+
+        $this->events = $expanded;
     }
 
     public function createEvent(array $data): void
