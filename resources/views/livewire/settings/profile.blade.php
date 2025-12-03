@@ -77,6 +77,17 @@ new class extends Component {
             <flux:input wire:model="name" :label="__('Name')" type="text" required autofocus autocomplete="name" />
 
             <div>
+                <flux:input
+                    :label="__('Role')"
+                    type="text"
+                    :value="auth()->user()->is_admin ? 'Admin' : 'User'"
+                    readonly
+                    disabled
+                    class="bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                />
+            </div>
+
+            <div>
                 <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
 
                 @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
