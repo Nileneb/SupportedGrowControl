@@ -19,6 +19,11 @@ docker compose -f "$COMPOSE_FILE" exec php-cli php artisan key:generate --force
 # Datenbank-Migrationen
 docker compose -f "$COMPOSE_FILE" exec php-cli php artisan migrate --force
 
+# Clear old caches first (important for scheduler to pick up new Kernel)
+docker compose -f "$COMPOSE_FILE" exec php-cli php artisan config:clear
+docker compose -f "$COMPOSE_FILE" exec php-cli php artisan route:clear
+docker compose -f "$COMPOSE_FILE" exec php-cli php artisan cache:clear
+
 # Caches optimieren
 docker compose -f "$COMPOSE_FILE" exec php-cli php artisan config:cache
 docker compose -f "$COMPOSE_FILE" exec php-cli php artisan route:cache
