@@ -8,6 +8,7 @@ use App\Models\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class ArduinoCompileController extends Controller
 {
@@ -190,5 +191,49 @@ class ArduinoCompileController extends Controller
             ->get();
 
         return response()->json(['devices' => $devices]);
+    }
+
+    /**
+     * Get available serial ports from device agent
+     */
+    public function getPorts(Device $device)
+    {
+        // Check ownership
+        if ($device->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Check if device is online
+        if ($device->status !== 'online') {
+            return response()->json([
+                'error' => 'Device offline',
+                'ports' => []
+            ], 400);
+        }
+
+        try {
+            // Call agent's local API to get available ports
+            // Assume agent runs on same host or has known IP
+            $agentUrl = $device->agent_url ?? 'http://localhost:8000';
+            
+            $response = Http::timeout(5)->get("{$agentUrl}/ports");
+            
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+            
+            return response()->json([
+                'error' => 'Agent nicht erreichbar',
+                'ports' => []
+            ], 503);
+            
+        } catch (\Exception $e) {
+            Log::error("Port-Scan fehlgeschlagen für Device {$device->id}: " . $e->getMessage());
+            
+            return response()->json([
+                'error' => 'Port-Scan fehlgeschlagen: ' . $e->getMessage(),
+                'ports' => []
+            ], 500);
+        }
     }
 }

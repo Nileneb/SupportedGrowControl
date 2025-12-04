@@ -146,35 +146,195 @@
         </div>
     @endif
 
-    <script>
-        async function compileScript(event, scriptId) {
-            // First, get available devices
-            const devicesResponse = await fetch('/api/arduino/devices', {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            });
-            const devicesData = await devicesResponse.json();
+    <!-- Compile Modal -->
+    <div id="compileModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">🔨 Script kompilieren</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Device mit Arduino CLI</label>
+                    <select id="compileDeviceSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="">Lade Devices...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Board Typ</label>
+                    <select id="compileBoardSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="esp32:esp32:esp32">ESP32 Dev Module</option>
+                        <option value="esp32:esp32:esp32s3">ESP32-S3 Dev Module</option>
+                        <option value="esp32:esp32:esp32c3">ESP32-C3 Dev Module</option>
+                        <option value="esp8266:esp8266:nodemcuv2">NodeMCU 1.0 (ESP-12E)</option>
+                        <option value="arduino:avr:uno">Arduino Uno</option>
+                        <option value="arduino:avr:mega">Arduino Mega</option>
+                        <option value="arduino:avr:nano">Arduino Nano</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button onclick="submitCompile()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Kompilieren</button>
+                <button onclick="closeCompileModal()" class="flex-1 px-4 py-2 border rounded hover:bg-neutral-50 dark:hover:bg-neutral-700">Abbrechen</button>
+            </div>
+        </div>
+    </div>
 
-            if (!devicesData.devices || devicesData.devices.length === 0) {
-                alert('❌ Keine Online-Devices gefunden! Stelle sicher, dass mindestens ein Device-Agent läuft.');
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">📤 Script flashen</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Device mit Arduino CLI</label>
+                    <select id="uploadDeviceSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="">Lade Devices...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Serieller Port</label>
+                    <select id="uploadPortSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="">Zuerst Device wählen...</option>
+                    </select>
+                    <p class="text-xs text-neutral-500 mt-1">Der Agent erkennt automatisch angeschlossene Boards</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Board Typ</label>
+                    <select id="uploadBoardSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="esp32:esp32:esp32">ESP32 Dev Module</option>
+                        <option value="esp32:esp32:esp32s3">ESP32-S3 Dev Module</option>
+                        <option value="esp32:esp32:esp32c3">ESP32-C3 Dev Module</option>
+                        <option value="esp8266:esp8266:nodemcuv2">NodeMCU 1.0 (ESP-12E)</option>
+                        <option value="arduino:avr:uno">Arduino Uno</option>
+                        <option value="arduino:avr:mega">Arduino Mega</option>
+                        <option value="arduino:avr:nano">Arduino Nano</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button onclick="submitUpload()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Flashen</button>
+                <button onclick="closeUploadModal()" class="flex-1 px-4 py-2 border rounded hover:bg-neutral-50 dark:hover:bg-neutral-700">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScriptId = null;
+        let availableDevices = [];
+
+        async function compileScript(event, scriptId) {
+            currentScriptId = scriptId;
+
+            // Fetch available devices
+            try {
+                const response = await fetch('/api/arduino/devices', {
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                });
+                const data = await response.json();
+                availableDevices = data.devices || [];
+
+                if (availableDevices.length === 0) {
+                    alert('❌ Keine Online-Devices gefunden! Stelle sicher, dass mindestens ein Device-Agent läuft.');
+                    return;
+                }
+
+                // Populate device select
+                const select = document.getElementById('compileDeviceSelect');
+                select.innerHTML = availableDevices.map(d =>
+                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
+                ).join('');
+
+                // Show modal
+                document.getElementById('compileModal').classList.remove('hidden');
+            } catch (error) {
+                alert('❌ Fehler beim Laden der Devices: ' + error.message);
+            }
+        }
+
+        async function uploadScript(event, scriptId) {
+            currentScriptId = scriptId;
+
+            // Fetch available devices
+            try {
+                const response = await fetch('/api/arduino/devices', {
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                });
+                const data = await response.json();
+                availableDevices = data.devices || [];
+
+                if (availableDevices.length === 0) {
+                    alert('❌ Keine Online-Devices gefunden!');
+                    return;
+                }
+
+                // Populate device select
+                const select = document.getElementById('uploadDeviceSelect');
+                select.innerHTML = availableDevices.map(d =>
+                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
+                ).join('');
+
+                // Add change listener to load ports dynamically from agent
+                select.onchange = async () => {
+                    const deviceId = select.value;
+                    if (!deviceId) return;
+
+                    const portSelect = document.getElementById('uploadPortSelect');
+                    portSelect.innerHTML = '<option value="">⏳ Lade verfügbare Ports...</option>';
+
+                    try {
+                        // Fetch available ports from agent API
+                        const response = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.ports && data.ports.length > 0) {
+                            // Populate with real ports from agent
+                            portSelect.innerHTML = data.ports.map(p => {
+                                const label = p.manufacturer
+                                    ? `${p.port} - ${p.manufacturer}`
+                                    : `${p.port} - ${p.description}`;
+                                return `<option value="${p.port}">${label}</option>`;
+                            }).join('');
+                        } else {
+                            // No ports found - show message
+                            portSelect.innerHTML = '<option value="">⚠️ Keine Ports gefunden</option>';
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Laden der Ports:', error);
+                        // Fallback to common ports
+                        portSelect.innerHTML = `
+                            <option value="">❌ Port-Scan fehlgeschlagen - Manuelle Eingabe:</option>
+                            <option value="COM3">COM3 (Windows)</option>
+                            <option value="COM4">COM4 (Windows)</option>
+                            <option value="/dev/ttyUSB0">/dev/ttyUSB0 (Linux)</option>
+                            <option value="/dev/ttyACM0">/dev/ttyACM0 (Linux)</option>
+                        `;
+                    }
+                };
+
+                // Show modal
+                document.getElementById('uploadModal').classList.remove('hidden');
+            } catch (error) {
+                alert('❌ Fehler beim Laden der Devices: ' + error.message);
+            }
+        }
+
+        async function submitCompile() {
+            const deviceId = document.getElementById('compileDeviceSelect').value;
+            const board = document.getElementById('compileBoardSelect').value;
+
+            if (!deviceId || !board) {
+                alert('❌ Bitte alle Felder ausfüllen!');
                 return;
             }
 
-            // Show device selection
-            let deviceOptions = devicesData.devices.map(d => `${d.name} (${d.bootstrap_id})`).join('\n');
-            const deviceId = prompt(`Wähle Device für Kompilierung:\n\n${deviceOptions}\n\nGib Device-ID ein:`, devicesData.devices[0].id);
-            if (!deviceId) return;
-
-            const board = prompt('Board FQBN (z.B. esp32:esp32:esp32):', 'esp32:esp32:esp32');
-            if (!board) return;
-
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = '⏳ Sende Befehl...';
-
             try {
-                const response = await fetch(`/api/arduino/scripts/${scriptId}/compile`, {
+                const response = await fetch(`/api/arduino/scripts/${currentScriptId}/compile`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -186,49 +346,29 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nDer Agent kompiliert das Script jetzt. Logs erscheinen hier nach Abschluss.`);
+                    alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nDer Agent kompiliert das Script jetzt.`);
+                    closeCompileModal();
                     setTimeout(() => window.location.reload(), 2000);
                 } else {
                     alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'));
                 }
             } catch (error) {
                 alert('❌ Netzwerkfehler: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🔨 Kompilieren';
             }
         }
 
-        async function uploadScript(event, scriptId) {
-            // Get available devices
-            const devicesResponse = await fetch('/api/arduino/devices', {
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
-            });
-            const devicesData = await devicesResponse.json();
+        async function submitUpload() {
+            const deviceId = document.getElementById('uploadDeviceSelect').value;
+            const port = document.getElementById('uploadPortSelect').value;
+            const board = document.getElementById('uploadBoardSelect').value;
 
-            if (!devicesData.devices || devicesData.devices.length === 0) {
-                alert('❌ Keine Online-Devices gefunden!');
+            if (!deviceId || !port || !board) {
+                alert('❌ Bitte alle Felder ausfüllen!');
                 return;
             }
 
-            let deviceOptions = devicesData.devices.map(d => `${d.name} (${d.bootstrap_id})`).join('\n');
-            const deviceId = prompt(`Wähle Device mit Arduino CLI:\n\n${deviceOptions}\n\nGib Device-ID ein:`, devicesData.devices[0].id);
-            if (!deviceId) return;
-
-            const port = prompt('Serieller Port am Agent (z.B. COM3, /dev/ttyUSB0):', 'COM3');
-            if (!port) return;
-
-            const board = prompt('Board FQBN:', 'esp32:esp32:esp32');
-            if (!board) return;
-
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = '⏳ Sende Befehl...';
-
             try {
-                const response = await fetch(`/api/arduino/scripts/${scriptId}/upload`, {
+                const response = await fetch(`/api/arduino/scripts/${currentScriptId}/upload`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -241,16 +381,22 @@
 
                 if (data.success) {
                     alert(`✅ Upload-Befehl gesendet an: ${data.device}\n\nDer Agent flasht das Target-Device jetzt.`);
+                    closeUploadModal();
                     setTimeout(() => window.location.reload(), 2000);
                 } else {
                     alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'));
                 }
             } catch (error) {
                 alert('❌ Netzwerkfehler: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '📤 Flashen';
             }
+        }
+
+        function closeCompileModal() {
+            document.getElementById('compileModal').classList.add('hidden');
+        }
+
+        function closeUploadModal() {
+            document.getElementById('uploadModal').classList.add('hidden');
         }
     </script>
 </div>
