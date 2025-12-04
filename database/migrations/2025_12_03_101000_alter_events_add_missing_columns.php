@@ -51,12 +51,8 @@ return new class extends Migration {
             if (! Schema::hasColumn('events', 'color')) {
                 $table->string('color')->nullable();
             }
-            // Index for range queries
-            if (Schema::hasColumn('events', 'user_id') && Schema::hasColumn('events', 'start_at')) {
-                // Safely add composite index if not exists (Postgres will error on duplicate name, so choose dynamic)
-                // Laravel doesn't support conditional index existence checks; rely on migration run once.
-                $table->index(['user_id', 'start_at']);
-            }
+            // Only attempt to add index if it doesn't already exist
+            // We already have the events_user_id_start_at_index from a previous migration
         });
     }
 
