@@ -48,6 +48,7 @@ Route::middleware(['auth'])->prefix('api/arduino')->group(function () {
     Route::get('/devices', [\App\Http\Controllers\ArduinoCompileController::class, 'listDevices']);
     Route::get('/devices/{device}/ports', [\App\Http\Controllers\ArduinoCompileController::class, 'getPorts']);
     Route::get('/scripts/{script}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'status']);
+    Route::get('/commands/{command}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'checkCommandStatus']);
     Route::post('/scripts/{script}/compile', [\App\Http\Controllers\ArduinoCompileController::class, 'compile']);
     Route::post('/scripts/{script}/upload', [\App\Http\Controllers\ArduinoCompileController::class, 'upload']);
     Route::post('/scripts/{script}/compile-upload', [\App\Http\Controllers\ArduinoCompileController::class, 'compileAndUpload']);

@@ -51,4 +51,21 @@ return [
         'python_base_url' => env('GROWDASH_PYTHON_BASE_URL', 'http://localhost:8000'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OpenAI API (AI/LLM Integration)
+    |--------------------------------------------------------------------------
+    |
+    | OpenAI API für LLM-gestützte Features wie Arduino Error Analysis.
+    | API Key: https://platform.openai.com/api-keys
+    | Models: gpt-4o-mini (empfohlen), gpt-4o, gpt-3.5-turbo
+    |
+    */
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'endpoint' => env('OPENAI_ENDPOINT', 'https://api.openai.com/v1'),
+    ],
+
 ];

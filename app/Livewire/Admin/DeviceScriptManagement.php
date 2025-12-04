@@ -113,6 +113,21 @@ class DeviceScriptManagement extends Component
         $this->dispatch('open-upload-modal', scriptId: $scriptId);
     }
 
+    /**
+     * Update script code (called from LLM Fix Apply)
+     */
+    public function updateScriptCode($scriptId, $newCode)
+    {
+        $script = DeviceScript::where('user_id', Auth::id())->findOrFail($scriptId);
+        $script->update([
+            'code' => $newCode,
+            'status' => 'draft', // Reset status after fix
+        ]);
+        
+        $this->loadScripts();
+        session()->flash('message', 'Script-Code wurde aktualisiert!');
+    }
+
     public function render()
     {
         $devices = \App\Models\Device::where('user_id', Auth::id())

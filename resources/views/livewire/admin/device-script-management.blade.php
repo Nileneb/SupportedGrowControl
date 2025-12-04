@@ -215,6 +215,51 @@
         </div>
     </div>
 
+    <!-- Error Analysis Modal (LLM-Powered) -->
+    <div id="errorAnalysisModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4 text-red-600 dark:text-red-400">❌ Kompilierungsfehler</h3>
+            
+            <!-- Original Error -->
+            <div class="mb-6">
+                <h4 class="font-semibold mb-2">Compiler-Output:</h4>
+                <pre class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-3 text-xs overflow-x-auto"><code id="errorMessageText"></code></pre>
+            </div>
+
+            <!-- LLM Analysis Success -->
+            <div id="errorAnalysisContent" class="hidden">
+                <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                    <h4 class="font-semibold mb-2 text-blue-900 dark:text-blue-200">🤖 AI-Analyse:</h4>
+                    <p id="errorSummary" class="font-medium mb-2"></p>
+                    <p id="errorExplanation" class="text-sm text-neutral-700 dark:text-neutral-300"></p>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="font-semibold mb-2 text-green-700 dark:text-green-400">✅ Korrigierter Code:</h4>
+                    <pre class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3 text-xs overflow-x-auto"><code id="fixedCodeBlock" class="language-cpp"></code></pre>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="applyFix()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        ✨ Fix anwenden
+                    </button>
+                    <button onclick="closeErrorModal()" class="flex-1 px-4 py-2 border rounded hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+
+            <!-- LLM Analysis Error -->
+            <div id="errorAnalysisError" class="hidden mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
+                <h4 class="font-semibold mb-2 text-yellow-900 dark:text-yellow-200">⚠️ AI-Analyse fehlgeschlagen</h4>
+                <p id="errorAnalysisErrorText" class="text-sm"></p>
+                <button onclick="closeErrorModal()" class="mt-4 px-4 py-2 border rounded hover:bg-neutral-50 dark:hover:bg-neutral-700">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentScriptId = null;
         let availableDevices = [];
@@ -346,9 +391,13 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nDer Agent kompiliert das Script jetzt.`);
+                    alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nAgent kompiliert jetzt das Script.`);
                     closeCompileModal();
-                    setTimeout(() => window.location.reload(), 2000);
+                    
+                    // Start status polling
+                    if (data.command_id) {
+                        pollCommandStatus(data.command_id);
+                    }
                 } else {
                     alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'));
                 }
@@ -397,6 +446,110 @@
 
         function closeUploadModal() {
             document.getElementById('uploadModal').classList.add('hidden');
+        }
+
+        // ==================== ERROR ANALYSIS MODAL ====================
+        let currentCommandId = null;
+        let pollInterval = null;
+
+        function openErrorModal(commandId, errorMessage, analysis) {
+            currentCommandId = commandId;
+            const modal = document.getElementById('errorAnalysisModal');
+            
+            // Populate error details
+            document.getElementById('errorMessageText').textContent = errorMessage;
+            
+            if (analysis && analysis.has_fix) {
+                document.getElementById('errorSummary').textContent = analysis.error_summary;
+                document.getElementById('errorExplanation').textContent = analysis.explanation;
+                document.getElementById('fixedCodeBlock').textContent = analysis.fixed_code;
+                document.getElementById('errorAnalysisContent').classList.remove('hidden');
+                document.getElementById('errorAnalysisError').classList.add('hidden');
+            } else {
+                document.getElementById('errorAnalysisError').textContent = analysis?.error || 'LLM-Analyse nicht verfügbar';
+                document.getElementById('errorAnalysisContent').classList.add('hidden');
+                document.getElementById('errorAnalysisError').classList.remove('hidden');
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeErrorModal() {
+            document.getElementById('errorAnalysisModal').classList.add('hidden');
+            currentCommandId = null;
+        }
+
+        async function applyFix() {
+            const fixedCode = document.getElementById('fixedCodeBlock').textContent;
+            
+            if (!fixedCode) {
+                alert('❌ Kein Fix verfügbar');
+                return;
+            }
+
+            // Find script ID from command
+            try {
+                const response = await fetch(`/api/arduino/commands/${currentCommandId}/status`, {
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                });
+                const data = await response.json();
+                const scriptId = data.command?.params?.script_id;
+
+                if (!scriptId) {
+                    alert('❌ Script-ID nicht gefunden');
+                    return;
+                }
+
+                // Update script via Livewire
+                @this.updateScriptCode(scriptId, fixedCode);
+                
+                alert('✅ Fix wurde angewendet! Seite wird neu geladen...');
+                closeErrorModal();
+                setTimeout(() => window.location.reload(), 1000);
+
+            } catch (error) {
+                alert('❌ Fehler beim Anwenden des Fix: ' + error.message);
+            }
+        }
+
+        // Poll command status after compilation
+        async function pollCommandStatus(commandId) {
+            let attempts = 0;
+            const maxAttempts = 20; // 20 * 3s = 60s max
+
+            const checkStatus = async () => {
+                attempts++;
+
+                try {
+                    const response = await fetch(`/api/arduino/commands/${commandId}/status`, {
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        alert('✅ Kompilierung erfolgreich!');
+                        window.location.reload();
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        
+                        // Show error analysis modal
+                        const errorMessage = data.original_error || 'Unbekannter Fehler';
+                        const analysis = data.error_analysis;
+                        
+                        openErrorModal(commandId, errorMessage, analysis);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        alert('⏱️ Timeout: Kompilierung dauert zu lange');
+                    }
+                } catch (error) {
+                    console.error('Status-Polling Fehler:', error);
+                }
+            };
+
+            // Initial check after 2s, then every 3s
+            setTimeout(checkStatus, 2000);
+            pollInterval = setInterval(checkStatus, 3000);
         }
     </script>
 </div>

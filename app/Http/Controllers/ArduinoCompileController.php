@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DeviceScript;
 use App\Models\Device;
 use App\Models\Command;
+use App\Services\ArduinoErrorAnalyzer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -94,6 +95,7 @@ class ArduinoCompileController extends Controller
             'params' => [
                 'script_id' => $script->id,
                 'script_name' => $script->name,
+                'code' => $script->code,  // Agent needs code to compile+upload
                 'port' => $port,
                 'board' => $board,
                 'target_device_id' => $request->input('target_device_id'),
@@ -191,6 +193,39 @@ class ArduinoCompileController extends Controller
             ->get();
 
         return response()->json(['devices' => $devices]);
+    }
+
+    /**
+     * Check command status and analyze errors with LLM if compilation failed
+     */
+    public function checkCommandStatus(Request $request, Command $command)
+    {
+        // Auth check
+        if ($command->created_by_user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $response = [
+            'command' => $command,
+            'status' => $command->status,
+        ];
+
+        // If compilation failed, analyze error with LLM
+        if ($command->status === 'failed' && $command->type === 'arduino_compile') {
+            $errorMessage = $command->result_data['error'] ?? $command->result_data['output'] ?? 'Unbekannter Fehler';
+            $originalCode = $command->params['code'] ?? '';
+            $boardFqbn = $command->params['board'] ?? 'unknown';
+
+            if ($errorMessage && $originalCode) {
+                $analyzer = new ArduinoErrorAnalyzer();
+                $analysis = $analyzer->analyzeAndFix($errorMessage, $originalCode, $boardFqbn);
+                
+                $response['error_analysis'] = $analysis;
+                $response['original_error'] = $errorMessage;
+            }
+        }
+
+        return response()->json($response);
     }
 
     /**
