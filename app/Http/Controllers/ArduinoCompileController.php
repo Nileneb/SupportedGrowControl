@@ -217,6 +217,34 @@ class ArduinoCompileController extends Controller
             'status' => $command->status,
         ];
 
+        // If upload succeeded, update script status
+        if ($command->status === 'completed' && $command->type === 'arduino_upload') {
+            $scriptId = $command->params['script_id'] ?? null;
+            if ($scriptId) {
+                $script = DeviceScript::find($scriptId);
+                if ($script && $script->user_id === Auth::id()) {
+                    $script->update([
+                        'status' => 'flashed',
+                        'flash_log' => 'Firmware erfolgreich auf Zielgerät geflasht!',
+                    ]);
+                }
+            }
+        }
+
+        // If compilation succeeded, update script status
+        if ($command->status === 'completed' && $command->type === 'arduino_compile') {
+            $scriptId = $command->params['script_id'] ?? null;
+            if ($scriptId) {
+                $script = DeviceScript::find($scriptId);
+                if ($script && $script->user_id === Auth::id()) {
+                    $script->update([
+                        'status' => 'compiled',
+                        'compile_log' => 'Kompilierung erfolgreich abgeschlossen!',
+                    ]);
+                }
+            }
+        }
+
         // If compilation failed, analyze error with LLM
         if ($command->status === 'failed' && $command->type === 'arduino_compile') {
             $errorMessage = $command->result_data['error'] ?? $command->result_data['output'] ?? 'Unbekannter Fehler';

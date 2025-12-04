@@ -44,7 +44,7 @@
                         <button
                             onclick="uploadScript(event, {{ $script->id }})"
                             class="flex-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                            {{ $script->status !== 'compiled' && $script->status !== 'flashed' ? 'disabled' : '' }}>
+                            {{ $script->status !== 'compiled' ? 'disabled' : '' }}>
                             📤 Flashen
                         </button>
                     </div>
