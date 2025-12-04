@@ -255,8 +255,8 @@ class ArduinoCompileController extends Controller
 
         try {
             // Call agent's local API to get available ports
-            // Assume agent runs on same host or has known IP
-            $agentUrl = $device->agent_url ?? 'http://localhost:8000';
+            // Use device's agent_url if set, otherwise fallback to APP_URL
+            $agentUrl = $device->agent_url ?? config('app.url');
 
             $response = Http::timeout(5)->get("{$agentUrl}/ports");
 

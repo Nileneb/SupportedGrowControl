@@ -48,7 +48,7 @@ return [
     'growdash' => [
         'webhook_token' => env('GROWDASH_WEBHOOK_TOKEN'),
         'device_slug' => env('GROWDASH_DEVICE_SLUG', 'growdash-1'),
-        'python_base_url' => env('GROWDASH_PYTHON_BASE_URL', 'http://localhost:8000'),
+        'python_base_url' => env('GROWDASH_PYTHON_BASE_URL', fn() => config('app.url')),
     ],
 
     /*
