@@ -21,7 +21,7 @@
                         {{ $webcam->is_active ? 'Aktiv' : 'Inaktiv' }}
                     </span>
                 </div>
-                
+
                 <div class="text-sm space-y-1 mb-3">
                     <p class="text-neutral-500 dark:text-neutral-400">
                         <span class="font-medium">Typ:</span> {{ strtoupper($webcam->type) }}
@@ -62,7 +62,7 @@
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-md">
                 <h3 class="text-xl font-bold mb-4">Neue Webcam</h3>
-                
+
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Name</label>
@@ -133,7 +133,7 @@
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-md">
                 <h3 class="text-xl font-bold mb-4">Webcam bearbeiten</h3>
-                
+
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Name</label>

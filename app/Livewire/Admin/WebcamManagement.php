@@ -76,7 +76,7 @@ class WebcamManagement extends Component
     public function editWebcam($webcamId)
     {
         $webcam = WebcamFeed::where('user_id', Auth::id())->findOrFail($webcamId);
-        
+
         $this->selectedWebcamId = $webcam->id;
         $this->name = $webcam->name;
         $this->stream_url = $webcam->stream_url;
@@ -85,7 +85,7 @@ class WebcamManagement extends Component
         $this->device_id = $webcam->device_id;
         $this->refresh_interval = $webcam->refresh_interval;
         $this->is_active = $webcam->is_active;
-        
+
         $this->showEditModal = true;
     }
 
@@ -94,7 +94,7 @@ class WebcamManagement extends Component
         $this->validate();
 
         $webcam = WebcamFeed::where('user_id', Auth::id())->findOrFail($this->selectedWebcamId);
-        
+
         $webcam->update([
             'name' => $this->name,
             'stream_url' => $this->stream_url,

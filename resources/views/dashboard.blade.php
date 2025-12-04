@@ -5,7 +5,7 @@
         $totalDevices = \App\Models\Device::where('user_id', $userId)->count();
         $onlineDevices = \App\Models\Device::where('user_id', $userId)->where('status', 'online')->count();
         $pairedDevices = \App\Models\Device::where('user_id', $userId)->whereNotNull('paired_at')->count();
-        
+
         // Only select needed columns for device list
         $devices = \App\Models\Device::select(['id', 'public_id', 'name', 'status', 'bootstrap_id', 'device_info', 'last_seen_at'])
             ->where('user_id', $userId)
@@ -50,7 +50,7 @@
         <div class="relative h-full flex-1 overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800">
             <div class="p-6">
                 <h2 class="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-4">Your Devices</h2>
-                
+
                 @if($devices->isEmpty())
                     <div class="text-center py-12">
                         <p class="text-neutral-500 dark:text-neutral-400">No devices registered yet.</p>
@@ -66,13 +66,13 @@
                                         <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ $device->bootstrap_id }}</p>
                                         @if($device->device_info)
                                             <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-                                                {{ $device->device_info['platform'] ?? 'Unknown' }} · 
+                                                {{ $device->device_info['platform'] ?? 'Unknown' }} ·
                                                 {{ $device->device_info['hostname'] ?? 'Unknown' }}
                                             </p>
                                         @endif
                                     </div>
                                     <div class="flex items-center gap-4">
-                                        <span class="px-3 py-1 text-xs font-medium rounded-full 
+                                        <span class="px-3 py-1 text-xs font-medium rounded-full
                                             @if($device->status === 'online') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
                                             @elseif($device->status === 'paired') bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
                                             @elseif($device->status === 'offline') bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400

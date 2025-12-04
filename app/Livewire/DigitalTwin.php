@@ -81,7 +81,7 @@ class DigitalTwin extends Component
     {
         $element = GrowroomElement::where('growroom_layout_id', $this->layout->id)
             ->findOrFail($elementId);
-        
+
         $element->update([
             'x_position' => (int) $x,
             'y_position' => (int) $y,

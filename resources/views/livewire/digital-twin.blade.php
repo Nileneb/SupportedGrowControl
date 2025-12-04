@@ -3,14 +3,14 @@
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold">{{ $layout->name ?? 'Digital Twin' }}</h2>
         <div class="flex gap-2">
-            <button 
-                wire:click="toggleWebcam" 
+            <button
+                wire:click="toggleWebcam"
                 class="px-3 py-1 text-sm border rounded {{ $showWebcam ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700' }}"
             >
                 📷 Webcam
             </button>
-            <button 
-                wire:click="toggleEditMode" 
+            <button
+                wire:click="toggleEditMode"
                 class="px-3 py-1 text-sm border rounded {{ $editMode ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700' }}"
             >
                 {{ $editMode ? '✓ Edit Mode' : '✏️ Edit' }}
@@ -21,10 +21,10 @@
     <!-- Main Canvas Area -->
     <div class="relative border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden"
          style="width: {{ $layout->width ?? 1000 }}px; height: {{ $layout->height ?? 600 }}px; background-color: {{ $layout->background_color ?? '#1a1a1a' }};">
-        
+
         <!-- Grid background when in edit mode -->
         @if($editMode)
-            <div class="absolute inset-0 opacity-20" 
+            <div class="absolute inset-0 opacity-20"
                  style="background-image: repeating-linear-gradient(0deg, #888 0px, #888 1px, transparent 1px, transparent 50px),
                                          repeating-linear-gradient(90deg, #888 0px, #888 1px, transparent 1px, transparent 50px);
                         background-size: 50px 50px;">
@@ -33,11 +33,11 @@
 
         <!-- Elements -->
         @foreach($elements as $element)
-            <div 
+            <div
                 class="absolute cursor-move select-none transition-shadow hover:shadow-lg {{ $editMode ? 'border-2 border-dashed border-blue-400' : '' }}"
-                style="left: {{ $element['x_position'] }}px; 
-                       top: {{ $element['y_position'] }}px; 
-                       width: {{ $element['width'] }}px; 
+                style="left: {{ $element['x_position'] }}px;
+                       top: {{ $element['y_position'] }}px;
+                       width: {{ $element['width'] }}px;
                        height: {{ $element['height'] }}px;
                        transform: rotate({{ $element['rotation'] }}deg);
                        z-index: {{ $element['z_index'] }};"
@@ -59,9 +59,9 @@
                         </div>
                     @endif
                 </div>
-                
+
                 @if($editMode)
-                    <button 
+                    <button
                         wire:click="deleteElement({{ $element['id'] }})"
                         class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
                     >×</button>
@@ -116,11 +116,11 @@
                 @php
                     $currentWebcam = collect($webcams)->firstWhere('id', $selectedWebcam);
                 @endphp
-                
+
                 @if($currentWebcam)
                     @if($currentWebcam['type'] === 'mjpeg' || $currentWebcam['type'] === 'image')
-                        <img 
-                            src="{{ $currentWebcam['stream_url'] }}" 
+                        <img
+                            src="{{ $currentWebcam['stream_url'] }}"
                             class="w-full h-full object-cover"
                             alt="Webcam Feed"
                             @if($currentWebcam['type'] === 'image')
@@ -132,7 +132,7 @@
                             <source src="{{ $currentWebcam['stream_url'] }}" type="application/x-mpegURL">
                         </video>
                     @endif
-                    
+
                     <!-- Live indicator -->
                     <div class="absolute top-2 left-2 px-2 py-1 bg-red-600 text-white text-xs rounded flex items-center gap-1">
                         <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
@@ -149,11 +149,11 @@
                 handleDragEnd(event, elementId) {
                     const canvas = event.target.closest('[style*="background-color"]');
                     if (!canvas) return;
-                    
+
                     const rect = canvas.getBoundingClientRect();
                     const x = Math.max(0, Math.min(event.clientX - rect.left - 40, rect.width - 80));
                     const y = Math.max(0, Math.min(event.clientY - rect.top - 40, rect.height - 80));
-                    
+
                     @this.call('updateElementPosition', elementId, Math.round(x), Math.round(y));
                 }
             }
