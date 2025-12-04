@@ -261,28 +261,36 @@
     </div>
 
     <script>
-        let currentScriptId = null;
-        let availableDevices = [];
+        // Initialize global script state (safe for Livewire re-renders)
+        if (typeof window.scriptManagerState === 'undefined') {
+            window.scriptManagerState = {
+                currentScriptId: null,
+                availableDevices: [],
+                currentCommandId: null,
+                pollInterval: null
+            };
+        }
 
         async function compileScript(event, scriptId) {
-            currentScriptId = scriptId;
+            console.log('🔵 compileScript() aufgerufen mit scriptId:', scriptId);
+            window.scriptManagerState.currentScriptId = scriptId;
 
             // Fetch available devices
             try {
-                const response = await fetch('/api/arduino/devices', {
+                console.log('📡 Lade verfügbare Devices...');
                     headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
                 });
                 const data = await response.json();
-                availableDevices = data.devices || [];
+                window.scriptManagerState.availableDevices = data.devices || [];
 
-                if (availableDevices.length === 0) {
+                if (window.scriptManagerState.availableDevices.length === 0) {
                     alert('❌ Keine Online-Devices gefunden! Stelle sicher, dass mindestens ein Device-Agent läuft.');
                     return;
                 }
 
                 // Populate device select
                 const select = document.getElementById('compileDeviceSelect');
-                select.innerHTML = availableDevices.map(d =>
+                select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
@@ -294,7 +302,7 @@
         }
 
         async function uploadScript(event, scriptId) {
-            currentScriptId = scriptId;
+            window.scriptManagerState.currentScriptId = scriptId;
 
             // Fetch available devices
             try {
@@ -302,16 +310,16 @@
                     headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
                 });
                 const data = await response.json();
-                availableDevices = data.devices || [];
+                window.scriptManagerState.availableDevices = data.devices || [];
 
-                if (availableDevices.length === 0) {
+                if (window.scriptManagerState.availableDevices.length === 0) {
                     alert('❌ Keine Online-Devices gefunden!');
                     return;
                 }
 
                 // Populate device select
                 const select = document.getElementById('uploadDeviceSelect');
-                select.innerHTML = availableDevices.map(d =>
+                select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
@@ -370,8 +378,11 @@
         }
 
         async function submitCompile() {
+            console.log('🔵 submitCompile() aufgerufen');
             const deviceId = document.getElementById('compileDeviceSelect').value;
             const board = document.getElementById('compileBoardSelect').value;
+
+            console.log('📋 Compile-Parameter:', { deviceId, board, scriptId: window.scriptManagerState.currentScriptId });
 
             if (!deviceId || !board) {
                 alert('❌ Bitte alle Felder ausfüllen!');
@@ -379,7 +390,8 @@
             }
 
             try {
-                const response = await fetch(`/api/arduino/scripts/${currentScriptId}/compile`, {
+                console.log('📤 Sende Compile-Befehl zu:', `/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/compile`);
+                const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/compile`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -389,6 +401,8 @@
                 });
 
                 const data = await response.json();
+
+                console.log('✅ Compile-Response:', data);
 
                 if (data.success) {
                     alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nAgent kompiliert jetzt das Script.`);
@@ -417,7 +431,7 @@
             }
 
             try {
-                const response = await fetch(`/api/arduino/scripts/${currentScriptId}/upload`, {
+                const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/upload`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -449,11 +463,8 @@
         }
 
         // ==================== ERROR ANALYSIS MODAL ====================
-        let currentCommandId = null;
-        let pollInterval = null;
-
         function openErrorModal(commandId, errorMessage, analysis) {
-            currentCommandId = commandId;
+            window.scriptManagerState.currentCommandId = commandId;
             const modal = document.getElementById('errorAnalysisModal');
 
             // Populate error details
@@ -476,7 +487,7 @@
 
         function closeErrorModal() {
             document.getElementById('errorAnalysisModal').classList.add('hidden');
-            currentCommandId = null;
+            window.scriptManagerState.currentCommandId = null;
         }
 
         async function applyFix() {
@@ -489,7 +500,7 @@
 
             // Find script ID from command
             try {
-                const response = await fetch(`/api/arduino/commands/${currentCommandId}/status`, {
+                const response = await fetch(`/api/arduino/commands/${window.scriptManagerState.currentCommandId}/status`, {
                     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
                 });
                 const data = await response.json();
@@ -527,11 +538,11 @@
                     const data = await response.json();
 
                     if (data.status === 'completed') {
-                        clearInterval(pollInterval);
+                        clearInterval(window.scriptManagerState.pollInterval);
                         alert('✅ Kompilierung erfolgreich!');
                         window.location.reload();
                     } else if (data.status === 'failed') {
-                        clearInterval(pollInterval);
+                        clearInterval(window.scriptManagerState.pollInterval);
 
                         // Show error analysis modal
                         const errorMessage = data.original_error || 'Unbekannter Fehler';
@@ -539,7 +550,7 @@
 
                         openErrorModal(commandId, errorMessage, analysis);
                     } else if (attempts >= maxAttempts) {
-                        clearInterval(pollInterval);
+                        clearInterval(window.scriptManagerState.pollInterval);
                         alert('⏱️ Timeout: Kompilierung dauert zu lange');
                     }
                 } catch (error) {
@@ -549,7 +560,7 @@
 
             // Initial check after 2s, then every 3s
             setTimeout(checkStatus, 2000);
-            pollInterval = setInterval(checkStatus, 3000);
+            window.scriptManagerState.pollInterval = setInterval(checkStatus, 3000);
         }
     </script>
 </div>

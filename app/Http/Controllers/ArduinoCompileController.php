@@ -18,6 +18,13 @@ class ArduinoCompileController extends Controller
      */
     public function compile(Request $request, DeviceScript $script)
     {
+        Log::debug('🔵 ArduinoCompileController::compile() aufgerufen', [
+            'script_id' => $script->id,
+            'script_name' => $script->name,
+            'user_id' => Auth::id(),
+            'request_data' => $request->all(),
+        ]);
+
         if ($script->user_id !== Auth::id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
