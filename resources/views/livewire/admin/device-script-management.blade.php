@@ -271,7 +271,8 @@
             };
         }
 
-        async function compileScript(event, scriptId) {
+        // Attach all functions to window to ensure they're globally accessible
+        window.compileScript = async function(event, scriptId) {
             console.log('🔵 compileScript() aufgerufen mit scriptId:', scriptId);
             window.scriptManagerState.currentScriptId = scriptId;
 
@@ -300,8 +301,7 @@
                 alert('❌ Fehler beim Laden der Devices: ' + error.message);
             }
         }
-
-        async function uploadScript(event, scriptId) {
+        window.uploadScript = async function(event, scriptId) {
             window.scriptManagerState.currentScriptId = scriptId;
 
             // Fetch available devices
@@ -377,7 +377,7 @@
             }
         }
 
-        async function submitCompile() {
+        window.submitCompile = async function() {
             console.log('🔵 submitCompile() aufgerufen');
             const deviceId = document.getElementById('compileDeviceSelect').value;
             const board = document.getElementById('compileBoardSelect').value;
@@ -420,7 +420,7 @@
             }
         }
 
-        async function submitUpload() {
+        window.submitUpload = async function() {
             const deviceId = document.getElementById('uploadDeviceSelect').value;
             const port = document.getElementById('uploadPortSelect').value;
             const board = document.getElementById('uploadBoardSelect').value;
@@ -454,16 +454,16 @@
             }
         }
 
-        function closeCompileModal() {
+        window.closeCompileModal = function() {
             document.getElementById('compileModal').classList.add('hidden');
         }
 
-        function closeUploadModal() {
+        window.closeUploadModal = function() {
             document.getElementById('uploadModal').classList.add('hidden');
         }
 
         // ==================== ERROR ANALYSIS MODAL ====================
-        function openErrorModal(commandId, errorMessage, analysis) {
+        window.openErrorModal = function(commandId, errorMessage, analysis) {
             window.scriptManagerState.currentCommandId = commandId;
             const modal = document.getElementById('errorAnalysisModal');
 
@@ -485,12 +485,12 @@
             modal.classList.remove('hidden');
         }
 
-        function closeErrorModal() {
+        window.closeErrorModal = function() {
             document.getElementById('errorAnalysisModal').classList.add('hidden');
             window.scriptManagerState.currentCommandId = null;
         }
 
-        async function applyFix() {
+        window.applyFix = async function() {
             const fixedCode = document.getElementById('fixedCodeBlock').textContent;
 
             if (!fixedCode) {
@@ -523,8 +523,7 @@
             }
         }
 
-        // Poll command status after compilation
-        async function pollCommandStatus(commandId) {
+        window.pollCommandStatus = async function(commandId) {
             let attempts = 0;
             const maxAttempts = 20; // 20 * 3s = 60s max
 
