@@ -59,6 +59,8 @@ class CommandController extends Controller
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:executing,completed,failed',
             'result_message' => 'nullable|string|max:1000',
+            'output' => 'nullable|string',
+            'error' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -68,9 +70,25 @@ class CommandController extends Controller
             ], 422);
         }
 
+        // Build result_data from request (includes error, output, etc.)
+        $resultData = [];
+        if ($request->has('error')) {
+            $resultData['error'] = $request->input('error');
+        }
+        if ($request->has('output')) {
+            $resultData['output'] = $request->input('output');
+        }
+        if ($request->has('stdout')) {
+            $resultData['stdout'] = $request->input('stdout');
+        }
+        if ($request->has('stderr')) {
+            $resultData['stderr'] = $request->input('stderr');
+        }
+
         $command->update([
             'status' => $request->input('status'),
             'result_message' => $request->input('result_message'),
+            'result_data' => !empty($resultData) ? $resultData : null,
             'completed_at' => in_array($request->input('status'), ['completed', 'failed'])
                 ? now()
                 : null,
@@ -189,10 +207,10 @@ class CommandController extends Controller
                             'errors' => $paramErrors,
                         ], 422);
                     }
-                    
+
                     // Map actuator command to Arduino serial command
                     $arduinoCommand = $this->mapActuatorToArduinoCommand($validated['type'], $providedParams);
-                    
+
                     // Create serial_command instead of actuator-specific type
                     $command = Command::create([
                         'device_id' => $device->id,
@@ -357,7 +375,7 @@ class CommandController extends Controller
             $liters = $params['target_liters'];
             return "FillL {$liters}";
         }
-        
+
         // Duration-based fill (convert ms to seconds, use as rough estimate)
         $durationMs = $params['duration_ms'] ?? 5000;
         $durationSec = $durationMs / 1000;

@@ -18,6 +18,7 @@ class Command extends Model
         'type',
         'params',
         'result_message',
+        'result_data',
         'status',
         'completed_at',
     ];
@@ -31,6 +32,7 @@ class Command extends Model
     {
         return [
             'params' => 'array',
+            'result_data' => 'array',
             'completed_at' => 'datetime',
         ];
     }
