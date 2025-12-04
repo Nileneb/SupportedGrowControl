@@ -37,12 +37,12 @@
                     </div>
                     <div class="flex gap-2">
                         <button
-                            onclick="compileScript({{ $script->id }})"
+                            onclick="compileScript(event, {{ $script->id }})"
                             class="flex-1 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700">
                             🔨 Kompilieren
                         </button>
                         <button
-                            onclick="uploadScript({{ $script->id }})"
+                            onclick="uploadScript(event, {{ $script->id }})"
                             class="flex-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                             {{ $script->status !== 'compiled' && $script->status !== 'flashed' ? 'disabled' : '' }}>
                             📤 Flashen
@@ -147,7 +147,7 @@
     @endif
 
     <script>
-        async function compileScript(scriptId) {
+        async function compileScript(event, scriptId) {
             // First, get available devices
             const devicesResponse = await fetch('/api/arduino/devices', {
                 headers: {
@@ -199,7 +199,7 @@
             }
         }
 
-        async function uploadScript(scriptId) {
+        async function uploadScript(event, scriptId) {
             // Get available devices
             const devicesResponse = await fetch('/api/arduino/devices', {
                 headers: {
