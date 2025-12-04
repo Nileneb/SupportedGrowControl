@@ -43,16 +43,16 @@ def handle_arduino_compile(self, command_data: dict) -> dict:
     """Handle arduino_compile command"""
     code = command_data.get('code')
     fqbn = command_data.get('board', 'arduino:avr:nano')
-    
+
     sketch_dir = None
     try:
         # Create sketch
         sketch_dir = Path(tempfile.mkdtemp(prefix="arduino_sketch_"))
         sketch_file = sketch_dir / f"{sketch_dir.name}.ino"
         sketch_file.write_text(code)
-        
+
         logger.info(f"Kompiliere Sketch: {sketch_file} für Board: {fqbn}")
-        
+
         # Compile
         cmd = [
             self.config.arduino_cli_path,
@@ -60,14 +60,14 @@ def handle_arduino_compile(self, command_data: dict) -> dict:
             '--fqbn', fqbn,
             str(sketch_dir)
         ]
-        
+
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             timeout=60
         )
-        
+
         if result.returncode == 0:
             logger.info("✅ Sketch erfolgreich kompiliert")
             return {
@@ -83,7 +83,7 @@ def handle_arduino_compile(self, command_data: dict) -> dict:
                 'error': error_msg,        # ← WICHTIG: error Feld
                 'output': result.stdout    # ← WICHTIG: output Feld
             }
-    
+
     except subprocess.TimeoutExpired:
         return {
             'status': 'failed',
@@ -120,14 +120,14 @@ def report_command_result(self, command_id: int, result: dict) -> bool:
                 'stderr': result.get('stderr', '')
             }
         )
-        
+
         if response.status_code != 200:
             logger.error(f"Result-Report fehlgeschlagen: {response.status_code}")
             return False
-        
+
         logger.info(f"✅ Result gemeldet: {command_id} -> {result['status']}")
         return True
-        
+
     except Exception as e:
         logger.exception(f"Fehler beim Result-Report: {e}")
         return False
@@ -157,17 +157,18 @@ php artisan tail
 ### 3. Frontend-Test
 
 Kompilieren mit Fehler → Error-Modal sollte jetzt:
-- ❌ Original-Error anzeigen
-- 🤖 LLM-Analyse durchführen
-- ✅ Fix anbieten
+
+-   ❌ Original-Error anzeigen
+-   🤖 LLM-Analyse durchführen
+-   ✅ Fix anbieten
 
 ## Checkliste für Python-Agent
 
-- [ ] `handle_arduino_compile()` gibt `error` + `output` zurück
-- [ ] `handle_arduino_upload()` gibt `error` + `output` zurück
-- [ ] `handle_arduino_compile_upload()` gibt `error` + `output` zurück
-- [ ] `report_command_result()` sendet **alle** Felder an Laravel
-- [ ] Agent-Logs zeigen vollständige Error-Messages
+-   [ ] `handle_arduino_compile()` gibt `error` + `output` zurück
+-   [ ] `handle_arduino_upload()` gibt `error` + `output` zurück
+-   [ ] `handle_arduino_compile_upload()` gibt `error` + `output` zurück
+-   [ ] `report_command_result()` sendet **alle** Felder an Laravel
+-   [ ] Agent-Logs zeigen vollständige Error-Messages
 
 ---
 

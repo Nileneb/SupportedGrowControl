@@ -17,9 +17,10 @@ fetch /api/arduino/scripts/1/compile
 ```
 
 **Wenn nicht:**
-- ❌ POST Request wird nicht gesendet
-- Check: JavaScript Fehler in Console
-- Check: DeviceSelect + Board Select gefüllt?
+
+-   ❌ POST Request wird nicht gesendet
+-   Check: JavaScript Fehler in Console
+-   Check: DeviceSelect + Board Select gefüllt?
 
 ### 2️⃣ Check: Laravel speichert Command
 
@@ -36,10 +37,11 @@ php artisan tinker
 ```
 
 **Wenn Command nicht existiert:**
-- ❌ Laravel speichert nicht
-- Check: `ArduinoCompileController::compile()` wird aufgerufen?
-- Check: Auth OK? (User-ID gespeichert?)
-- Check: DB Error in `storage/logs/laravel.log`?
+
+-   ❌ Laravel speichert nicht
+-   Check: `ArduinoCompileController::compile()` wird aufgerufen?
+-   Check: Auth OK? (User-ID gespeichert?)
+-   Check: DB Error in `storage/logs/laravel.log`?
 
 ### 3️⃣ Check: Agent erhält Command
 
@@ -56,10 +58,11 @@ cd ~/growdash
 ```
 
 **Wenn nichts angezeigt wird:**
-- ❌ Agent pollt nicht oder erhält keine Commands
-- Check: Agent ist online? (Device Status in Laravel: `online`?)
-- Check: Device-Auth OK? (X-Device-ID + X-Device-Token Header?)
-- Check: Agent-Logs für "Fehler beim Abrufen der Befehle"?
+
+-   ❌ Agent pollt nicht oder erhält keine Commands
+-   Check: Agent ist online? (Device Status in Laravel: `online`?)
+-   Check: Device-Auth OK? (X-Device-ID + X-Device-Token Header?)
+-   Check: Agent-Logs für "Fehler beim Abrufen der Befehle"?
 
 ```bash
 2025-12-04 14:30:20 - ERROR - Fehler beim Abrufen der Befehle: 502 Server Error
@@ -92,9 +95,10 @@ grep -n "def handle_arduino_compile" ~/growdash/agent.py
 ```
 
 **Wenn nicht angezeigt wird:**
-- ❌ Handler wirft Exception
-- Check: `result_data` wird korrekt gespeichert?
-- Check: Agent kann zu Laravel zurück kommunizieren?
+
+-   ❌ Handler wirft Exception
+-   Check: `result_data` wird korrekt gespeichert?
+-   Check: Agent kann zu Laravel zurück kommunizieren?
 
 ### 6️⃣ Check: Laravel empfängt Result
 
@@ -116,9 +120,10 @@ GET /api/arduino/commands/28/status
 ```
 
 **Wenn nicht:**
-- ❌ Frontend pollt nicht richtig
-- Check: JavaScript Fehler?
-- Check: `pollCommandStatus()` wird aufgerufen?
+
+-   ❌ Frontend pollt nicht richtig
+-   Check: JavaScript Fehler?
+-   Check: `pollCommandStatus()` wird aufgerufen?
 
 ## Vollständige Debug-Befehlskette
 
@@ -141,14 +146,14 @@ cd ~/growdash
 
 ## Häufige Fehler
 
-| Symptom | Ursache | Lösung |
-|---------|---------|--------|
-| Frontend: "keine Reaktion" | Agent läuft nicht | `./grow_start.sh` |
-| Frontend: "keine Reaktion" | Handler existiert nicht | Python-Agent Handler hinzufügen |
-| Agent zeigt: "502 Server Error" | Laravel API antwortet nicht | Laravel neu starten: `php artisan serve` |
-| Agent zeigt: "Fehler beim Abrufen" | Device nicht online | Device-Status in Laravel prüfen |
-| Error-Modal zeigt keine LLM-Analyse | OpenAI API Key fehlt | `.env`: `OPENAI_API_KEY=sk-proj-...` |
-| Error-Modal zeigt "⚠️ Analyse fehlgeschlagen" | LLM Error (401, 429) | OpenAI Logs checken |
+| Symptom                                       | Ursache                     | Lösung                                   |
+| --------------------------------------------- | --------------------------- | ---------------------------------------- |
+| Frontend: "keine Reaktion"                    | Agent läuft nicht           | `./grow_start.sh`                        |
+| Frontend: "keine Reaktion"                    | Handler existiert nicht     | Python-Agent Handler hinzufügen          |
+| Agent zeigt: "502 Server Error"               | Laravel API antwortet nicht | Laravel neu starten: `php artisan serve` |
+| Agent zeigt: "Fehler beim Abrufen"            | Device nicht online         | Device-Status in Laravel prüfen          |
+| Error-Modal zeigt keine LLM-Analyse           | OpenAI API Key fehlt        | `.env`: `OPENAI_API_KEY=sk-proj-...`     |
+| Error-Modal zeigt "⚠️ Analyse fehlgeschlagen" | LLM Error (401, 429)        | OpenAI Logs checken                      |
 
 ## Quick-Fix Checklist
 
