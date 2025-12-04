@@ -221,7 +221,7 @@
 
         async function compileScript(event, scriptId) {
             currentScriptId = scriptId;
-            
+
             // Fetch available devices
             try {
                 const response = await fetch('/api/arduino/devices', {
@@ -237,7 +237,7 @@
 
                 // Populate device select
                 const select = document.getElementById('compileDeviceSelect');
-                select.innerHTML = availableDevices.map(d => 
+                select.innerHTML = availableDevices.map(d =>
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
@@ -250,7 +250,7 @@
 
         async function uploadScript(event, scriptId) {
             currentScriptId = scriptId;
-            
+
             // Fetch available devices
             try {
                 const response = await fetch('/api/arduino/devices', {
@@ -266,7 +266,7 @@
 
                 // Populate device select
                 const select = document.getElementById('uploadDeviceSelect');
-                select.innerHTML = availableDevices.map(d => 
+                select.innerHTML = availableDevices.map(d =>
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
