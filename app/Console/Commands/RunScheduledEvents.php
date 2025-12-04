@@ -37,10 +37,7 @@ class RunScheduledEvents extends Command
 
             try {
                 if (!empty($event->rrule)) {
-                    $rrule = new RRule([
-                        'RULE' => $event->rrule,
-                        'DTSTART' => $event->start_at?->toDateTimeString(),
-                    ]);
+                    $rrule = new RRule($event->rrule, $event->start_at?->toDateTimeString());
                     // Get occurrences in the window
                     $occurrences = $rrule->getOccurrencesBetween($from->toDateTimeString(), $to->toDateTimeString());
                 } else {

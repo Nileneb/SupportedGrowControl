@@ -9,12 +9,7 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
     {
-        // Run scheduled calendar events every minute
-        $schedule->command('events:run-scheduled')->everyMinute();
-
-        // Timeout pending and executing commands to keep UI accurate
-        $schedule->command('commands:timeout --minutes=5')->everyFiveMinutes();
-        $schedule->command('commands:timeout-executing --minutes=10')->everyTenMinutes();
+        // Schedules are now defined in routes/console.php for Laravel 12
     }
 
     protected function commands(): void
