@@ -261,7 +261,7 @@
     </div>
 
     <script>
-        // Initialize global script state (safe for Livewire re-renders)
+        // ==================== GLOBAL STATE ====================
         if (typeof window.scriptManagerState === 'undefined') {
             window.scriptManagerState = {
                 currentScriptId: null,
@@ -271,40 +271,11 @@
             };
         }
 
-        // Attach all functions to window to ensure they're globally accessible
+        // ==================== COMPILE SCRIPT ====================
         window.compileScript = async function(event, scriptId) {
-            console.log('🔵 compileScript() aufgerufen mit scriptId:', scriptId);
+            console.log('🔵 compileScript aufgerufen:', scriptId);
             window.scriptManagerState.currentScriptId = scriptId;
 
-            // Fetch available devices
-            try {
-                console.log('📡 Lade verfügbare Devices...');
-                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
-                });
-                const data = await response.json();
-                window.scriptManagerState.availableDevices = data.devices || [];
-
-                if (window.scriptManagerState.availableDevices.length === 0) {
-                    alert('❌ Keine Online-Devices gefunden! Stelle sicher, dass mindestens ein Device-Agent läuft.');
-                    return;
-                }
-
-                // Populate device select
-                const select = document.getElementById('compileDeviceSelect');
-                select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
-                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
-                ).join('');
-
-                // Show modal
-                document.getElementById('compileModal').classList.remove('hidden');
-            } catch (error) {
-                alert('❌ Fehler beim Laden der Devices: ' + error.message);
-            }
-        }
-        window.uploadScript = async function(event, scriptId) {
-            window.scriptManagerState.currentScriptId = scriptId;
-
-            // Fetch available devices
             try {
                 const response = await fetch('/api/arduino/devices', {
                     headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
@@ -317,119 +288,105 @@
                     return;
                 }
 
-                // Populate device select
+                const select = document.getElementById('compileDeviceSelect');
+                select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
+                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
+                ).join('');
+
+                document.getElementById('compileModal').classList.remove('hidden');
+            } catch (error) {
+                alert('❌ Fehler: ' + error.message);
+            }
+        };
+
+        // ==================== UPLOAD SCRIPT ====================
+        window.uploadScript = async function(event, scriptId) {
+            window.scriptManagerState.currentScriptId = scriptId;
+
+            try {
+                const response = await fetch('/api/arduino/devices', {
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                });
+                const data = await response.json();
+                window.scriptManagerState.availableDevices = data.devices || [];
+
+                if (window.scriptManagerState.availableDevices.length === 0) {
+                    alert('❌ Keine Online-Devices gefunden!');
+                    return;
+                }
+
                 const select = document.getElementById('uploadDeviceSelect');
                 select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
-                // Add change listener to load ports dynamically from agent
                 select.onchange = async () => {
                     const deviceId = select.value;
                     if (!deviceId) return;
-
                     const portSelect = document.getElementById('uploadPortSelect');
-                    portSelect.innerHTML = '<option value="">⏳ Lade verfügbare Ports...</option>';
-
+                    portSelect.innerHTML = '<option value="">⏳ Lädt Ports...</option>';
                     try {
-                        // Fetch available ports from agent API
-                        const response = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            }
+                        const resp = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
+                            headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
                         });
-
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-
-                        const data = await response.json();
-
-                        if (data.ports && data.ports.length > 0) {
-                            // Populate with real ports from agent
-                            portSelect.innerHTML = data.ports.map(p => {
-                                const label = p.manufacturer
-                                    ? `${p.port} - ${p.manufacturer}`
-                                    : `${p.port} - ${p.description}`;
-                                return `<option value="${p.port}">${label}</option>`;
-                            }).join('');
+                        const portData = await resp.json();
+                        if (portData.ports && portData.ports.length > 0) {
+                            portSelect.innerHTML = portData.ports.map(p => 
+                                `<option value="${p.port}">${p.port} - ${p.description || p.manufacturer}</option>`
+                            ).join('');
                         } else {
-                            // No ports found - show message
                             portSelect.innerHTML = '<option value="">⚠️ Keine Ports gefunden</option>';
                         }
-                    } catch (error) {
-                        console.error('Fehler beim Laden der Ports:', error);
-                        // Fallback to common ports
-                        portSelect.innerHTML = `
-                            <option value="">❌ Port-Scan fehlgeschlagen - Manuelle Eingabe:</option>
-                            <option value="COM3">COM3 (Windows)</option>
-                            <option value="COM4">COM4 (Windows)</option>
-                            <option value="/dev/ttyUSB0">/dev/ttyUSB0 (Linux)</option>
-                            <option value="/dev/ttyACM0">/dev/ttyACM0 (Linux)</option>
-                        `;
+                    } catch (err) {
+                        portSelect.innerHTML = '<option value="">❌ Port-Scan fehlgeschlagen</option>';
                     }
                 };
 
-                // Show modal
                 document.getElementById('uploadModal').classList.remove('hidden');
             } catch (error) {
-                alert('❌ Fehler beim Laden der Devices: ' + error.message);
+                alert('❌ Fehler: ' + error.message);
             }
-        }
+        };
 
+        // ==================== SUBMIT COMPILE ====================
         window.submitCompile = async function() {
-            console.log('🔵 submitCompile() aufgerufen');
             const deviceId = document.getElementById('compileDeviceSelect').value;
             const board = document.getElementById('compileBoardSelect').value;
-
-            console.log('📋 Compile-Parameter:', { deviceId, board, scriptId: window.scriptManagerState.currentScriptId });
-
             if (!deviceId || !board) {
-                alert('❌ Bitte alle Felder ausfüllen!');
+                alert('❌ Alle Felder ausfüllen!');
                 return;
             }
-
             try {
-                console.log('📤 Sende Compile-Befehl zu:', `/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/compile`);
                 const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/compile`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ device_id: deviceId, board })
+                    body: JSON.stringify({device_id: deviceId, board})
                 });
-
                 const data = await response.json();
-
-                console.log('✅ Compile-Response:', data);
-
                 if (data.success) {
-                    alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nAgent kompiliert jetzt das Script.`);
-                    closeCompileModal();
-
-                    // Start status polling
-                    if (data.command_id) {
-                        pollCommandStatus(data.command_id);
-                    }
+                    alert('✅ Befehl gesendet: ' + data.device);
+                    window.closeCompileModal();
+                    if (data.command_id) window.pollCommandStatus(data.command_id);
                 } else {
-                    alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    alert('❌ ' + (data.error || 'Fehler'));
                 }
             } catch (error) {
-                alert('❌ Netzwerkfehler: ' + error.message);
+                alert('❌ Netzwerk: ' + error.message);
             }
-        }
+        };
 
+        // ==================== SUBMIT UPLOAD ====================
         window.submitUpload = async function() {
             const deviceId = document.getElementById('uploadDeviceSelect').value;
             const port = document.getElementById('uploadPortSelect').value;
             const board = document.getElementById('uploadBoardSelect').value;
-
             if (!deviceId || !port || !board) {
-                alert('❌ Bitte alle Felder ausfüllen!');
+                alert('❌ Alle Felder ausfüllen!');
                 return;
             }
-
             try {
                 const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/upload`, {
                     method: 'POST',
@@ -437,39 +394,38 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({ device_id: deviceId, port, board })
+                    body: JSON.stringify({device_id: deviceId, port, board})
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
-                    alert(`✅ Upload-Befehl gesendet an: ${data.device}\n\nDer Agent flasht das Target-Device jetzt.`);
-                    closeUploadModal();
-                    setTimeout(() => window.location.reload(), 2000);
+                    alert('✅ Upload gesendet!');
+                    window.closeUploadModal();
+                    setTimeout(() => location.reload(), 2000);
                 } else {
-                    alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    alert('❌ ' + (data.error || 'Fehler'));
                 }
             } catch (error) {
-                alert('❌ Netzwerkfehler: ' + error.message);
+                alert('❌ ' + error.message);
             }
-        }
+        };
 
+        // ==================== MODAL CONTROLS ====================
         window.closeCompileModal = function() {
             document.getElementById('compileModal').classList.add('hidden');
-        }
+        };
 
         window.closeUploadModal = function() {
             document.getElementById('uploadModal').classList.add('hidden');
-        }
+        };
 
-        // ==================== ERROR ANALYSIS MODAL ====================
+        window.closeErrorModal = function() {
+            document.getElementById('errorAnalysisModal').classList.add('hidden');
+            window.scriptManagerState.currentCommandId = null;
+        };
+
         window.openErrorModal = function(commandId, errorMessage, analysis) {
             window.scriptManagerState.currentCommandId = commandId;
-            const modal = document.getElementById('errorAnalysisModal');
-
-            // Populate error details
             document.getElementById('errorMessageText').textContent = errorMessage;
-
             if (analysis && analysis.has_fix) {
                 document.getElementById('errorSummary').textContent = analysis.error_summary;
                 document.getElementById('errorExplanation').textContent = analysis.explanation;
@@ -477,89 +433,67 @@
                 document.getElementById('errorAnalysisContent').classList.remove('hidden');
                 document.getElementById('errorAnalysisError').classList.add('hidden');
             } else {
-                document.getElementById('errorAnalysisError').textContent = analysis?.error || 'LLM-Analyse nicht verfügbar';
+                document.getElementById('errorAnalysisError').textContent = analysis?.error || 'Fehler';
                 document.getElementById('errorAnalysisContent').classList.add('hidden');
                 document.getElementById('errorAnalysisError').classList.remove('hidden');
             }
+            document.getElementById('errorAnalysisModal').classList.remove('hidden');
+        };
 
-            modal.classList.remove('hidden');
-        }
-
-        window.closeErrorModal = function() {
-            document.getElementById('errorAnalysisModal').classList.add('hidden');
-            window.scriptManagerState.currentCommandId = null;
-        }
-
+        // ==================== APPLY FIX ====================
         window.applyFix = async function() {
             const fixedCode = document.getElementById('fixedCodeBlock').textContent;
-
             if (!fixedCode) {
                 alert('❌ Kein Fix verfügbar');
                 return;
             }
-
-            // Find script ID from command
             try {
-                const response = await fetch(`/api/arduino/commands/${window.scriptManagerState.currentCommandId}/status`, {
-                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                const resp = await fetch(`/api/arduino/commands/${window.scriptManagerState.currentCommandId}/status`, {
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
                 });
-                const data = await response.json();
+                const data = await resp.json();
                 const scriptId = data.command?.params?.script_id;
-
                 if (!scriptId) {
                     alert('❌ Script-ID nicht gefunden');
                     return;
                 }
-
-                // Update script via Livewire
                 @this.updateScriptCode(scriptId, fixedCode);
-
-                alert('✅ Fix wurde angewendet! Seite wird neu geladen...');
-                closeErrorModal();
-                setTimeout(() => window.location.reload(), 1000);
-
+                alert('✅ Fix angewendet!');
+                window.closeErrorModal();
+                setTimeout(() => location.reload(), 1000);
             } catch (error) {
-                alert('❌ Fehler beim Anwenden des Fix: ' + error.message);
+                alert('❌ ' + error.message);
             }
-        }
+        };
 
+        // ==================== POLL STATUS ====================
         window.pollCommandStatus = async function(commandId) {
             let attempts = 0;
-            const maxAttempts = 20; // 20 * 3s = 60s max
-
+            const maxAttempts = 20;
             const checkStatus = async () => {
                 attempts++;
-
                 try {
-                    const response = await fetch(`/api/arduino/commands/${commandId}/status`, {
-                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                    const resp = await fetch(`/api/arduino/commands/${commandId}/status`, {
+                        headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
                     });
-                    const data = await response.json();
-
+                    const data = await resp.json();
                     if (data.status === 'completed') {
                         clearInterval(window.scriptManagerState.pollInterval);
-                        alert('✅ Kompilierung erfolgreich!');
-                        window.location.reload();
+                        alert('✅ Erfolg!');
+                        location.reload();
                     } else if (data.status === 'failed') {
                         clearInterval(window.scriptManagerState.pollInterval);
-
-                        // Show error analysis modal
-                        const errorMessage = data.original_error || 'Unbekannter Fehler';
-                        const analysis = data.error_analysis;
-
-                        openErrorModal(commandId, errorMessage, analysis);
+                        window.openErrorModal(commandId, data.original_error || 'Fehler', data.error_analysis);
                     } else if (attempts >= maxAttempts) {
                         clearInterval(window.scriptManagerState.pollInterval);
-                        alert('⏱️ Timeout: Kompilierung dauert zu lange');
+                        alert('⏱️ Timeout');
                     }
                 } catch (error) {
-                    console.error('Status-Polling Fehler:', error);
+                    console.error('Poll error:', error);
                 }
             };
-
-            // Initial check after 2s, then every 3s
             setTimeout(checkStatus, 2000);
             window.scriptManagerState.pollInterval = setInterval(checkStatus, 3000);
-        }
+        };
     </script>
 </div>
