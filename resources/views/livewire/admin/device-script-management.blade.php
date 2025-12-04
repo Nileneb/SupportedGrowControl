@@ -277,7 +277,7 @@
 
                     const portSelect = document.getElementById('uploadPortSelect');
                     portSelect.innerHTML = '<option value="">⏳ Lade verfügbare Ports...</option>';
-                    
+
                     try {
                         // Fetch available ports from agent API
                         const response = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
@@ -285,17 +285,17 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             }
                         });
-                        
+
                         if (!response.ok) {
                             throw new Error(`HTTP ${response.status}`);
                         }
-                        
+
                         const data = await response.json();
-                        
+
                         if (data.ports && data.ports.length > 0) {
                             // Populate with real ports from agent
                             portSelect.innerHTML = data.ports.map(p => {
-                                const label = p.manufacturer 
+                                const label = p.manufacturer
                                     ? `${p.port} - ${p.manufacturer}`
                                     : `${p.port} - ${p.description}`;
                                 return `<option value="${p.port}">${label}</option>`;
