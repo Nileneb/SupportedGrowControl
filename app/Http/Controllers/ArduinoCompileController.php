@@ -35,8 +35,9 @@ class ArduinoCompileController extends Controller
 
         $command = Command::create([
             'device_id' => $device->id,
+            'created_by_user_id' => Auth::id(),
             'type' => 'arduino_compile',
-            'payload' => [
+            'params' => [
                 'script_id' => $script->id,
                 'script_name' => $script->name,
                 'code' => $script->code,
@@ -87,8 +88,9 @@ class ArduinoCompileController extends Controller
 
         $command = Command::create([
             'device_id' => $device->id,
+            'created_by_user_id' => Auth::id(),
             'type' => 'arduino_upload',
-            'payload' => [
+            'params' => [
                 'script_id' => $script->id,
                 'script_name' => $script->name,
                 'port' => $port,
@@ -136,8 +138,9 @@ class ArduinoCompileController extends Controller
 
         $command = Command::create([
             'device_id' => $device->id,
+            'created_by_user_id' => Auth::id(),
             'type' => 'arduino_compile_upload',
-            'payload' => [
+            'params' => [
                 'script_id' => $script->id,
                 'script_name' => $script->name,
                 'code' => $script->code,
@@ -172,7 +175,7 @@ class ArduinoCompileController extends Controller
             'script' => $script,
             'recent_commands' => Command::where('device_id', $script->device_id)
                 ->whereIn('type', ['arduino_compile', 'arduino_upload', 'arduino_compile_upload'])
-                ->where('payload->script_id', $script->id)
+                ->where('params->script_id', $script->id)
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get(),
