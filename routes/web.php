@@ -86,7 +86,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/users', App\Livewire\Admin\UserManagement::class)->name('admin.users');
     Route::get('/webcams', App\Livewire\Admin\WebcamManagement::class)->name('admin.webcams');
     Route::get('/scripts', App\Livewire\Admin\DeviceScriptManagement::class)->name('admin.scripts');
-    Route::post('/feedback', [FeedbackController::class, 'store'])->name('admin.feedback');
+    Route::post('/feedback', [FeedbackController::class, 'store'])->name('admin.feedback.store');
 });
 
 // Calendar routes
