@@ -24,7 +24,7 @@ class CommandController extends Controller
     public function pending(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         $commands = $device->commands()
             ->where('status', 'pending')
@@ -50,7 +50,7 @@ class CommandController extends Controller
     public function result(Request $request, int $id): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         $command = Command::where('id', $id)
             ->where('device_id', $device->id)

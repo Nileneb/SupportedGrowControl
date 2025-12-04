@@ -59,7 +59,7 @@ class DeviceManagementController extends Controller
     public function updateCapabilities(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         // Detect and normalize capabilities format
         $capabilities = $request->input('capabilities', []);
@@ -126,7 +126,7 @@ class DeviceManagementController extends Controller
     public function heartbeat(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         $validator = Validator::make($request->all(), [
             'last_state' => 'nullable|array',
@@ -296,7 +296,7 @@ class DeviceManagementController extends Controller
     public function getCapabilities(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         // Return agent-ready format from device_sensors and device_actuators
         $agentCapabilities = $device->getAgentCapabilities();

@@ -38,7 +38,7 @@ class TelemetryController extends Controller
     public function store(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device; // Set by AuthenticateDevice middleware
+        $device = $request->attributes->get('device'); // Set by AuthenticateDevice middleware
 
         $validator = Validator::make($request->all(), [
             'readings' => 'required|array|min:1|max:100',

@@ -33,7 +33,7 @@ class LogController extends Controller
     public function store(Request $request): JsonResponse
     {
         /** @var Device $device */
-        $device = $request->device;
+        $device = $request->attributes->get('device');
 
         $validator = Validator::make($request->all(), [
             'logs' => 'required|array|min:1|max:100',
