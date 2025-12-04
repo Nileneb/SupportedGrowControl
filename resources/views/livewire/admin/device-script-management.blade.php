@@ -331,7 +331,7 @@
                         });
                         const portData = await resp.json();
                         if (portData.ports && portData.ports.length > 0) {
-                            portSelect.innerHTML = portData.ports.map(p => 
+                            portSelect.innerHTML = portData.ports.map(p =>
                                 `<option value="${p.port}">${p.port} - ${p.description || p.manufacturer}</option>`
                             ).join('');
                         } else {
