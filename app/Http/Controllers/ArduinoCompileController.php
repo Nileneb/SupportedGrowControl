@@ -219,7 +219,7 @@ class ArduinoCompileController extends Controller
             if ($errorMessage && $originalCode) {
                 $analyzer = new ArduinoErrorAnalyzer();
                 $analysis = $analyzer->analyzeAndFix($errorMessage, $originalCode, $boardFqbn);
-                
+
                 $response['error_analysis'] = $analysis;
                 $response['original_error'] = $errorMessage;
             }
@@ -250,21 +250,21 @@ class ArduinoCompileController extends Controller
             // Call agent's local API to get available ports
             // Assume agent runs on same host or has known IP
             $agentUrl = $device->agent_url ?? 'http://localhost:8000';
-            
+
             $response = Http::timeout(5)->get("{$agentUrl}/ports");
-            
+
             if ($response->successful()) {
                 return response()->json($response->json());
             }
-            
+
             return response()->json([
                 'error' => 'Agent nicht erreichbar',
                 'ports' => []
             ], 503);
-            
+
         } catch (\Exception $e) {
             Log::error("Port-Scan fehlgeschlagen für Device {$device->id}: " . $e->getMessage());
-            
+
             return response()->json([
                 'error' => 'Port-Scan fehlgeschlagen: ' . $e->getMessage(),
                 'ports' => []

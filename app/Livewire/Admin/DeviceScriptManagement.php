@@ -123,7 +123,7 @@ class DeviceScriptManagement extends Component
             'code' => $newCode,
             'status' => 'draft', // Reset status after fix
         ]);
-        
+
         $this->loadScripts();
         session()->flash('message', 'Script-Code wurde aktualisiert!');
     }

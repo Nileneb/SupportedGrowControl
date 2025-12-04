@@ -219,7 +219,7 @@
     <div id="errorAnalysisModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-white dark:bg-neutral-800 rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4 text-red-600 dark:text-red-400">❌ Kompilierungsfehler</h3>
-            
+
             <!-- Original Error -->
             <div class="mb-6">
                 <h4 class="font-semibold mb-2">Compiler-Output:</h4>
@@ -393,7 +393,7 @@
                 if (data.success) {
                     alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nAgent kompiliert jetzt das Script.`);
                     closeCompileModal();
-                    
+
                     // Start status polling
                     if (data.command_id) {
                         pollCommandStatus(data.command_id);
@@ -455,10 +455,10 @@
         function openErrorModal(commandId, errorMessage, analysis) {
             currentCommandId = commandId;
             const modal = document.getElementById('errorAnalysisModal');
-            
+
             // Populate error details
             document.getElementById('errorMessageText').textContent = errorMessage;
-            
+
             if (analysis && analysis.has_fix) {
                 document.getElementById('errorSummary').textContent = analysis.error_summary;
                 document.getElementById('errorExplanation').textContent = analysis.explanation;
@@ -470,7 +470,7 @@
                 document.getElementById('errorAnalysisContent').classList.add('hidden');
                 document.getElementById('errorAnalysisError').classList.remove('hidden');
             }
-            
+
             modal.classList.remove('hidden');
         }
 
@@ -481,7 +481,7 @@
 
         async function applyFix() {
             const fixedCode = document.getElementById('fixedCodeBlock').textContent;
-            
+
             if (!fixedCode) {
                 alert('❌ Kein Fix verfügbar');
                 return;
@@ -502,7 +502,7 @@
 
                 // Update script via Livewire
                 @this.updateScriptCode(scriptId, fixedCode);
-                
+
                 alert('✅ Fix wurde angewendet! Seite wird neu geladen...');
                 closeErrorModal();
                 setTimeout(() => window.location.reload(), 1000);
@@ -532,11 +532,11 @@
                         window.location.reload();
                     } else if (data.status === 'failed') {
                         clearInterval(pollInterval);
-                        
+
                         // Show error analysis modal
                         const errorMessage = data.original_error || 'Unbekannter Fehler';
                         const analysis = data.error_analysis;
-                        
+
                         openErrorModal(commandId, errorMessage, analysis);
                     } else if (attempts >= maxAttempts) {
                         clearInterval(pollInterval);

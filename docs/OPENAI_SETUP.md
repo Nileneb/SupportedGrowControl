@@ -51,11 +51,11 @@ tail -f storage/logs/laravel.log | grep -i "openai"
 
 ## 📊 Model-Übersicht
 
-| Model | Speed | Qualität | Kosten/1000 Analysen | Use Case |
-|-------|-------|----------|---------------------|----------|
-| **gpt-4o-mini** | ⚡⚡⚡ | ⭐⭐⭐⭐ | **$0.30** | ✅ Standard (empfohlen) |
-| gpt-4o | ⚡⚡ | ⭐⭐⭐⭐⭐ | $2.50 | Komplexe Multi-File Errors |
-| gpt-3.5-turbo | ⚡⚡⚡ | ⭐⭐⭐ | $0.60 | Legacy (nicht empfohlen) |
+| Model           | Speed  | Qualität   | Kosten/1000 Analysen | Use Case                   |
+| --------------- | ------ | ---------- | -------------------- | -------------------------- |
+| **gpt-4o-mini** | ⚡⚡⚡ | ⭐⭐⭐⭐   | **$0.30**            | ✅ Standard (empfohlen)    |
+| gpt-4o          | ⚡⚡   | ⭐⭐⭐⭐⭐ | $2.50                | Komplexe Multi-File Errors |
+| gpt-3.5-turbo   | ⚡⚡⚡ | ⭐⭐⭐     | $0.60                | Legacy (nicht empfohlen)   |
 
 ## 💰 Kosten-Kalkulator
 
@@ -126,14 +126,16 @@ curl https://api.openai.com/v1/chat/completions \
 ### API Key Schutz
 
 ✅ **DO:**
-- In `.env` speichern (nicht in Git)
-- Environment Variables auf Server setzen
-- Regelmäßig rotieren (alle 90 Tage)
+
+-   In `.env` speichern (nicht in Git)
+-   Environment Variables auf Server setzen
+-   Regelmäßig rotieren (alle 90 Tage)
 
 ❌ **DON'T:**
-- Hardcoded in Code
-- In Frontend-JavaScript
-- In Public Repository commits
+
+-   Hardcoded in Code
+-   In Frontend-JavaScript
+-   In Public Repository commits
 
 ### Rate Limiting
 
@@ -149,26 +151,28 @@ Bei Überschreitung → HTTP 429 Error.
 
 ## 📚 Weitere Ressourcen
 
-- **API Docs:** https://platform.openai.com/docs/api-reference
-- **Models:** https://platform.openai.com/docs/models
-- **Pricing:** https://openai.com/api/pricing/
-- **Rate Limits:** https://platform.openai.com/docs/guides/rate-limits
-- **Playground:** https://platform.openai.com/playground
+-   **API Docs:** https://platform.openai.com/docs/api-reference
+-   **Models:** https://platform.openai.com/docs/models
+-   **Pricing:** https://openai.com/api/pricing/
+-   **Rate Limits:** https://platform.openai.com/docs/guides/rate-limits
+-   **Playground:** https://platform.openai.com/playground
 
 ## 🆘 Support
 
 Bei Problemen:
 
 1. **Logs prüfen:**
-   ```bash
-   tail -f storage/logs/laravel.log | grep -i "openai\|error"
-   ```
+
+    ```bash
+    tail -f storage/logs/laravel.log | grep -i "openai\|error"
+    ```
 
 2. **Config prüfen:**
-   ```bash
-   php artisan config:cache
-   php artisan config:clear
-   ```
+
+    ```bash
+    php artisan config:cache
+    php artisan config:clear
+    ```
 
 3. **API Status:**
    https://status.openai.com/
