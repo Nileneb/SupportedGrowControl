@@ -26,7 +26,7 @@ class ArduinoCompileController extends Controller
         ]);
 
         $device = Device::findOrFail($request->device_id);
-        
+
         if ($device->user_id !== Auth::id()) {
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
@@ -73,7 +73,7 @@ class ArduinoCompileController extends Controller
         ]);
 
         $device = Device::findOrFail($request->device_id);
-        
+
         if ($device->user_id !== Auth::id()) {
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
@@ -126,7 +126,7 @@ class ArduinoCompileController extends Controller
         ]);
 
         $device = Device::findOrFail($request->device_id);
-        
+
         if ($device->user_id !== Auth::id()) {
             return response()->json(['error' => 'Device not owned by user'], 403);
         }

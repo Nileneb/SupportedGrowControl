@@ -36,12 +36,12 @@
                         <button wire:click="deleteScript({{ $script->id }})" onclick="return confirm('Wirklich löschen?')" class="px-3 py-1 text-sm border border-red-500 text-red-500 rounded hover:bg-red-50 dark:hover:bg-red-900/30">🗑️</button>
                     </div>
                     <div class="flex gap-2">
-                        <button 
+                        <button
                             onclick="compileScript({{ $script->id }})"
                             class="flex-1 px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700">
                             🔨 Kompilieren
                         </button>
-                        <button 
+                        <button
                             onclick="uploadScript({{ $script->id }})"
                             class="flex-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                             {{ $script->status !== 'compiled' && $script->status !== 'flashed' ? 'disabled' : '' }}>
@@ -155,7 +155,7 @@
                 }
             });
             const devicesData = await devicesResponse.json();
-            
+
             if (!devicesData.devices || devicesData.devices.length === 0) {
                 alert('❌ Keine Online-Devices gefunden! Stelle sicher, dass mindestens ein Device-Agent läuft.');
                 return;
@@ -184,7 +184,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     alert(`✅ Compile-Befehl gesendet an: ${data.device}\n\nDer Agent kompiliert das Script jetzt. Logs erscheinen hier nach Abschluss.`);
                     setTimeout(() => window.location.reload(), 2000);
@@ -207,7 +207,7 @@
                 }
             });
             const devicesData = await devicesResponse.json();
-            
+
             if (!devicesData.devices || devicesData.devices.length === 0) {
                 alert('❌ Keine Online-Devices gefunden!');
                 return;
@@ -238,7 +238,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     alert(`✅ Upload-Befehl gesendet an: ${data.device}\n\nDer Agent flasht das Target-Device jetzt.`);
                     setTimeout(() => window.location.reload(), 2000);

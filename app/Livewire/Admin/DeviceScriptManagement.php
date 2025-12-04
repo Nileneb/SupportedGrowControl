@@ -96,7 +96,7 @@ class DeviceScriptManagement extends Component
     public function compileScript($scriptId)
     {
         $script = DeviceScript::where('user_id', Auth::id())->findOrFail($scriptId);
-        
+
         // Call Arduino compile via HTTP (since Livewire can't easily use services directly in async context)
         $this->dispatch('open-compile-modal', scriptId: $scriptId);
     }
@@ -104,12 +104,12 @@ class DeviceScriptManagement extends Component
     public function uploadScript($scriptId)
     {
         $script = DeviceScript::where('user_id', Auth::id())->findOrFail($scriptId);
-        
+
         if ($script->status !== 'compiled') {
             session()->flash('error', 'Script muss zuerst kompiliert werden!');
             return;
         }
-        
+
         $this->dispatch('open-upload-modal', scriptId: $scriptId);
     }
 
