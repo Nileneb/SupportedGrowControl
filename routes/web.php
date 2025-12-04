@@ -46,6 +46,7 @@ Route::middleware(['auth'])->prefix('api/growdash/devices')->group(function () {
 // Arduino CLI API endpoints (commands sent to device agents)
 Route::middleware(['auth'])->prefix('api/arduino')->group(function () {
     Route::get('/devices', [\App\Http\Controllers\ArduinoCompileController::class, 'listDevices']);
+    Route::get('/devices/{device}/ports', [\App\Http\Controllers\ArduinoCompileController::class, 'getPorts']);
     Route::get('/scripts/{script}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'status']);
     Route::post('/scripts/{script}/compile', [\App\Http\Controllers\ArduinoCompileController::class, 'compile']);
     Route::post('/scripts/{script}/upload', [\App\Http\Controllers\ArduinoCompileController::class, 'upload']);

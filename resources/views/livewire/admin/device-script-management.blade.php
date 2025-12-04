@@ -270,23 +270,51 @@
                     `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
                 ).join('');
 
-                // Add change listener to load ports
+                // Add change listener to load ports dynamically from agent
                 select.onchange = async () => {
                     const deviceId = select.value;
                     if (!deviceId) return;
 
-                    // TODO: Fetch available ports from agent API
-                    // For now, show common options
                     const portSelect = document.getElementById('uploadPortSelect');
-                    portSelect.innerHTML = `
-                        <option value="COM3">COM3 (Windows)</option>
-                        <option value="COM4">COM4 (Windows)</option>
-                        <option value="COM5">COM5 (Windows)</option>
-                        <option value="/dev/ttyUSB0">/dev/ttyUSB0 (Linux)</option>
-                        <option value="/dev/ttyUSB1">/dev/ttyUSB1 (Linux)</option>
-                        <option value="/dev/ttyACM0">/dev/ttyACM0 (Linux)</option>
-                        <option value="/dev/cu.usbserial-0001">/dev/cu.usbserial-0001 (Mac)</option>
-                    `;
+                    portSelect.innerHTML = '<option value="">⏳ Lade verfügbare Ports...</option>';
+                    
+                    try {
+                        // Fetch available ports from agent API
+                        const response = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.ports && data.ports.length > 0) {
+                            // Populate with real ports from agent
+                            portSelect.innerHTML = data.ports.map(p => {
+                                const label = p.manufacturer 
+                                    ? `${p.port} - ${p.manufacturer}`
+                                    : `${p.port} - ${p.description}`;
+                                return `<option value="${p.port}">${label}</option>`;
+                            }).join('');
+                        } else {
+                            // No ports found - show message
+                            portSelect.innerHTML = '<option value="">⚠️ Keine Ports gefunden</option>';
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Laden der Ports:', error);
+                        // Fallback to common ports
+                        portSelect.innerHTML = `
+                            <option value="">❌ Port-Scan fehlgeschlagen - Manuelle Eingabe:</option>
+                            <option value="COM3">COM3 (Windows)</option>
+                            <option value="COM4">COM4 (Windows)</option>
+                            <option value="/dev/ttyUSB0">/dev/ttyUSB0 (Linux)</option>
+                            <option value="/dev/ttyACM0">/dev/ttyACM0 (Linux)</option>
+                        `;
+                    }
                 };
 
                 // Show modal
