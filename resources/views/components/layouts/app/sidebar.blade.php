@@ -24,6 +24,7 @@
                         <flux:navlist.item icon="document-text" :href="route('admin.feedback')" :current="request()->routeIs('admin.feedback')" wire:navigate>{{ __('Feedback') }}</flux:navlist.item>
                         <flux:navlist.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Management') }}</flux:navlist.item>
                         <flux:navlist.item icon="video-camera" :href="route('admin.webcams')" :current="request()->routeIs('admin.webcams')" wire:navigate>{{ __('Webcams') }}</flux:navlist.item>
+                        <flux:navlist.item icon="code-bracket" :href="route('admin.scripts')" :current="request()->routeIs('admin.scripts')" wire:navigate>{{ __('Skriptspeicher') }}</flux:navlist.item>
                     </flux:navlist.group>
                 @endif
             </flux:navlist>

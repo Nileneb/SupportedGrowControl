@@ -43,6 +43,15 @@ Route::middleware(['auth'])->prefix('api/growdash/devices')->group(function () {
     Route::get('/{device}/commands', [CommandController::class, 'history']);
 });
 
+// Arduino CLI API endpoints (commands sent to device agents)
+Route::middleware(['auth'])->prefix('api/arduino')->group(function () {
+    Route::get('/devices', [\App\Http\Controllers\ArduinoCompileController::class, 'listDevices']);
+    Route::get('/scripts/{script}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'status']);
+    Route::post('/scripts/{script}/compile', [\App\Http\Controllers\ArduinoCompileController::class, 'compile']);
+    Route::post('/scripts/{script}/upload', [\App\Http\Controllers\ArduinoCompileController::class, 'upload']);
+    Route::post('/scripts/{script}/compile-upload', [\App\Http\Controllers\ArduinoCompileController::class, 'compileAndUpload']);
+});
+
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
@@ -73,8 +82,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/feedback', App\Livewire\Admin\FeedbackList::class)->name('admin.feedback');
     Route::get('/users', App\Livewire\Admin\UserManagement::class)->name('admin.users');
-    Route::get('/admin/webcams', App\Livewire\Admin\WebcamManagement::class)->name('admin.webcams');
-    Route::post('/admin/feedback', [FeedbackController::class, 'store'])->name('admin.feedback');
+    Route::get('/webcams', App\Livewire\Admin\WebcamManagement::class)->name('admin.webcams');
+    Route::get('/scripts', App\Livewire\Admin\DeviceScriptManagement::class)->name('admin.scripts');
+    Route::post('/feedback', [FeedbackController::class, 'store'])->name('admin.feedback');
 });
 
 // Calendar routes
