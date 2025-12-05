@@ -52,7 +52,7 @@ Route::middleware('auth:web')->prefix('devices')->group(function () {
 // ==================== Agent API (Device-Authenticated) ====================
 
 // Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
-Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
+Route::middleware(\App\Http\Middleware\AuthenticateDevice::class)->prefix('growdash/agent')->group(function () {
     // -------- Heartbeat & Status --------
     Route::post('/heartbeat', [\App\Http\Controllers\Api\AgentController::class, 'heartbeat']);
 

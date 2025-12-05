@@ -127,15 +127,16 @@ class AgentController extends Controller
 
         foreach ($telemetryItems as $item) {
             try {
-                $telemetry = $device->telemetry()->create([
-                    'type' => $item['type'],
+                // Map 'type' to 'sensor_key' and 'timestamp' to 'measured_at'
+                $telemetry = $device->telemetryReadings()->create([
+                    'sensor_key' => $item['type'],
                     'value' => $item['value'],
-                    'timestamp' => $item['timestamp'],
+                    'measured_at' => $item['timestamp'],
                 ]);
 
                 $inserted[] = [
                     'id' => $telemetry->id,
-                    'type' => $telemetry->type,
+                    'sensor_key' => $telemetry->sensor_key,
                 ];
             } catch (\Exception $e) {
                 Log::error('Failed to store telemetry', [
@@ -419,10 +420,12 @@ class AgentController extends Controller
 
         foreach ($logs as $logItem) {
             try {
-                $log = $device->logs()->create([
+                $log = $device->deviceLogs()->create([
                     'level' => $logItem['level'],
                     'message' => $logItem['message'],
-                    'timestamp' => $logItem['timestamp'] ?? now(),
+                    'context' => [
+                        'timestamp' => $logItem['timestamp'] ?? now()->toIso8601String(),
+                    ],
                 ]);
 
                 $inserted[] = $log->id;
