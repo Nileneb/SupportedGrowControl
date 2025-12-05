@@ -6,6 +6,7 @@ use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
+use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\ShellyWebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;

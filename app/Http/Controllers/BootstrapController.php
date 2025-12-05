@@ -42,11 +42,11 @@ class BootstrapController extends Controller
         $device = Device::findByBootstrapId($bootstrapId);
 
         // Device doesn't exist yet - create unclaimed device
-        if (!$device) {
+        if (! $device) {
             $device = Device::create([
                 'bootstrap_id' => $bootstrapId,
                 'name' => $data['name'] ?? 'Unclaimed Device',
-                'slug' => 'device-' . Str::random(8),
+                'slug' => 'device-'.Str::random(8),
             ]);
 
             return response()->json([
@@ -113,7 +113,7 @@ class BootstrapController extends Controller
             ->where('bootstrap_code', $data['bootstrap_code'])
             ->first();
 
-        if (!$device) {
+        if (! $device) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid bootstrap_id or bootstrap_code',
@@ -121,7 +121,7 @@ class BootstrapController extends Controller
         }
 
         // Not yet paired
-        if (!$device->isPaired()) {
+        if (! $device->isPaired()) {
             return response()->json([
                 'status' => 'pending',
             ]);
