@@ -96,4 +96,111 @@ class AgentController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Queue Arduino compilation command
+     */
+    public function arduinoCompile(Request $request): JsonResponse
+    {
+        /** @var Device $device */
+        $device = $request->attributes->get('device');
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string',
+            'board' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $command = \App\Models\Command::create([
+            'device_id' => $device->id,
+            'type' => 'arduino_compile',
+            'params' => [
+                'code' => $request->input('code'),
+                'board' => $request->input('board'),
+            ],
+            'status' => 'pending',
+        ]);
+
+        Log::info('Arduino compile command created', [
+            'device_id' => $device->id,
+            'command_id' => $command->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'command_id' => $command->id,
+            'message' => 'Compile command queued',
+        ]);
+    }
+
+    /**
+     * Queue Arduino upload command
+     */
+    public function arduinoUpload(Request $request): JsonResponse
+    {
+        /** @var Device $device */
+        $device = $request->attributes->get('device');
+
+        $validator = Validator::make($request->all(), [
+            'code' => 'required|string',
+            'board' => 'required|string',
+            'port' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $command = \App\Models\Command::create([
+            'device_id' => $device->id,
+            'type' => 'arduino_upload',
+            'params' => [
+                'code' => $request->input('code'),
+                'board' => $request->input('board'),
+                'port' => $request->input('port'),
+            ],
+            'status' => 'pending',
+        ]);
+
+        Log::info('Arduino upload command created', [
+            'device_id' => $device->id,
+            'command_id' => $command->id,
+            'port' => $request->input('port'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'command_id' => $command->id,
+            'message' => 'Upload command queued',
+        ]);
+    }
+
+    /**
+     * Queue port scan command
+     */
+    public function scanPorts(Request $request): JsonResponse
+    {
+        /** @var Device $device */
+        $device = $request->attributes->get('device');
+
+        $command = \App\Models\Command::create([
+            'device_id' => $device->id,
+            'type' => 'scan_ports',
+            'params' => [],
+            'status' => 'pending',
+        ]);
+
+        Log::info('Port scan command created', [
+            'device_id' => $device->id,
+            'command_id' => $command->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'command_id' => $command->id,
+            'message' => 'Port scan command queued',
+        ]);
+    }
 }

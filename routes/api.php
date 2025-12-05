@@ -56,4 +56,13 @@ Route::middleware(\App\Http\Middleware\AuthenticateDevice::class)->prefix('growd
 
     // Command Result: Agent reports command execution result
     Route::post('/commands/{id}/result', [AgentController::class, 'commandResult']);
+
+    // Arduino Compilation: Compile script on device
+    Route::post('/arduino/compile', [AgentController::class, 'arduinoCompile']);
+
+    // Arduino Upload: Upload compiled firmware to device
+    Route::post('/arduino/upload', [AgentController::class, 'arduinoUpload']);
+
+    // Port Scanner: Get available serial ports
+    Route::get('/ports/scan', [AgentController::class, 'scanPorts']);
 });
