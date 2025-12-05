@@ -12,29 +12,11 @@ use Illuminate\Support\Facades\Validator;
 /**
  * Agent API Controller
  *
- * Handles all communication from agent to Laravel backend.
- * All routes protected by device.auth middleware.
- *
+ * Simplified agent endpoints: heartbeat, command polling/results.
  * Base URL: /api/growdash/agent
  */
 class AgentController extends Controller
 {
-    /**
-     * POST /api/growdash/agent/heartbeat
-     *
-     * Agent sends heartbeat every 30 seconds to keep device online status.
-     *
-     * Request:
-     * {
-     *   "ip_address": "192.168.1.100",
-     *   "api_port": 8000
-     * }
-     *
-     * Response:
-     * {
-     *   "success": true
-     * }
-     */
     public function heartbeat(Request $request): JsonResponse
     {
         /** @var Device $device */
@@ -52,27 +34,51 @@ class AgentController extends Controller
             ], 422);
         }
 
-        // Update device status and last_seen_at
         $updateData = [
             'last_seen_at' => now(),
             'status' => 'online',
         ];
 
-        // Optionally update IP and API port if provided
         if ($request->has('ip_address')) {
-            $updateData['ip_address'] = $request->input('ip_address');
+            $updateData['ip_address'] = $request->string('ip_address');
         }
         if ($request->has('api_port')) {
-            $updateData['api_port'] = $request->input('api_port');
+            $updateData['api_port'] = $request->integer('api_port');
         }
 
         $device->update($updateData);
 
         Log::info('Agent heartbeat received', [
+            'device_id' => $device->id,
+            'ip_address' => $request->input('ip_address'),
+            'api_port' => $request->input('api_port'),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function pendingCommands(Request $request): JsonResponse
+    {
+        /** @var Device $device */
         $device = $request->attributes->get('device');
 
-        $command = $device->commands()
-            ->findOrFail($id);
+        $commands = $device->commands()
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'asc')
+            ->get(['id', 'type', 'params']);
+
+        return response()->json([
+            'success' => true,
+            'commands' => $commands,
+        ]);
+    }
+
+    public function commandResult(Request $request, int $id): JsonResponse
+    {
+        /** @var Device $device */
+        $device = $request->attributes->get('device');
+
+        $command = $device->commands()->findOrFail($id);
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:completed,failed',
@@ -88,7 +94,6 @@ class AgentController extends Controller
             ], 422);
         }
 
-        // Build result_data JSON from request
         $resultData = [];
         if ($request->has('output')) {
             $resultData['output'] = $request->input('output');
@@ -100,7 +105,7 @@ class AgentController extends Controller
         $command->update([
             'status' => $request->input('status'),
             'result_message' => $request->input('result_message'),
-            'result_data' => !empty($resultData) ? $resultData : null,
+            'result_data' => ! empty($resultData) ? $resultData : null,
             'completed_at' => now(),
         ]);
 
@@ -114,242 +119,4 @@ class AgentController extends Controller
         return response()->json(['success' => true]);
     }
 
-    /**
-     * POST /api/growdash/agent/capabilities
-     *
-     * Agent reports device capabilities (sensors, actuators, board info).
-     *
-     * Request:
-     * {
-     *   "board": {
-     *     "name": "Arduino Uno",
-     *     "type": "arduino:avr:uno",
-     *     "firmware": "GrowDash v1.0"
-     *   },
-     *   "sensors": [
-     *     {
-     *       "id": "water_level",
-     *       "name": "Water Level",
-     *       "unit": "%",
-     *       "min": 0,
-     *       "max": 100
-     *     }
-     *   ],
-     *   "actuators": [
-     *     {
-     *       "id": "spray_pump",
-     *       "name": "Spray Pump",
-     *       "type": "relay"
-     *     }
-     *   ]
-     * }
-     *
-     * Response:
-     * {
-     *   "success": true
-     * }
-     */
-    public function updateCapabilities(Request $request): JsonResponse
-    {
-        /** @var Device $device */
-        $device = $request->attributes->get('device');
-
-        $validator = Validator::make($request->all(), [
-            'board' => 'nullable|array',
-            'sensors' => 'nullable|array',
-            'actuators' => 'nullable|array',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $capabilities = [];
-        if ($request->has('board')) {
-            $capabilities['board'] = $request->input('board');
-        }
-        if ($request->has('sensors')) {
-            $capabilities['sensors'] = $request->input('sensors');
-        }
-        if ($request->has('actuators')) {
-            $capabilities['actuators'] = $request->input('actuators');
-        }
-
-        $device->update([
-            'capabilities' => $capabilities,
-        ]);
-
-        Log::info('Device capabilities updated', [
-            'device_id' => $device->id,
-            'sensors' => count($request->input('sensors', [])),
-            'actuators' => count($request->input('actuators', [])),
-        ]);
-
-        return response()->json(['success' => true]);
-    }
-
-    /**
-     * GET /api/growdash/agent/capabilities
-     *
-     * Agent retrieves stored device capabilities.
-     *
-     * Response:
-     * {
-     *   "success": true,
-     *   "capabilities": { ... }
-     * }
-     */
-    public function getCapabilities(Request $request): JsonResponse
-    {
-        /** @var Device $device */
-        $device = $request->attributes->get('device');
-
-        return response()->json([
-            'success' => true,
-            'capabilities' => $device->capabilities ?? [],
-        ]);
-    }
-
-    /**
-     * POST /api/growdash/agent/logs
-     *
-     * Agent sends device logs to Laravel backend.
-     *
-     * Request:
-     * {
-     *   "logs": [
-     *     {
-     *       "level": "info",
-     *       "message": "Device initialized",
-     *       "timestamp": "2025-12-05T10:30:00Z"
-     *     }
-     *   ]
-     * }
-     *
-     * Response:
-     * {
-     *   "success": true
-     * }
-     */
-    public function storeLogs(Request $request): JsonResponse
-    {
-        /** @var Device $device */
-        $device = $request->attributes->get('device');
-
-        $validator = Validator::make($request->all(), [
-            'logs' => 'required|array|min:1|max:100',
-            'logs.*.level' => 'required|in:debug,info,warning,error',
-            'logs.*.message' => 'required|string|max:1000',
-            'logs.*.timestamp' => 'nullable|date_format:Y-m-d\TH:i:s\Z',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $logs = $request->input('logs', []);
-        $inserted = [];
-
-        foreach ($logs as $logItem) {
-            try {
-                $log = $device->deviceLogs()->create([
-                    'level' => $logItem['level'],
-                    'message' => $logItem['message'],
-                    'context' => [
-                        'timestamp' => $logItem['timestamp'] ?? now()->toIso8601String(),
-                    ],
-                ]);
-
-                $inserted[] = $log->id;
-            } catch (\Exception $e) {
-                Log::error('Failed to store device log', [
-                    'device_id' => $device->id,
-                    'log' => $logItem,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        Log::info('Device logs received', [
-            'device_id' => $device->id,
-            'count' => count($inserted),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'inserted' => count($inserted),
-        ]);
-    }
-
-    /**
-     * GET /api/growdash/agent/ports
-     *
-     * Returns available serial ports on the agent.
-     * This is a fallback response - typically agent should proxy to its local /ports endpoint.
-     *
-     * Response:
-     * {
-     *   "success": true,
-     *   "ports": [
-     *     {
-     *       "port": "/dev/ttyACM0",
-     *       "description": "Arduino Uno",
-     *       "vendor_id": "2341",
-     *       "product_id": "0043"
-     *     }
-     *   ]
-     * }
-     */
-    public function getPorts(Request $request): JsonResponse
-    {
-        /** @var Device $device */
-        $device = $request->attributes->get('device');
-
-        // If device has IP address, proxy to agent's local /ports endpoint
-        if ($device->ip_address) {
-            try {
-                $response = \Illuminate\Support\Facades\Http::timeout(10)
-                    ->get("http://{$device->ip_address}:8000/ports");
-
-                if ($response->successful()) {
-                    return response()->json($response->json());
-                }
-            } catch (\Exception $e) {
-                Log::warning('Failed to proxy ports request to agent', [
-                    'device_id' => $device->id,
-                    'ip_address' => $device->ip_address,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        // Fallback: Return common serial ports for manual selection
-        $fallbackPorts = [
-            // Linux
-            ['port' => '/dev/ttyACM0', 'description' => 'Arduino (ACM)', 'vendor_id' => '', 'product_id' => ''],
-            ['port' => '/dev/ttyACM1', 'description' => 'Arduino (ACM)', 'vendor_id' => '', 'product_id' => ''],
-            ['port' => '/dev/ttyUSB0', 'description' => 'Serial Device (USB)', 'vendor_id' => '', 'product_id' => ''],
-            ['port' => '/dev/ttyUSB1', 'description' => 'Serial Device (USB)', 'vendor_id' => '', 'product_id' => ''],
-            // Windows
-            ['port' => 'COM3', 'description' => 'Serial Port', 'vendor_id' => '', 'product_id' => ''],
-            ['port' => 'COM4', 'description' => 'Serial Port', 'vendor_id' => '', 'product_id' => ''],
-            ['port' => 'COM5', 'description' => 'Serial Port', 'vendor_id' => '', 'product_id' => ''],
-        ];
-
-        Log::info('Returning fallback ports', [
-            'device_id' => $device->id,
-            'reason' => $device->ip_address ? 'agent_unreachable' : 'no_ip_address',
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'ports' => $fallbackPorts,
-        ]);
-    }
 }

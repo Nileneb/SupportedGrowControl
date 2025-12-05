@@ -53,14 +53,4 @@ Route::middleware(\App\Http\Middleware\AuthenticateDevice::class)->prefix('growd
 
     // Command Result: Agent reports command execution result
     Route::post('/commands/{id}/result', [AgentController::class, 'commandResult']);
-
-    // Capabilities: Agent sends/receives device capabilities
-    Route::post('/capabilities', [AgentController::class, 'updateCapabilities']);
-    Route::get('/capabilities', [AgentController::class, 'getCapabilities']);
-
-    // Logs: Agent stores debug/execution logs
-    Route::post('/logs', [AgentController::class, 'storeLogs']);
-
-    // Ports: Agent gets available serial ports for scanning
-    Route::get('/ports', [AgentController::class, 'getPorts']);
 });
