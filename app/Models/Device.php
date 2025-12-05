@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use App\DTOs\ActuatorCapability;
-use App\DTOs\DeviceCapabilities;
-use App\DTOs\SensorCapability;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -161,13 +158,7 @@ class Device extends Model
             ->withPivot('role');
     }
 
-    /**
-     * Get all telemetry readings for this device.
-     */
-    public function telemetryReadings(): HasMany
-    {
-        return $this->hasMany(TelemetryReading::class);
-    }
+
 
     /**
      * Get all commands for this device.
@@ -177,13 +168,7 @@ class Device extends Model
         return $this->hasMany(Command::class);
     }
 
-    /**
-     * Get all device logs for this device.
-     */
-    public function deviceLogs(): HasMany
-    {
-        return $this->hasMany(DeviceLog::class);
-    }
+
 
     /**
      * Get all configured sensors for this device (manual wizard instances).
@@ -353,173 +338,5 @@ class Device extends Model
         $this->update(['shelly_last_webhook_at' => now()]);
     }
 
-    /**
-     * Get device capabilities as DTO.
-     */
-    public function getCapabilitiesDTO(): ?DeviceCapabilities
-    {
-        if (!$this->capabilities) {
-            return null;
-        }
 
-        try {
-            return DeviceCapabilities::fromArray($this->capabilities);
-        } catch (\Exception $e) {
-            return null;
-        }
-    }
-
-    /**
-     * Get sensor by ID from capabilities.
-     */
-    public function getSensorById(string $sensorId): ?SensorCapability
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto?->getSensorById($sensorId);
-    }
-
-    /**
-     * Get actuator by ID from capabilities.
-     */
-    public function getActuatorById(string $actuatorId): ?ActuatorCapability
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto?->getActuatorById($actuatorId);
-    }
-
-    /**
-     * Get sensors by category.
-     */
-    public function getSensorsByCategory(string $category): array
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto ? $dto->getSensorsByCategory($category) : [];
-    }
-
-    /**
-     * Get actuators by category.
-     */
-    public function getActuatorsByCategory(string $category): array
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto ? $dto->getActuatorsByCategory($category) : [];
-    }
-
-    /**
-     * Get all categories from capabilities.
-     */
-    public function getAllCategories(): array
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto ? $dto->getAllCategories() : [];
-    }
-
-    /**
-     * Get critical sensors.
-     */
-    public function getCriticalSensors(): array
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto ? $dto->getCriticalSensors() : [];
-    }
-
-    /**
-     * Get critical actuators.
-     */
-    public function getCriticalActuators(): array
-    {
-        $dto = $this->getCapabilitiesDTO();
-        return $dto ? $dto->getCriticalActuators() : [];
-    }
-
-    /**
-     * Validate telemetry reading against sensor capabilities.
-     */
-    public function validateTelemetryReading(string $sensorKey, mixed $value, ?string $unit = null): bool
-    {
-        $sensor = $this->getSensorById($sensorKey);
-
-        if (!$sensor) {
-            return false; // Sensor not in capabilities
-        }
-
-        if (!$sensor->validateValue($value)) {
-            return false; // Value validation failed
-        }
-
-        if ($unit !== null && $unit !== $sensor->unit) {
-            return false; // Unit mismatch
-        }
-
-        return true;
-    }
-
-    /**
-     * Validate command params against actuator capabilities.
-     */
-    public function validateCommandParams(string $actuatorId, array $params): array
-    {
-        $actuator = $this->getActuatorById($actuatorId);
-
-        if (!$actuator) {
-            return ['actuator' => 'Actuator not found in device capabilities'];
-        }
-
-        return $actuator->validateParams($params);
-    }
-
-    /**
-     * Rebuild capabilities JSON from configured device_sensors and device_actuators.
-     * Call this after wizard changes to sync capabilities for agent consumption.
-     */
-    public function syncCapabilitiesFromInstances(): void
-    {
-        $sensors = $this->deviceSensors()->with('sensorType')->get();
-        $actuators = $this->deviceActuators()->with('actuatorType')->get();
-
-        $capabilities = [
-            'board' => $this->capabilities['board'] ?? null,
-            'sensors' => $sensors->map(function (DeviceSensor $sensor) {
-                return [
-                    'id' => $sensor->sensor_type_id,
-                    'display_name' => $sensor->sensorType->display_name ?? $sensor->channel_key,
-                    'category' => $sensor->sensorType->category ?? 'custom',
-                    'unit' => $sensor->sensorType->default_unit ?? '',
-                    'value_type' => $sensor->sensorType->value_type ?? 'float',
-                    'range' => $sensor->sensorType->default_range,
-                    'min_interval' => $sensor->min_interval,
-                    'critical' => $sensor->critical,
-                ];
-            })->values()->all(),
-            'actuators' => $actuators->map(function (DeviceActuator $actuator) {
-                return [
-                    'id' => $actuator->actuator_type_id,
-                    'display_name' => $actuator->actuatorType->display_name ?? $actuator->channel_key,
-                    'category' => $actuator->actuatorType->category ?? 'custom',
-                    'command_type' => $actuator->actuatorType->command_type ?? 'toggle',
-                    'params' => $actuator->actuatorType->params_schema ?? [],
-                    'min_interval' => $actuator->min_interval,
-                    'critical' => false,
-                ];
-            })->values()->all(),
-        ];
-
-        $this->update(['capabilities' => $capabilities]);
-    }
-
-    /**
-     * Get agent-ready configuration from device instances.
-     * Returns flat structure with channel → pin → type mapping.
-     */
-    public function getAgentCapabilities(): array
-    {
-        $sensors = $this->deviceSensors()->with('sensorType')->get();
-        $actuators = $this->deviceActuators()->with('actuatorType')->get();
-
-        return [
-            'board_type' => $this->board_type ?? 'unknown',
-            'sensors' => $sensors->map->toAgentFormat()->values()->all(),
-            'actuators' => $actuators->map->toAgentFormat()->values()->all(),
-        ];
-    }
 }

@@ -22,36 +22,13 @@ class AgentController extends Controller
         /** @var Device $device */
         $device = $request->attributes->get('device');
 
-        $validator = Validator::make($request->all(), [
-            'ip_address' => 'nullable|ip',
-            'api_port' => 'nullable|integer|between:1,65535',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $updateData = [
+        $device->update([
             'last_seen_at' => now(),
             'status' => 'online',
-        ];
-
-        if ($request->has('ip_address')) {
-            $updateData['ip_address'] = $request->string('ip_address');
-        }
-        if ($request->has('api_port')) {
-            $updateData['api_port'] = $request->integer('api_port');
-        }
-
-        $device->update($updateData);
+        ]);
 
         Log::info('Agent heartbeat received', [
             'device_id' => $device->id,
-            'ip_address' => $request->input('ip_address'),
-            'api_port' => $request->input('api_port'),
         ]);
 
         return response()->json(['success' => true]);

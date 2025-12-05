@@ -123,7 +123,7 @@ class BootstrapController extends Controller
         // Not yet paired
         if (! $device->isPaired()) {
             return response()->json([
-                'status' => 'pending',
+                'status' => 'unpaired',
             ]);
         }
 
@@ -139,6 +139,49 @@ class BootstrapController extends Controller
             'agent_token' => $plaintextToken,
             'device_name' => $device->name,
             'user_email' => $device->user->email ?? null,
+        ]);
+    }
+
+    /**
+     * User pairs device with bootstrap code.
+     *
+     * POST /api/devices/pair
+     */
+    public function pair(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'bootstrap_code' => 'required|string|size:6',
+        ]);
+
+        $device = Device::findByBootstrapCode($data['bootstrap_code']);
+
+        if (!$device) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid bootstrap code',
+            ], 404);
+        }
+
+        if ($device->isPaired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Device already paired',
+            ], 400);
+        }
+
+        // Pair device with authenticated user
+        $plaintextToken = $device->pairWithUser($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Device paired successfully',
+            'device' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'public_id' => $device->public_id,
+                'paired_at' => $device->paired_at->toISOString(),
+            ],
+            'agent_token' => $plaintextToken,
         ]);
     }
 }

@@ -23,7 +23,6 @@ class DeleteActuator extends Component
             ->where('id', $this->actuatorId)
             ->firstOrFail();
         $actuator->delete();
-        $this->device->syncCapabilitiesFromInstances();
         session()->flash('success', 'Actuator deleted and capabilities updated.');
         return redirect()->route('devices.show', $this->device);
     }

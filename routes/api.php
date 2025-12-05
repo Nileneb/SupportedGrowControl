@@ -35,6 +35,9 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->post('/devices/register', [DeviceRegistrationController::class, 'registerFromAgent']);
 
+// User pairs device with bootstrap code
+Route::middleware('auth:sanctum')->post('/devices/pair', [BootstrapController::class, 'pair']);
+
 // Send command to device (web → device)
 Route::post('/growdash/devices/{device}/commands', [CommandController::class, 'send'])
     ->middleware('auth:sanctum')

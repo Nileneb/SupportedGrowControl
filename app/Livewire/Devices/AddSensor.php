@@ -78,9 +78,6 @@ class AddSensor extends Component
             'config' => $this->config,
         ]);
 
-        // Rebuild capabilities JSON for agent
-        $this->device->syncCapabilitiesFromInstances();
-
         session()->flash('success', 'Sensor added successfully');
 
         $this->redirect(route('devices.show', $this->device), navigate: true);

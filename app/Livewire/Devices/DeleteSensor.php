@@ -23,7 +23,6 @@ class DeleteSensor extends Component
             ->where('id', $this->sensorId)
             ->firstOrFail();
         $sensor->delete();
-        $this->device->syncCapabilitiesFromInstances();
         session()->flash('success', 'Sensor deleted and capabilities updated.');
         return redirect()->route('devices.show', $this->device);
     }
