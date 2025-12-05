@@ -51,7 +51,11 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+
+        $token = $request->user()->currentAccessToken();
+        if ($token) {
+            \Laravel\Sanctum\PersonalAccessToken::where('id', $token->id)->delete();
+        }
 
         return response()->json([
             'success' => true,

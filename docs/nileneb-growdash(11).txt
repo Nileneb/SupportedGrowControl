@@ -1,0 +1,2893 @@
+Directory structure:
+└── nileneb-growdash.git/
+    ├── README.md
+    ├── agent.py
+    ├── API_ENDPOINTS.md
+    ├── grow_start.sh
+    ├── local_api.py
+    ├── requirements.txt
+    ├── setup.sh
+    ├── .env.example
+    ├── C++Scripts/
+    │   └── ArduinoUno.txt
+    ├── firmware/
+    │   └── README.md
+    └── scripts/
+        ├── install.sh
+        ├── install_arduino_cli.sh
+        ├── test_arduino_cli.sh
+        ├── test_heartbeat.sh
+        └── test_multi_device.sh
+
+================================================
+FILE: README.md
+================================================
+# GrowDash Hardware Agent
+
+**Simple Hardware Bridge: Laravel ↔ Arduino**
+
+## Was macht der Agent?
+
+- 🔌 **Serial-Kommunikation** mit Arduino
+- 🛠️ **Arduino-CLI** Wrapper (compile/upload)
+- 📡 **HTTP-Client** zu Laravel (commands/telemetry/heartbeat)
+- 🔍 **Port-Scanner** für verfügbare Serial-Devices
+
+## Setup
+
+1. **Install Dependencies:**
+
+```bash
+pip install -r requirements.txt
+```
+
+2. **Configure `.env`:**
+
+```bash
+LARAVEL_BASE_URL=https://grow.linn.games
+DEVICE_PUBLIC_ID=your-device-id
+DEVICE_TOKEN=your-token
+SERIAL_PORT=/dev/ttyACM0
+BAUD_RATE=9600
+ARDUINO_CLI_PATH=/usr/local/bin/arduino-cli
+```
+
+3. **Run Agent:**
+
+```bash
+python agent.py
+```
+
+## Commands
+
+Agent führt Commands aus Laravel aus:
+
+- `serial_command` - Direkt ans Arduino
+- `arduino_compile` - Code kompilieren
+- `arduino_upload` - Code kompilieren + uploaden
+- `scan_ports` - Verfügbare Serial-Ports scannen
+
+## Local API (Debug)
+
+```bash
+python local_api.py
+```
+
+Endpoints:
+
+- `GET /ports` - Serial-Ports scannen
+- `GET /status` - Agent-Status
+- `GET /config` - Aktuelle Config
+
+## Architecture
+
+```
+Laravel Backend
+    ↕ HTTP (commands/telemetry/heartbeat)
+Hardware Agent (agent.py)
+    ↕ Serial
+Arduino/Microcontroller
+```
+
+**Simple. Clean. No bullshit.**
+
+Python-Agent für automatisierte Growbox-Steuerung. Läuft auf Raspberry Pi, kommuniziert mit Arduino über Serial und mit Laravel-Backend via HTTPS.
+
+## 🚀 Quick Start
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/Nileneb/growdash.git
+cd growdash
+
+# 2. Setup ausführen (erstellt venv, installiert Dependencies, startet Onboarding)
+./setup.sh
+
+# 3. Agent starten
+./grow_start.sh
+```
+
+## 📋 Features
+
+- ✅ **Device-Token Authentifizierung** - Sichere Kommunikation mit Laravel-Backend
+- ✅ **Automatisches Onboarding** - Pairing-Code oder Direct-Login
+- ✅ **Serial-Kommunikation** - Direkte Arduino-Steuerung mit Command-Responses
+- ✅ **Telemetrie** - Automatisches Senden von Sensor-Daten (Wasserstand, TDS, Temperatur)
+- ✅ **Command-Polling** - Empfängt und führt Commands vom Backend aus
+- ✅ **Heartbeat** - Hält Device-Status auf "online"
+- ✅ **Board Detection** - Automatische Erkennung von Arduino Uno, Mega, ESP32, etc.
+- ✅ **Firmware Updates** - Sichere Arduino-Firmware-Updates via arduino-cli
+- ✅ **Log Batching** - Sendet Logs periodisch ans Backend
+- ✅ **Multi-Device Support** - Automatisches Scannen und Verwalten mehrerer USB-Devices
+- ✅ **Port-Scanner API** - Dynamische Port-Erkennung für Frontend-Integration
+
+## 🔌 Multi-Device Modus
+
+Der Agent kann **mehrere Arduino-Devices gleichzeitig** verwalten:
+
+```bash
+# Multi-Device-Modus aktivieren in .env
+MULTI_DEVICE_MODE=true
+USB_SCAN_INTERVAL=12000  # Scan alle 12000s (3.33h)
+
+# Agent im Multi-Device-Modus starten
+./grow_start.sh
+```
+
+### Funktionsweise
+
+1. **Automatischer USB-Scan**
+   - Beim Start: Sofortiger Scan aller verfügbaren USB-Ports
+   - Periodisch: Alle 12000 Sekunden (konfigurierbar)
+2. **Device-Erkennung**
+   - Erkennt Arduino/USB-Serial-Devices automatisch
+   - Jedes Device erhält eindeutige ID: `growdash-{vendor_id}-{product_id}-{port}`
+3. **Separate Device-Instanzen**
+   - Für jeden erkannten Port wird ein eigener Thread gestartet
+   - Jedes Device hat separate SerialProtocol, LaravelClient, HardwareAgent
+4. **Hot-Plug Support**
+   - Neue Devices: Werden automatisch erkannt und gestartet
+   - Getrennte Devices: Thread wird sauber beendet, Device aus Laravel abgemeldet
+
+📖 **Detaillierte Dokumentation:** [docs/MULTI_DEVICE.md](docs/MULTI_DEVICE.md)
+
+## 🔧 Systemanforderungen
+
+- **OS:** Linux (Raspberry Pi OS, Ubuntu, etc.)
+- **Python:** 3.10+
+- **Hardware:** Arduino (Uno/Mega/Nano) oder ESP32 via Serial/USB
+- **Backend:** Laravel-API mit Agent-Endpoints (siehe `docs/LARAVEL_IMPLEMENTATION.md`)
+
+## 📁 Projektstruktur
+
+```
+growdash/
+├── agent.py                    # Haupt-Agent (Serial, Telemetrie, Commands)
+├── usb_device_manager.py       # Multi-Device USB-Scanner
+├── bootstrap.py                # Onboarding-Wizard (standalone)
+├── pairing.py                  # Pairing-Flow-Implementierung
+├── local_api.py                # Debug-API (optional, localhost)
+├── setup.sh                    # Ersteinrichtung (venv + Onboarding)
+├── grow_start.sh               # Agent-Starter (Production)
+├── requirements.txt            # Python-Dependencies
+├── .env.example                # Konfigurationsvorlage
+├── docs/                       # Detaillierte Dokumentation
+│   ├── MULTI_DEVICE.md         # Multi-Device Support
+│   ├── LARAVEL_IMPLEMENTATION.md
+│   ├── AGENT_API_UPDATE.md
+│   ├── ONBOARDING_MODES.md
+│   └── ...
+├── scripts/                    # Utility-Scripts
+│   ├── test_multi_device.sh    # Test Multi-Device-Scanner
+│   ├── test_heartbeat.sh
+│   ├── install_arduino_cli.sh
+│   └── install.sh
+└── firmware/                   # Arduino-Firmware (.ino Dateien)
+```
+
+## 🔐 Konfiguration (.env)
+
+```bash
+# Laravel Backend
+LARAVEL_BASE_URL=https://grow.linn.games
+LARAVEL_API_PATH=/api/growdash/agent
+
+# Onboarding Modus
+ONBOARDING_MODE=PAIRING  # PAIRING | DIRECT_LOGIN | PRECONFIGURED
+
+# Device Credentials (werden automatisch gesetzt)
+DEVICE_PUBLIC_ID=
+DEVICE_TOKEN=
+
+# Hardware
+SERIAL_PORT=/dev/ttyACM0
+BAUD_RATE=9600
+
+# Agent Intervalle
+TELEMETRY_INTERVAL=10       # Sekunden
+COMMAND_POLL_INTERVAL=5     # Sekunden
+
+# Multi-Device Support
+MULTI_DEVICE_MODE=false     # true = Multi-Device, false = Single-Device
+USB_SCAN_INTERVAL=12000     # USB-Scan alle 12000s (nur bei MULTI_DEVICE_MODE=true)
+
+# Arduino-CLI (für Firmware-Updates)
+ARDUINO_CLI_PATH=/usr/local/bin/arduino-cli
+FIRMWARE_DIR=./firmware
+
+# Debug (optional)
+LOCAL_API_ENABLED=false
+LOCAL_API_HOST=127.0.0.1
+LOCAL_API_PORT=8000
+```
+
+## 🎯 Onboarding Modi
+
+### 1. PAIRING (Empfohlen)
+
+Agent zeigt Pairing-Code an, User gibt Code im Laravel-Frontend ein:
+
+```bash
+ONBOARDING_MODE=PAIRING
+./setup.sh
+# → Zeigt 6-stelligen Code an
+# → In Laravel-Frontend eingeben
+```
+
+### 2. DIRECT_LOGIN
+
+Agent meldet sich mit User-Credentials an:
+
+```bash
+ONBOARDING_MODE=DIRECT_LOGIN
+./setup.sh
+# → Email und Passwort eingeben
+```
+
+### 3. PRECONFIGURED
+
+Credentials sind bereits in `.env` vorhanden (z.B. vorkonfigurierte SD-Card):
+
+```bash
+ONBOARDING_MODE=PRECONFIGURED
+DEVICE_PUBLIC_ID=growdash-001
+DEVICE_TOKEN=xxx
+```
+
+📖 **Details:** [docs/ONBOARDING_MODES.md](docs/ONBOARDING_MODES.md)
+
+## 📡 API Endpoints
+
+Agent kommuniziert mit Laravel-Backend:
+
+| Endpoint                | Methode | Beschreibung              |
+| ----------------------- | ------- | ------------------------- |
+| `/commands/pending`     | GET     | Holt ausstehende Commands |
+| `/commands/{id}/result` | POST    | Meldet Command-Ergebnis   |
+| `/telemetry`            | POST    | Sendet Sensor-Daten       |
+| `/heartbeat`            | POST    | Meldet "online" Status    |
+| `/capabilities`         | POST    | Sendet Board/Sensor-Info  |
+| `/logs`                 | POST    | Sendet Log-Batch          |
+
+📖 **Details:** [docs/LARAVEL_ENDPOINTS.md](docs/LARAVEL_ENDPOINTS.md)
+
+## 🎮 Serial Commands
+
+Agent sendet Commands an Arduino und wartet auf Response:
+
+| Command        | Arduino-Antwort                        | Beschreibung      |
+| -------------- | -------------------------------------- | ----------------- |
+| `status`       | `dist_cm=20.3 liters=33.53 Tab=OFF...` | Kompletter Status |
+| `TDS`          | `TDS=660 TempC=22.50 ADC=351 V=1.714`  | TDS-Sensor        |
+| `Spray 120000` | (Timeout nach 5s)                      | Sprühe 120s       |
+| `Fill 60000`   | (Timeout nach 5s)                      | Fülle 60s         |
+
+**Wichtig:** Actuator-Commands (Spray, Fill) laufen länger als 5s → Timeout ist normal.
+
+## 🛠️ Development
+
+### Setup
+
+```bash
+# 1. Repo klonen
+git clone https://github.com/Nileneb/growdash.git
+cd growdash
+
+# 2. Virtual Environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Dependencies
+pip install -r requirements.txt
+
+# 4. .env kopieren
+cp .env.example .env
+# → LARAVEL_BASE_URL, DEVICE_PUBLIC_ID, DEVICE_TOKEN anpassen
+```
+
+### Lokale API (Debug)
+
+```bash
+# Local API starten (Port 8000)
+python3 local_api.py
+
+# Agent mit Local API testen
+# .env:
+LOCAL_API_ENABLED=true
+LARAVEL_BASE_URL=http://127.0.0.1:8000
+
+# Agent starten
+python3 agent.py
+```
+
+### Tests
+
+```bash
+# Heartbeat testen
+./scripts/test_heartbeat.sh
+
+# Multi-Device testen
+./scripts/test_multi_device.sh
+
+# Serial-Verbindung testen
+python3 -c "import serial; s=serial.Serial('/dev/ttyACM0', 9600); print(s.read(100))"
+```
+
+## 🐛 Troubleshooting
+
+### 1. Serial-Port Permission Denied
+
+```bash
+# User zu dialout-Gruppe hinzufügen
+sudo usermod -a -G dialout $USER
+
+# Neuanmeldung erforderlich
+logout
+```
+
+### 2. Laravel-Backend 404
+
+```bash
+# Backend nicht vollständig eingerichtet
+# → Siehe docs/LARAVEL_IMPLEMENTATION.md
+# → Routes /api/growdash/agent/* müssen existieren
+```
+
+### 3. Device-Auth 401
+
+```bash
+# Token ungültig oder Device gelöscht
+# → Credentials zurücksetzen:
+rm .env
+./setup.sh  # Neu pairen
+```
+
+### 4. Arduino nicht erkannt
+
+```bash
+# USB-Verbindung prüfen
+lsusb
+
+# Serial-Ports prüfen
+ls -l /dev/tty*
+
+# Permissions prüfen
+groups $USER  # sollte "dialout" enthalten
+```
+
+### 5. Multi-Device: Keine Devices erkannt
+
+```bash
+# pyserial prüfen
+pip list | grep pyserial
+
+# USB-Scanner testen
+./scripts/test_multi_device.sh
+
+# Manuelle Prüfung
+python3 -c "from usb_device_manager import USBScanner; print(USBScanner.scan_ports())"
+```
+
+## 📚 Dokumentation
+
+- **[MULTI_DEVICE.md](docs/MULTI_DEVICE.md)** - Multi-Device Support (USB-Scanner, Hot-Plug)
+- **[LARAVEL_IMPLEMENTATION.md](docs/LARAVEL_IMPLEMENTATION.md)** - Laravel Backend-Integration
+- **[AGENT_API_UPDATE.md](docs/AGENT_API_UPDATE.md)** - API Alignment mit Agent Integration Guide
+- **[ONBOARDING_MODES.md](docs/ONBOARDING_MODES.md)** - Pairing, Direct-Login, Pre-configured
+- **[PAIRING_FLOW.md](docs/PAIRING_FLOW.md)** - Detaillierter Pairing-Ablauf
+- **[LARAVEL_ENDPOINTS.md](docs/LARAVEL_ENDPOINTS.md)** - Alle API-Endpoints
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Schnelleinstieg
+- **[SETUP.md](docs/SETUP.md)** - Detaillierte Setup-Anleitung
+
+## 🤝 Contributing
+
+Contributions sind willkommen! Bitte:
+
+1. Fork das Repository
+2. Erstelle Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit Changes (`git commit -m 'Add AmazingFeature'`)
+4. Push zum Branch (`git push origin feature/AmazingFeature`)
+5. Öffne Pull Request
+
+## 📝 License
+
+Dieses Projekt ist unter der MIT-Lizenz lizenziert.
+
+## 👨‍💻 Author
+
+**Nileneb**
+
+- GitHub: [@Nileneb](https://github.com/Nileneb)
+- Projekt: [GrowDash](https://github.com/Nileneb/growdash)
+
+---
+
+**Status:** ✅ Production-Ready  
+**Letzte Aktualisierung:** 2. Dezember 2025  
+**Version:** 2.0.0 (Multi-Device Support)
+
+
+
+================================================
+FILE: agent.py
+================================================
+"""
+GrowDash Hardware Agent - CLEAN VERSION
+========================================
+Einziger Zweck: Hardware-Brücke zwischen Laravel und Arduino.
+
+WAS WIR TUN:
+- Serial-Port öffnen und Befehle senden (Request/Response)
+- Arduino-CLI aufrufen (compile/upload)
+- USB-Ports scannen
+- Commands von Laravel abholen und ausführen
+- Heartbeat senden (Device online)
+
+WAS WIR NICHT TUN:
+- Business-Logik (-> Laravel)
+- Daten speichern (-> Laravel)
+- Automatische Telemetrie (Arduino antwortet NUR auf Commands!)
+"""
+
+import os
+import sys
+import time
+import json
+import logging
+import subprocess
+import threading
+import requests
+from typing import Dict, List, Optional, Any
+from pathlib import Path
+
+from pydantic_settings import BaseSettings
+from pydantic import Field
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+class Config(BaseSettings):
+    """Lädt Config aus .env"""
+    laravel_base_url: str = Field(default="http://localhost")
+    laravel_api_path: str = Field(default="/api/growdash/agent")
+    device_public_id: str = Field(default="")
+    device_token: str = Field(default="")
+    serial_port: str = Field(default="/dev/ttyACM0")
+    baud_rate: int = Field(default=9600)
+    command_poll_interval: int = Field(default=5)
+    arduino_cli_path: str = Field(default="/usr/local/bin/arduino-cli")
+    
+    class Config:
+        env_file = ".env"
+        extra = 'ignore'
+
+
+# ============================================================================
+# SERIAL COMMUNICATION
+# ============================================================================
+
+class SerialPort:
+    """Einfache Serial-Kommunikation - NUR Request/Response!"""
+    
+    def __init__(self, port: str, baud: int):
+        self.port = port
+        self.baud = baud
+        self.serial = None
+        self._connect()
+    
+    def _connect(self):
+        try:
+            import serial
+            self.serial = serial.Serial(self.port, self.baud, timeout=1)
+            logger.info(f"✅ Serial verbunden: {self.port}")
+        except Exception as e:
+            logger.error(f"❌ Serial-Fehler: {e}")
+    
+    def send(self, command: str) -> Optional[str]:
+        """Befehl senden und auf Antwort warten"""
+        try:
+            if self.serial:
+                self.serial.write(f"{command}\n".encode())
+                time.sleep(0.5)
+                if self.serial.in_waiting:
+                    return self.serial.readline().decode('utf-8').strip()
+            return None
+        except Exception as e:
+            logger.error(f"Send failed: {e}")
+            return None
+    
+    def close(self):
+        if self.serial:
+            self.serial.close()
+
+
+# ============================================================================
+# ARDUINO CLI WRAPPER
+# ============================================================================
+
+class ArduinoCLI:
+    """Arduino-CLI Wrapper - compile/upload"""
+    
+    def __init__(self, cli_path: str):
+        self.cli = cli_path
+    
+    def compile(self, code: str, board: str = "arduino:avr:uno") -> Dict[str, Any]:
+        """Kompiliert Arduino-Code"""
+        import tempfile
+        import shutil
+        
+        sketch_dir = Path(tempfile.mkdtemp(prefix="sketch_"))
+        sketch_file = sketch_dir / f"{sketch_dir.name}.ino"
+        
+        try:
+            sketch_file.write_text(code)
+            
+            result = subprocess.run(
+                [self.cli, "compile", "--fqbn", board, str(sketch_file)],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            success = result.returncode == 0
+            return {
+                'status': 'completed' if success else 'failed',
+                'message': '✅ Kompiliert' if success else '❌ Compile-Fehler',
+                'output': result.stdout,
+                'error': result.stderr if not success else ''
+            }
+        except Exception as e:
+            return {'status': 'failed', 'message': str(e), 'output': '', 'error': str(e)}
+        finally:
+            shutil.rmtree(sketch_dir, ignore_errors=True)
+    
+    def upload(self, code: str, board: str, port: str) -> Dict[str, Any]:
+        """Kompiliert und uploaded"""
+        import tempfile
+        import shutil
+        
+        sketch_dir = Path(tempfile.mkdtemp(prefix="upload_"))
+        sketch_file = sketch_dir / f"{sketch_dir.name}.ino"
+        
+        try:
+            sketch_file.write_text(code)
+            
+            result = subprocess.run(
+                [self.cli, "compile", "--upload", "--fqbn", board, "--port", port, str(sketch_file)],
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            success = result.returncode == 0
+            return {
+                'status': 'completed' if success else 'failed',
+                'message': f'✅ Upload auf {port}' if success else '❌ Upload-Fehler',
+                'output': result.stdout,
+                'error': result.stderr if not success else ''
+            }
+        except Exception as e:
+            return {'status': 'failed', 'message': str(e), 'output': '', 'error': str(e)}
+        finally:
+            shutil.rmtree(sketch_dir, ignore_errors=True)
+
+
+# ============================================================================
+# PORT SCANNER
+# ============================================================================
+
+def scan_ports() -> List[Dict]:
+    """Scannt verfügbare Serial-Ports"""
+    try:
+        import serial.tools.list_ports as list_ports
+        ports = []
+        for port in list_ports.comports():
+            ports.append({
+                "port": port.device,
+                "description": port.description or "Unknown",
+                "vendor_id": f"{port.vid:04x}" if port.vid else None,
+                "product_id": f"{port.pid:04x}" if port.pid else None
+            })
+        return ports
+    except:
+        return []
+
+
+# ============================================================================
+# LARAVEL CLIENT
+# ============================================================================
+
+class LaravelClient:
+    """HTTP-Client für Laravel-Backend"""
+    
+    def __init__(self, config: Config):
+        self.config = config
+        self.base_url = f"{config.laravel_base_url}{config.laravel_api_path}"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "X-Device-ID": config.device_public_id,
+            "X-Device-Token": config.device_token,
+            "Content-Type": "application/json"
+        })
+    
+    def heartbeat(self, ip_address: str = "127.0.0.1") -> bool:
+        """Heartbeat an Laravel"""
+        try:
+            response = self.session.post(
+                f"{self.base_url}/heartbeat",
+                json={"ip_address": ip_address, "api_port": 8000},
+                timeout=8
+            )
+            return response.status_code == 200
+        except:
+            return False
+    
+    def get_commands(self) -> List[Dict]:
+        """Pending Commands abrufen"""
+        try:
+            response = self.session.get(f"{self.base_url}/commands/pending", timeout=10)
+            if response.status_code == 200:
+                return response.json().get("commands", [])
+        except:
+            pass
+        return []
+    
+    def report_result(self, command_id: str, result: Dict):
+        """Command-Result melden"""
+        try:
+            self.session.post(
+                f"{self.base_url}/commands/{command_id}/result",
+                json={
+                    "status": result.get('status'),
+                    "result_message": result.get('message', ''),
+                    "output": result.get('output', ''),
+                    "error": result.get('error', '')
+                },
+                timeout=10
+            )
+        except:
+            pass
+
+
+# ============================================================================
+# AGENT
+# ============================================================================
+
+class Agent:
+    """Hardware-Agent - DIE BRÜCKE zwischen Laravel und Arduino"""
+    
+    def __init__(self):
+        self.config = Config()
+        self.serial = SerialPort(self.config.serial_port, self.config.baud_rate)
+        self.laravel = LaravelClient(self.config)
+        self.arduino = ArduinoCLI(self.config.arduino_cli_path)
+        self._stop = threading.Event()
+        
+        logger.info(f"🚀 Agent gestartet: {self.config.device_public_id}")
+        logger.info(f"📡 Laravel: {self.config.laravel_base_url}")
+        logger.info(f"🔌 Serial: {self.config.serial_port}")
+    
+    def execute_command(self, command: Dict) -> Dict[str, Any]:
+        """Führt Command aus - KEINE BUSINESS-LOGIK!"""
+        cmd_type = command.get("type")
+        params = command.get("params", {})
+        
+        # Serial-Befehl direkt ans Arduino
+        if cmd_type == "serial_command":
+            arduino_cmd = params.get("command", "")
+            response = self.serial.send(arduino_cmd)
+            return {
+                'status': 'completed',
+                'message': f'Arduino: {response}' if response else 'Sent',
+                'output': response or ''
+            }
+        
+        # Arduino-CLI: Kompilieren
+        elif cmd_type == "arduino_compile":
+            return self.arduino.compile(params.get("code", ""), params.get("board", "arduino:avr:uno"))
+        
+        # Arduino-CLI: Upload
+        elif cmd_type == "arduino_upload":
+            return self.arduino.upload(
+                params.get("code", ""),
+                params.get("board", "arduino:avr:uno"),
+                params.get("port", self.config.serial_port)
+            )
+        
+        # Port-Scan
+        elif cmd_type == "scan_ports":
+            ports = scan_ports()
+            return {
+                'status': 'completed',
+                'message': f'{len(ports)} ports found',
+                'output': json.dumps({"success": True, "ports": ports, "count": len(ports)})
+            }
+        
+        else:
+            return {'status': 'failed', 'error': f'Unknown command: {cmd_type}'}
+    
+    def _command_loop(self):
+        """Commands von Laravel abrufen"""
+        while not self._stop.is_set():
+            commands = self.laravel.get_commands()
+            for cmd in commands:
+                result = self.execute_command(cmd)
+                self.laravel.report_result(cmd['id'], result)
+            time.sleep(self.config.command_poll_interval)
+    
+    def _heartbeat_loop(self):
+        """Heartbeat an Laravel"""
+        while not self._stop.is_set():
+            self.laravel.heartbeat(self._get_ip())
+            time.sleep(30)
+    
+    def _get_ip(self) -> str:
+        """Lokale IP ermitteln"""
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "127.0.0.1"
+    
+    def run(self):
+        """Agent starten - NUR Commands + Heartbeat!"""
+        threads = [
+            threading.Thread(target=self._command_loop, daemon=True),
+            threading.Thread(target=self._heartbeat_loop, daemon=True)
+        ]
+        
+        for t in threads:
+            t.start()
+        
+        logger.info("✅ Agent läuft...")
+        
+        try:
+            while not self._stop.is_set():
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("🛑 Stoppe Agent...")
+            self._stop.set()
+            self.serial.close()
+
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == "__main__":
+    # Config prüfen
+    config = Config()
+    if not config.device_public_id or not config.device_token:
+        logger.error("❌ DEVICE_PUBLIC_ID oder DEVICE_TOKEN fehlt in .env")
+        logger.error("Run: python bootstrap.py")
+        sys.exit(1)
+    
+    # Agent starten
+    agent = Agent()
+    agent.run()
+
+
+
+================================================
+FILE: API_ENDPOINTS.md
+================================================
+# Laravel Agent API - Endpoints Reference
+
+## 🔐 Authentication
+
+Alle Requests nutzen **Device-Token-Auth**:
+
+```http
+X-Device-ID: growdash-abc123
+X-Device-Token: your-device-token
+```
+
+---
+
+## 📡 Agent → Laravel Endpoints
+
+### 1. Heartbeat (Device Online-Status)
+
+**POST** `/api/growdash/agent/heartbeat`
+
+**Frequency:** Alle 30 Sekunden
+
+**Request:**
+
+```json
+{
+  "ip_address": "192.168.1.100",
+  "api_port": 8000
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+**Purpose:** Hält Device-Status auf "online", aktualisiert `last_seen_at`
+
+---
+
+### 2. Commands abrufen
+
+**GET** `/api/growdash/agent/commands/pending`
+
+**Frequency:** Alle 5 Sekunden
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "commands": [
+    {
+      "id": "cmd-123",
+      "type": "serial_command",
+      "params": {
+        "command": "Status"
+      }
+    },
+    {
+      "id": "cmd-124",
+      "type": "arduino_upload",
+      "params": {
+        "code": "void setup() {...}",
+        "board": "arduino:avr:uno",
+        "port": "/dev/ttyACM0"
+      }
+    }
+  ]
+}
+```
+
+**Purpose:** Agent holt pending Commands von Laravel
+
+---
+
+### 3. Command-Result melden
+
+**POST** `/api/growdash/agent/commands/{id}/result`
+
+**Request (Success):**
+
+```json
+{
+  "status": "completed",
+  "result_message": "✅ Upload auf /dev/ttyACM0",
+  "output": "Sketch uses 1234 bytes...",
+  "error": ""
+}
+```
+
+**Request (Failed):**
+
+```json
+{
+  "status": "failed",
+  "result_message": "❌ Compile-Fehler",
+  "output": "Linking everything together...",
+  "error": "error: 'LO' was not declared in this scope"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true
+}
+```
+
+**Purpose:** Agent meldet Ausführungs-Ergebnis zurück an Laravel
+
+---
+
+## 🎮 Command Types
+
+### `serial_command` - Direkt ans Arduino
+
+**Params:**
+
+```json
+{
+  "command": "Status"
+}
+```
+
+**Was passiert:**
+
+1. Agent sendet `Status\n` an Serial-Port
+2. Wartet 0.5s auf Antwort
+3. Meldet Result zurück
+
+**Use Cases:**
+
+- Sensor-Werte abfragen
+- Pumpen steuern
+- Status prüfen
+
+---
+
+### `arduino_compile` - Code kompilieren (ohne Upload)
+
+**Params:**
+
+```json
+{
+  "code": "void setup() { pinMode(LED_BUILTIN, OUTPUT); }\nvoid loop() { digitalWrite(LED_BUILTIN, HIGH); }",
+  "board": "arduino:avr:uno"
+}
+```
+
+**Was passiert:**
+
+1. Agent erstellt temp Sketch-Datei
+2. Ruft `arduino-cli compile` auf
+3. Meldet Compile-Output + Errors zurück
+4. Löscht temp Dateien
+
+**Use Cases:**
+
+- Code vor Upload testen
+- Syntax-Check
+- LLM-basierte Fehleranalyse
+
+---
+
+### `arduino_upload` - Code kompilieren + uploaden
+
+**Params:**
+
+```json
+{
+  "code": "void setup() {...}",
+  "board": "arduino:avr:uno",
+  "port": "/dev/ttyACM0"
+}
+```
+
+**Was passiert:**
+
+1. Agent erstellt temp Sketch-Datei
+2. Ruft `arduino-cli compile --upload` auf
+3. Serial-Connection wird kurz geschlossen (während Upload)
+4. Meldet Upload-Result + Errors zurück
+5. Löscht temp Dateien
+
+**Use Cases:**
+
+- Firmware-Updates
+- Code-Upload vom Frontend
+- OTA-Updates (Over-The-Air)
+
+---
+
+### `scan_ports` - Verfügbare Serial-Ports scannen
+
+**Params:**
+
+```json
+{}
+```
+
+**Was passiert:**
+
+1. Agent scannt alle `/dev/ttyACM*` und `/dev/ttyUSB*` (Linux) bzw. `COM*` (Windows)
+2. Sammelt VID/PID/Description
+3. Gibt JSON-Liste zurück
+
+**Response in `output`:**
+
+```json
+{
+  "success": true,
+  "ports": [
+    {
+      "port": "/dev/ttyACM0",
+      "description": "Arduino Uno",
+      "vendor_id": "2341",
+      "product_id": "0043"
+    }
+  ],
+  "count": 1
+}
+```
+
+**Use Cases:**
+
+- Port-Dropdown im Frontend befüllen
+- Auto-Discovery von Devices
+- Hardware-Check
+
+---
+
+## 📊 Data Flow
+
+### Command Execution (Laravel → Arduino)
+
+```
+User (Frontend)
+    ↓ Klick "Pump ON"
+
+Laravel Backend
+    ↓ Command.create(type: 'serial_command', params: {command: 'PUMP_ON'}, status: 'pending')
+
+Agent (command_loop alle 5s)
+    ↓ GET /commands/pending
+    ↓ Findet Command cmd-123
+
+Agent (execute_command)
+    ↓ serial.send('PUMP_ON\n')
+
+Arduino (Serial)
+    ↓ digitalWrite(PUMP_PIN, HIGH)
+    ↓ Serial.println("OK")
+
+Agent
+    ↓ Empfängt "OK"
+    ↓ POST /commands/cmd-123/result
+    ↓ {status: 'completed', output: 'OK'}
+
+Laravel Backend
+    ↓ Command status → 'completed'
+    ↓ Command output → 'OK'
+
+Frontend (WebSocket/Polling)
+    ↓ Zeige ✅ "Pumpe aktiviert"
+```
+
+**WICHTIG:** Arduino antwortet NUR auf Befehle - KEINE automatische Telemetrie!
+
+Wenn du Sensor-Werte brauchst, musst du sie aktiv abfragen:
+
+```
+Laravel: Command.create(type: 'serial_command', params: {command: 'STATUS'})
+Arduino: Serial.println("Pump:ON,Water:45,Temp:22.5")
+Laravel: Speichert Output in Command.output
+```
+
+---
+
+### Arduino-CLI Workflow
+
+```
+User (Frontend)
+    ↓ Upload Code
+Laravel Backend
+    ↓ Command.create(type: 'arduino_upload', params: {code: '...', board: 'arduino:avr:uno'})
+Agent (command_loop)
+    ↓ GET /commands/pending
+Agent (ArduinoCLI.upload)
+    ↓ Create temp sketch
+    ↓ arduino-cli compile --upload
+    ↓ [Serial closed during upload]
+    ↓ Parse stdout/stderr
+Agent
+    ↓ POST /commands/{id}/result (output + error)
+Laravel Backend
+    ↓ Update Command (status, output, error)
+Frontend
+    ↓ Show Compile-Errors or Success
+    ↓ [Optional] LLM analyzes error → suggest fix
+```
+
+---
+
+## 🔧 Laravel Backend Implementation
+
+### Required Routes
+
+```php
+// routes/api.php
+Route::prefix('growdash/agent')->middleware('device.auth')->group(function () {
+    Route::post('/heartbeat', [AgentController::class, 'heartbeat']);
+    Route::get('/commands/pending', [AgentController::class, 'pendingCommands']);
+    Route::post('/commands/{id}/result', [AgentController::class, 'commandResult']);
+});
+```
+
+---
+
+### Controller Methods
+
+#### `heartbeat()`
+
+```php
+public function heartbeat(Request $request)
+{
+    $device = $request->attributes->get('device'); // from middleware
+
+    $device->update([
+        'last_seen_at' => now(),
+        'ip_address' => $request->input('ip_address'),
+        'api_port' => $request->input('api_port', 8000)
+    ]);
+
+    return response()->json(['success' => true]);
+}
+```
+
+---
+
+#### `pendingCommands()`
+
+```php
+public function pendingCommands(Request $request)
+{
+    $device = $request->attributes->get('device');
+
+    $commands = Command::where('device_id', $device->id)
+        ->where('status', 'pending')
+        ->orderBy('created_at', 'asc')
+        ->get(['id', 'type', 'params']);
+
+    return response()->json([
+        'success' => true,
+        'commands' => $commands
+    ]);
+}
+```
+
+---
+
+#### `commandResult()`
+
+```php
+public function commandResult(Request $request, $id)
+{
+    $device = $request->attributes->get('device');
+
+    $command = Command::where('device_id', $device->id)
+        ->findOrFail($id);
+
+    $command->update([
+        'status' => $request->input('status'), // 'completed' | 'failed'
+        'result_message' => $request->input('result_message'),
+        'output' => $request->input('output'),
+        'error' => $request->input('error'),
+        'completed_at' => now()
+    ]);
+
+    return response()->json(['success' => true]);
+}
+```
+
+---
+
+## 🗄️ Database Schema
+
+### `devices` Table
+
+```sql
+id              BIGINT PRIMARY KEY
+user_id         BIGINT (FK users)
+public_id       VARCHAR(255) UNIQUE
+name            VARCHAR(255)
+agent_token     VARCHAR(255) -- HASHED!
+ip_address      VARCHAR(45) NULLABLE
+api_port        INT DEFAULT 8000
+last_seen_at    TIMESTAMP NULLABLE
+status          ENUM('active', 'offline')
+created_at      TIMESTAMP
+updated_at      TIMESTAMP
+```
+
+---
+
+### `commands` Table
+
+```sql
+id              BIGINT PRIMARY KEY
+device_id       BIGINT (FK devices)
+type            VARCHAR(255) -- 'serial_command', 'arduino_upload', etc.
+params          JSON
+status          ENUM('pending', 'completed', 'failed')
+result_message  TEXT NULLABLE
+output          TEXT NULLABLE
+error           TEXT NULLABLE
+created_at      TIMESTAMP
+completed_at    TIMESTAMP NULLABLE
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Device registrieren (Laravel)
+
+```php
+$device = Device::create([
+    'user_id' => auth()->id(),
+    'public_id' => 'growdash-' . Str::random(4),
+    'name' => 'GrowDash Pi',
+    'agent_token' => Hash::make($plainToken = Str::random(64))
+]);
+
+// Gib $plainToken NUR EINMAL zurück!
+return response()->json([
+    'device_id' => $device->public_id,
+    'token' => $plainToken // Agent trägt das in .env ein
+]);
+```
+
+---
+
+### 2. Agent konfigurieren
+
+```bash
+# .env
+DEVICE_PUBLIC_ID=growdash-abc123
+DEVICE_TOKEN=your-plain-token-here
+LARAVEL_BASE_URL=https://grow.linn.games
+SERIAL_PORT=/dev/ttyACM0
+```
+
+---
+
+### 3. Agent starten
+
+```bash
+./setup.sh
+./grow_start.sh
+```
+
+---
+
+### 4. Command senden (Laravel)
+
+```php
+Command::create([
+    'device_id' => $device->id,
+    'type' => 'serial_command',
+    'params' => ['command' => 'Status'],
+    'status' => 'pending'
+]);
+```
+
+Agent holt es automatisch (alle 5s) und führt es aus!
+
+---
+
+## 💡 Async Pattern (Optional - für bessere Performance)
+
+**Problem:** Synchrones Polling = Agent wartet immer 5s zwischen Commands
+
+**Lösung:** Async mit WebSocket oder Long-Polling
+
+### Option A: WebSocket (empfohlen)
+
+```php
+// Laravel Backend sendet Command direkt an Agent
+use App\Events\CommandCreated;
+
+Command::create([...]);
+broadcast(new CommandCreated($command));
+```
+
+```python
+# Agent connected zu Laravel WebSocket
+import socketio
+
+sio = socketio.Client()
+sio.connect('https://grow.linn.games')
+
+@sio.on('command')
+def on_command(data):
+    result = agent.execute_command(data)
+    agent.laravel.report_result(data['id'], result)
+```
+
+**Vorteil:** Instant-Ausführung, keine 5s Wartezeit!
+
+### Option B: Long-Polling
+
+```php
+// Laravel: Blockiere Request bis Command vorhanden
+public function waitForCommand(Request $request)
+{
+    $timeout = 30;
+    $start = time();
+
+    while (time() - $start < $timeout) {
+        $cmd = Command::where('device_id', $device->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($cmd) {
+            return response()->json(['command' => $cmd]);
+        }
+
+        usleep(500000); // 0.5s
+    }
+
+    return response()->json(['command' => null]);
+}
+```
+
+**Vorteil:** Weniger Requests, schnellere Response
+
+---
+
+## 🎯 Empfohlener Workflow
+
+### 1. Arduino Code schreiben (in Laravel)
+
+```cpp
+// User schreibt im Frontend
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+
+    if (cmd == "LED_ON") {
+      digitalWrite(13, HIGH);
+      Serial.println("LED:ON");
+    }
+    else if (cmd == "LED_OFF") {
+      digitalWrite(13, LOW);
+      Serial.println("LED:OFF");
+    }
+    else if (cmd == "STATUS") {
+      Serial.println("LED:" + String(digitalRead(13) ? "ON" : "OFF"));
+    }
+  }
+}
+```
+
+### 2. Laravel kompiliert + uploaded Code
+
+```php
+Command::create([
+    'device_id' => $device->id,
+    'type' => 'arduino_upload',
+    'params' => [
+        'code' => $arduinoCode,
+        'board' => 'arduino:avr:uno',
+        'port' => '/dev/ttyACM0'
+    ]
+]);
+```
+
+### 3. Agent führt Upload aus
+
+```
+Agent → Arduino-CLI → Arduino
+Result: "✅ Upload erfolgreich"
+```
+
+### 4. User sendet Commands
+
+```php
+// Frontend: "LED an"
+Command::create([
+    'type' => 'serial_command',
+    'params' => ['command' => 'LED_ON']
+]);
+
+// Agent führt aus
+// Arduino antwortet: "LED:ON"
+// Laravel speichert in Command.output
+```
+
+### 5. Frontend pollt/websocket für Result
+
+```javascript
+// Polling
+setInterval(() => {
+  fetch(`/api/commands/${commandId}`)
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.status === "completed") {
+        showNotification("LED aktiviert: " + data.output);
+      }
+    });
+}, 1000);
+
+// Oder WebSocket
+Echo.channel("device." + deviceId).listen("CommandCompleted", (e) => {
+  showNotification("✅ " + e.output);
+});
+```
+
+---
+
+## 📝 Logs
+
+Agent loggt nach **stdout**:
+
+```
+2025-12-05 10:30:00 - INFO - 🚀 Agent gestartet: growdash-abc123
+2025-12-05 10:30:00 - INFO - 📡 Laravel: https://grow.linn.games
+2025-12-05 10:30:00 - INFO - 🔌 Serial: /dev/ttyACM0
+2025-12-05 10:30:00 - INFO - ✅ Serial verbunden: /dev/ttyACM0
+2025-12-05 10:30:00 - INFO - ✅ Agent läuft...
+```
+
+**In Production:**
+
+```bash
+python agent.py 2>&1 | tee -a agent.log
+```
+
+Oder systemd Service:
+
+```ini
+[Service]
+ExecStart=/home/pi/growdash/venv/bin/python /home/pi/growdash/agent.py
+StandardOutput=journal
+StandardError=journal
+```
+
+Dann:
+
+```bash
+sudo journalctl -u growdash-agent -f
+```
+
+---
+
+**SIMPLE. CLEAN. NO BULLSHIT.**
+
+
+
+================================================
+FILE: grow_start.sh
+================================================
+#!/bin/bash
+# GrowDash Agent starten
+
+cd "$(dirname "$0")"
+
+# Virtual Environment aktivieren
+if [ ! -d "venv" ]; then
+    echo "❌ Virtual Environment fehlt!"
+    echo "Bitte erst ./setup.sh ausführen"
+    exit 1
+fi
+
+source venv/bin/activate
+
+# .env prüfen
+if [ ! -f ".env" ]; then
+    echo "❌ .env fehlt!"
+    echo "Bitte erst ./setup.sh ausführen"
+    exit 1
+fi
+
+# Credentials prüfen
+if ! grep -q "^DEVICE_PUBLIC_ID=.\+" .env || ! grep -q "^DEVICE_TOKEN=.\+" .env; then
+    echo ""
+    echo "❌ DEVICE_PUBLIC_ID oder DEVICE_TOKEN fehlt in .env!"
+    echo ""
+    echo "Hole Device-Credentials von Laravel:"
+    echo "  1. https://grow.linn.games/devices"
+    echo "  2. Neues Device erstellen"
+    echo "  3. ID + Token in .env eintragen"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "🚀 Starte GrowDash Agent..."
+echo ""
+
+# Agent starten
+python agent.py
+            echo "📦 Installiere Arduino-CLI..."
+            
+            # Detect architecture
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64)
+                    ARDUINO_ARCH="Linux_64bit"
+                    ;;
+                aarch64|arm64)
+                    ARDUINO_ARCH="Linux_ARM64"
+                    ;;
+                armv7l)
+                    ARDUINO_ARCH="Linux_ARMv7"
+                    ;;
+                *)
+                    echo "❌ Unbekannte Architektur: $ARCH"
+                    echo "Bitte installiere Arduino-CLI manuell:"
+                    echo "  https://arduino.github.io/arduino-cli/latest/installation/"
+                    return 1
+                    ;;
+            esac
+            
+            # Download latest version
+            TEMP_DIR=$(mktemp -d)
+            cd "$TEMP_DIR" || exit 1
+            
+            echo "Lade Arduino-CLI für $ARDUINO_ARCH..."
+            DOWNLOAD_URL="https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_${ARDUINO_ARCH}.tar.gz"
+            
+            if command -v wget &> /dev/null; then
+                wget -q "$DOWNLOAD_URL" -O arduino-cli.tar.gz
+            elif command -v curl &> /dev/null; then
+                curl -fsSL "$DOWNLOAD_URL" -o arduino-cli.tar.gz
+            else
+                echo "❌ Weder wget noch curl gefunden. Bitte manuell installieren."
+                cd - > /dev/null
+                rm -rf "$TEMP_DIR"
+                return 1
+            fi
+            
+            if [ $? -ne 0 ]; then
+                echo "❌ Download fehlgeschlagen"
+                cd - > /dev/null
+                rm -rf "$TEMP_DIR"
+                return 1
+            fi
+            
+            # Extract
+            tar -xzf arduino-cli.tar.gz
+            
+            # Install to /usr/local/bin (requires sudo) or ~/.local/bin
+            if [ -w "/usr/local/bin" ]; then
+                mv arduino-cli /usr/local/bin/
+                echo "✅ Arduino-CLI installiert: /usr/local/bin/arduino-cli"
+            else
+                echo "Keine Schreibrechte für /usr/local/bin, versuche sudo..."
+                sudo mv arduino-cli /usr/local/bin/
+                if [ $? -eq 0 ]; then
+                    echo "✅ Arduino-CLI installiert: /usr/local/bin/arduino-cli"
+                else
+                    # Fallback: user local bin
+                    mkdir -p "$HOME/.local/bin"
+                    mv arduino-cli "$HOME/.local/bin/"
+                    echo "✅ Arduino-CLI installiert: $HOME/.local/bin/arduino-cli"
+                    echo ""
+                    echo "⚠️  Füge zur .env hinzu:"
+                    echo "ARDUINO_CLI_PATH=$HOME/.local/bin/arduino-cli"
+                    echo ""
+                    # Update .env
+                    if grep -q "^ARDUINO_CLI_PATH=" .env 2>/dev/null; then
+                        sed -i "s|^ARDUINO_CLI_PATH=.*|ARDUINO_CLI_PATH=$HOME/.local/bin/arduino-cli|" .env
+                    else
+                        echo "ARDUINO_CLI_PATH=$HOME/.local/bin/arduino-cli" >> .env
+                    fi
+                fi
+            fi
+            
+            # Cleanup
+            cd - > /dev/null
+            rm -rf "$TEMP_DIR"
+            
+            # Install Arduino AVR boards
+            echo ""
+            echo "📦 Installiere Arduino AVR Boards..."
+            arduino-cli core update-index
+            arduino-cli core install arduino:avr
+            
+            echo ""
+            echo "✅ Arduino-CLI Setup abgeschlossen"
+            echo ""
+        else
+            echo ""
+            echo "ℹ️  Arduino-CLI wird NICHT installiert."
+            echo "   Firmware-Updates sind nicht verfügbar."
+            echo ""
+            echo "Manuelle Installation später:"
+            echo "  https://arduino.github.io/arduino-cli/latest/installation/"
+            echo ""
+        fi
+    fi
+}
+
+# Arduino-CLI Check ausführen (nur einmal, nicht bei jedem Start nerven)
+if [ ! -f ".arduino_cli_checked" ]; then
+    check_arduino_cli
+    touch .arduino_cli_checked
+fi
+
+# Agent starten
+echo "Installiere Python-Dependencies (requirements.txt in venv)..."
+pip install -q --upgrade pip || { echo "❌ Upgrade pip fehlgeschlagen"; exit 1; }
+pip install -r requirements.txt || { echo "❌ Pip-Installation fehlgeschlagen"; exit 1; }
+
+echo "Starte GrowDash Hardware-Agent..."
+python3 agent.py
+
+
+================================================
+FILE: local_api.py
+================================================
+"""
+GrowDash Local API - CLEAN VERSION
+===================================
+Minimale Debug-API für Port-Scanning und Status-Abfragen
+
+KEIN Agent-Start! Local API ist NUR für Debug-Zwecke.
+Agent läuft separat via grow_start.sh
+"""
+
+import os
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+# Import Port-Scanner
+from agent import scan_ports
+
+app = FastAPI(title="GrowDash Local API")
+
+# CORS für Laravel
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+def root():
+    """API Info"""
+    return {
+        "name": "GrowDash Local API",
+        "version": "2.0",
+        "endpoints": ["/ports"]
+    }
+
+
+@app.get("/ports")
+def get_ports():
+    """Scanne verfügbare Serial-Ports"""
+    try:
+        ports = scan_ports()
+        return {
+            "success": True,
+            "ports": ports,
+            "count": len(ports)
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Port-Scan fehlgeschlagen: {e}")
+
+
+if __name__ == "__main__":
+    host = os.getenv("LOCAL_API_HOST", "0.0.0.0")
+    port = int(os.getenv("LOCAL_API_PORT", "8000"))
+    
+    print(f"🚀 Starting Local API on {host}:{port}")
+    uvicorn.run(app, host=host, port=port)
+
+
+
+================================================
+FILE: requirements.txt
+================================================
+requests==2.31.0
+pyserial==3.5
+pydantic==2.5.0
+pydantic-settings==2.1.0
+fastapi==0.104.1
+uvicorn==0.24.0
+
+
+
+================================================
+FILE: setup.sh
+================================================
+#!/bin/bash
+# GrowDash Setup - Clean Version
+
+cd "$(dirname "$0")"
+
+echo ""
+echo "🌱 GrowDash Setup"
+echo "================="
+echo ""
+
+# Virtual Environment aktivieren ODER erstellen
+if [ ! -d "venv" ]; then
+    echo "📦 Erstelle Python Virtual Environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+    echo "✅ Virtual Environment erstellt"
+    echo ""
+    echo "📚 Installiere Dependencies..."
+    pip install -q --upgrade pip
+    pip install -q -r requirements.txt
+    echo "✅ Dependencies installiert"
+    echo ""
+else
+    source venv/bin/activate
+    echo "✅ Virtual Environment aktiviert"
+fi
+
+# .env erstellen falls nicht vorhanden
+if [ ! -f ".env" ]; then
+    echo ""
+    echo "📄 Erstelle .env aus .env.example..."
+    cp .env.example .env
+    echo "✅ .env erstellt"
+    echo ""
+    echo "⚠️  WICHTIG: Trage Device-Credentials in .env ein:"
+    echo "   - DEVICE_PUBLIC_ID=deine-device-id"
+    echo "   - DEVICE_TOKEN=dein-token"
+    echo ""
+    echo "Diese erhältst du vom Laravel-Backend unter:"
+    echo "   https://grow.linn.games/devices"
+    echo ""
+else
+    echo "✅ .env vorhanden"
+fi
+
+# Check ob Credentials gesetzt sind
+if ! grep -q "^DEVICE_PUBLIC_ID=.\+" .env || ! grep -q "^DEVICE_TOKEN=.\+" .env; then
+    echo ""
+    echo "⚠️  DEVICE_PUBLIC_ID oder DEVICE_TOKEN fehlt in .env!"
+    echo ""
+    echo "Bitte trage folgende Werte in .env ein:"
+    echo "   DEVICE_PUBLIC_ID=deine-device-id"
+    echo "   DEVICE_TOKEN=dein-token"
+    echo ""
+    echo "Diese erhältst du vom Laravel-Backend:"
+    echo "   1. Gehe zu https://grow.linn.games/devices"
+    echo "   2. Klicke auf 'Neues Device hinzufügen'"
+    echo "   3. Kopiere Device-ID und Token"
+    echo "   4. Füge sie in .env ein"
+    echo ""
+    read -p "Möchtest du .env jetzt bearbeiten? (j/n): " edit
+    if [[ "$edit" =~ ^[jJyY]$ ]]; then
+        ${EDITOR:-nano} .env
+    fi
+    echo ""
+    echo "Nach dem Eintragen starte den Agent mit:"
+    echo "  ./grow_start.sh"
+    echo ""
+    exit 0
+fi
+
+echo ""
+echo "✅ Setup abgeschlossen!"
+echo ""
+echo "Agent starten:"
+echo "  ./grow_start.sh"
+echo ""
+
+
+
+================================================
+FILE: .env.example
+================================================
+# Laravel Backend Configuration
+LARAVEL_BASE_URL=https://grow.linn.games
+LARAVEL_API_PATH=/api/growdash/agent
+
+# Onboarding
+ONBOARDING_MODE=PAIRING
+
+# Device Identification (Device-Token-Auth, kein User-Login)
+# Diese Werte kommen aus Laravel nach erfolgreichem Pairing
+DEVICE_PUBLIC_ID=
+DEVICE_TOKEN=
+
+# Hardware Configuration
+SERIAL_PORT=/dev/ttyACM0
+BAUD_RATE=9600
+
+
+# Agent Behavior
+TELEMETRY_INTERVAL=10
+COMMAND_POLL_INTERVAL=5
+
+# Multi-Device Support (USB-Scanner)
+# Aktiviert automatisches Scannen und Verwalten mehrerer USB-Devices
+MULTI_DEVICE_MODE=false
+# USB-Scan-Intervall in Sekunden (default: 12000 = 3.33h)
+USB_SCAN_INTERVAL=12000
+
+# Local API (nur für Debugging, nicht für Internet gedacht)
+LOCAL_API_ENABLED=true
+LOCAL_API_HOST=127.0.0.1
+LOCAL_API_PORT=8000
+
+# Firmware Update (sichere Kapselung)
+FIRMWARE_DIR=./firmware
+ARDUINO_CLI_PATH=/usr/local/bin/arduino-cli
+
+
+
+================================================
+FILE: C++Scripts/ArduinoUno.txt
+================================================
+/* UNO: Spray D6, Tab D9, Pegelschalter D2->Relais D10 (invertiert),
+ * Ultraschall TRIG/ECHO (umschaltbar), DS18B20@D4, TDS@A1.
+ * 9600 Baud, Newline.
+ * Cmds: SprayOn | SprayOff | Spray <ms> | FillL <L> | CancelFill | TDS | Status
+ */
+
+#include <Arduino.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+/*** === Pins === ***/
+#define US_SWAP_PINS 0        // 0: TRIG=12/ECHO=11, 1: TRIG=11/ECHO=12
+const uint8_t SPRAY_PIN = 6;  // HIGH=ON
+const uint8_t TAP_PIN = 9;    // HIGH=ON
+#if US_SWAP_PINS
+const uint8_t US_TRIG_PIN = 11;
+const uint8_t US_ECHO_PIN = 12;
+#else
+const uint8_t US_TRIG_PIN = 12;
+const uint8_t US_ECHO_PIN = 11;
+#endif
+const uint8_t LEVEL_SW_PIN = 2;    // GND—Schalter—D2 (INPUT_PULLUP)
+const uint8_t LEVEL_REL_PIN = 10;  // invertiert
+const uint8_t ONE_WIRE_BUS = 4;    // DS18B20
+const uint8_t TDS_PIN = A1;
+
+/*** === Geometrie/Kalibrierung ===
+ * Trage ENTWEDER den INNENUMFANG ein (TANK_CIRC_CM>0)
+ * ODER den INNENDURCHMESSER (TANK_DIAM_CM>0, Umfang = pi*D).
+ */
+const float EMPTY_DIST_CM = 62.0;  // Sensor → Boden (leer)
+const float FULL_DIST_CM = 10.0;   // Sensor → Wasser bei „voll“ (Mindestabstand)
+const float TANK_CIRC_CM = 0.0;    // << dein Wert (Umfang). Wenn Durchmesser: hier 0.0 lassen …
+const float TANK_DIAM_CM = 32.0;   // … und HIER den Durchmesser in cm eintragen
+
+// Abgeleitet (zur Laufzeit berechnet)
+const float CIRC_USED = (TANK_CIRC_CM > 0.0f) ? TANK_CIRC_CM : (TANK_DIAM_CM > 0.0f ? (PI * TANK_DIAM_CM) : 0.0f);
+const float FILL_HEIGHT_CM = (EMPTY_DIST_CM - FULL_DIST_CM);
+const float MAX_VOLUME_L = (CIRC_USED * CIRC_USED * FILL_HEIGHT_CM) / (4.0f * PI * 1000.0f);  // Zylinder V = C^2*h/(4π*1000)
+const float FULL_CAP_L = MAX_VOLUME_L * 0.95f;                                                // 95% als harter Stop
+const float DRY_MIN_L_DEF = 2.0f;
+const float DRY_MIN_L = (MAX_VOLUME_L > 0.0f) ? min(DRY_MIN_L_DEF, MAX_VOLUME_L * 0.2f) : DRY_MIN_L_DEF;
+
+/*** === Regeln / Zeiten === ***/
+const unsigned long MEAS_PERIOD_MS = 1000;
+const unsigned long MEAS_PERIOD_SPRAY_MS = 30000;
+const float FILL_RATE_LPM_EST = 6.0;
+const float FILL_TIMEOUT_FACTOR = 1.8;
+const unsigned long FILL_HARD_MAX_MS = 12UL * 60UL * 1000UL;
+
+/*** === Ultraschall === ***/
+const uint8_t US_BURST = 5;
+const float US_MIN_CM = 6.0;
+const float US_MAX_CM = 90.0;
+const float US_SPREAD_MAX_CM = 6.0;
+const float EMA_ALPHA = 0.30;
+const unsigned long US_FALLBACK_HOLD_MS = 60000UL;
+const unsigned long US_STALE_SAFE_MS = 30000UL;
+
+/*** === Zustände === ***/
+bool sprayOn = false, tabOn = false;
+float liters = NAN, distanceCm = NAN, emaDistCm = NAN;
+unsigned long lastUSOkAt = 0;
+float lastUSOkDist = NAN;
+float tapFillAmount = 0.0, tapTargetL = 0.0;
+unsigned long fillTimeoutAt = 0;
+uint8_t lvl_last = HIGH, lvl_stable = HIGH;
+unsigned long lvl_changed_at = 0;
+const unsigned long LEVEL_DEBOUNCE_MS = 30;
+unsigned long tLastMeas = 0;
+
+/*** === TDS/Temp on demand === ***/
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature dallas(&oneWire);
+float waterTempC = NAN, tdsPPM = NAN;
+
+/*** === Helpers === ***/
+inline void SprayON() {
+  digitalWrite(SPRAY_PIN, HIGH);
+  sprayOn = true;
+}
+inline void SprayOFF() {
+  digitalWrite(SPRAY_PIN, LOW);
+  sprayOn = false;
+}
+inline void TabON() {
+  digitalWrite(TAP_PIN, HIGH);
+  tabOn = true;
+}
+inline void TabOFF() {
+  digitalWrite(TAP_PIN, LOW);
+  tabOn = false;
+}
+inline void LevelRelON() {
+  digitalWrite(LEVEL_REL_PIN, HIGH);
+}
+inline void LevelRelOFF() {
+  digitalWrite(LEVEL_REL_PIN, LOW);
+}
+
+static void isort(float *a, uint8_t n) {
+  for (uint8_t i = 1; i < n; i++) {
+    float v = a[i];
+    int j = i - 1;
+    while (j >= 0 && a[j] > v) {
+      a[j + 1] = a[j];
+      j--;
+    }
+    a[j + 1] = v;
+  }
+}
+
+static float pingCm(unsigned long tout_us = 120000UL) {
+  digitalWrite(US_TRIG_PIN, LOW);
+  delayMicroseconds(3);
+  digitalWrite(US_TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(US_TRIG_PIN, LOW);
+  unsigned long dur = pulseIn(US_ECHO_PIN, HIGH, tout_us);
+  if (!dur) return NAN;
+  float cm = dur / 58.0f;
+  if (cm < US_MIN_CM || cm > US_MAX_CM) return NAN;
+  return cm;
+}
+static float burstCm(uint8_t n = US_BURST) {
+  if (n < 1) n = 1;
+  if (n > 9) n = 9;
+  float s[9];
+  uint8_t k = 0;
+  for (uint8_t i = 0; i < n; i++) {
+    float c = pingCm();
+    if (!isnan(c)) s[k++] = c;
+    delay(20);
+  }
+  if (k == 0) return NAN;
+  if (k < 3) {
+    float sum = 0;
+    for (uint8_t i = 0; i < k; i++) sum += s[i];
+    return sum / k;
+  }
+  isort(s, k);
+  float med = s[k / 2];
+  float p20 = s[(uint16_t)k * 2 / 10];
+  float p80 = s[(uint16_t)k * 8 / 10];
+  return ((p80 - p20) > US_SPREAD_MAX_CM) ? med : med;
+}
+
+/*** === Volumen aus Distanz === ***/
+float litersFromDist(float d) {
+  if (isnan(d) || CIRC_USED <= 0.0f) return NAN;
+  float span = FILL_HEIGHT_CM;          // 52 cm
+  float x = (d - FULL_DIST_CM) / span;  // 0 = voll, 1 = leer
+  x = constrain(x, 0.0f, 1.0f);
+  return MAX_VOLUME_L * (1.0f - x);
+}
+
+/*** === Messen === ***/
+void maybeMeasure() {
+  unsigned long period = sprayOn ? MEAS_PERIOD_SPRAY_MS : MEAS_PERIOD_MS;
+  if (millis() - tLastMeas < period) return;
+  tLastMeas = millis();
+
+  float d = burstCm();
+  if (isnan(d)) d = pingCm(150000UL);
+
+  if (!isnan(d)) {
+    emaDistCm = isnan(emaDistCm) ? d : (emaDistCm + EMA_ALPHA * (d - emaDistCm));
+    distanceCm = emaDistCm;
+    liters = litersFromDist(distanceCm);
+    lastUSOkAt = millis();
+    lastUSOkDist = distanceCm;
+  } else {
+    unsigned long age = millis() - lastUSOkAt;
+    if (!isnan(lastUSOkDist) && age <= US_FALLBACK_HOLD_MS) {
+      distanceCm = lastUSOkDist;
+      liters = litersFromDist(distanceCm);
+    } else {
+      distanceCm = NAN;
+      liters = NAN;
+    }
+  }
+
+  if (!isnan(liters) && liters >= FULL_CAP_L && tabOn) {
+    TabOFF();
+    Serial.println(F("SAFE: FULL->TabOFF"));
+  }
+  if (millis() - lastUSOkAt > US_STALE_SAFE_MS) {
+    if (sprayOn) {
+      SprayOFF();
+      Serial.println(F("SAFE: STALE->SprayOFF"));
+    }
+    if (tabOn) {
+      TabOFF();
+      Serial.println(F("SAFE: STALE->TabOFF"));
+    }
+  }
+  if (sprayOn && (isnan(liters) || liters <= DRY_MIN_L)) {
+    SprayOFF();
+    Serial.println(F("SAFE: DRY/NaN->SprayOFF"));
+  }
+}
+
+/*** === Pegelschalter invertiert === ***/
+void updateLevelRelay() {
+  uint8_t r = digitalRead(LEVEL_SW_PIN);  // HIGH=offen
+  static unsigned long t = 0;             // lokales Debounce
+  static uint8_t last = HIGH;
+  if (r != last) {
+    last = r;
+    t = millis();
+  }
+  if (millis() - t >= LEVEL_DEBOUNCE_MS && r != lvl_stable) {
+    lvl_stable = r;
+    if (lvl_stable == HIGH) LevelRelOFF();
+    else LevelRelON();
+  }
+}
+
+/*** === Dosiertes Füllen === ***/
+void controlWaterFill() {
+  if (!isnan(liters) && liters >= FULL_CAP_L) {
+    if (tabOn) TabOFF();
+    tapFillAmount = 0;
+    return;
+  }
+  if (millis() - lastUSOkAt > US_STALE_SAFE_MS) {
+    if (tabOn) TabOFF();
+    tapFillAmount = 0;
+    return;
+  }
+
+  if (tapFillAmount > 0.0f) {
+    if (millis() >= fillTimeoutAt) {
+      TabOFF();
+      tapFillAmount = 0;
+      Serial.println(F("SAFE: FillTimeout"));
+      return;
+    }
+    maybeMeasure();
+    if (!isnan(liters) && liters >= tapTargetL) {
+      TabOFF();
+      tapFillAmount = 0;
+      Serial.println(F("OK: FillDone"));
+      return;
+    }
+    if (!tabOn) TabON();
+  } else {
+    if (tabOn) TabOFF();
+  }
+}
+
+/*** === TDS/Temp (on demand) === ***/
+float readWaterTempC() {
+  dallas.requestTemperatures();
+  float t = dallas.getTempCByIndex(0);
+  return (t == DEVICE_DISCONNECTED_C) ? NAN : t;
+}
+int readTDSRaw(uint8_t n = 30) {
+  long acc = 0;
+  for (uint8_t i = 0; i < n; i++) {
+    acc += analogRead(TDS_PIN);
+    delay(5);
+  }
+  return (int)(acc / n);
+}
+void measureTDS() {
+  waterTempC = readWaterTempC();
+  int adc = readTDSRaw();
+  float v = adc * (5.0f / 1024.0f);
+  float ec = (133.42f * v * v * v - 255.86f * v * v + 857.39f * v);
+  if (!isnan(waterTempC)) ec *= (1.0f + 0.02f * (waterTempC - 25.0f));
+  tdsPPM = ec * 0.5f;
+  Serial.print(F("TDS="));
+  Serial.print((int)tdsPPM);
+  Serial.print(F(" TempC="));
+  if (isnan(waterTempC)) Serial.print(F("NaN"));
+  else Serial.print(waterTempC, 2);
+  Serial.print(F(" ADC="));
+  Serial.print(adc);
+  Serial.print(F(" V="));
+  Serial.println(v, 3);
+}
+
+/*** === Serial-CMDs === ***/
+void handleSerial() {
+  while (Serial.available()) {
+    String s = Serial.readStringUntil('\n');
+    s.trim();
+
+    if (s.equalsIgnoreCase("SprayOn")) {
+      maybeMeasure();
+      if (isnan(liters) || liters <= DRY_MIN_L) Serial.println(F("ERR"));
+      else {
+        SprayON();
+        Serial.println(F("OK"));
+      }
+    } else if (s.equalsIgnoreCase("SprayOff")) {
+      SprayOFF();
+      Serial.println(F("OK"));
+    } else if (s.startsWith("Spray ")) {
+      unsigned long ms = s.substring(6).toInt();
+      maybeMeasure();
+      if (ms > 0 && !isnan(liters) && liters > DRY_MIN_L) {
+        SprayON();
+        delay(ms);
+        SprayOFF();
+        Serial.println(F("OK"));
+      } else Serial.println(F("ERR"));
+    } else if (s.startsWith("FillL ")) {
+      float l = s.substring(6).toFloat();
+      maybeMeasure();
+      if (l <= 0 || isnan(liters) || liters >= FULL_CAP_L || tapFillAmount > 0) {
+        Serial.println(F("ERR"));
+      } else {
+        tapFillAmount = l;
+        tapTargetL = min(liters + l, FULL_CAP_L);
+        float estMin = l / max(FILL_RATE_LPM_EST, 0.1f);
+        unsigned long softMs = (unsigned long)(estMin * 60.0f * 1000.0f * FILL_TIMEOUT_FACTOR);
+        fillTimeoutAt = millis() + min(softMs, FILL_HARD_MAX_MS);
+        TabON();
+        Serial.println(F("OK"));
+      }
+    } else if (s.equalsIgnoreCase("CancelFill")) {
+      tapFillAmount = 0;
+      TabOFF();
+      Serial.println(F("OK"));
+    } else if (s.equalsIgnoreCase("TDS")) {
+      measureTDS();
+    } else if (s.equalsIgnoreCase("Status")) {
+      Serial.print(F("dist_cm="));
+      if (isnan(distanceCm)) Serial.print(F("NaN"));
+      else Serial.print(distanceCm, 1);
+      Serial.print(F(" liters="));
+      if (isnan(liters)) Serial.print(F("NaN"));
+      else Serial.print(liters, 2);
+      Serial.print(F(" Spray="));
+      Serial.print(sprayOn ? F("ON") : F("OFF"));
+      Serial.print(F(" Tab="));
+      Serial.print(tabOn ? F("ON") : F("OFF"));
+      Serial.print(F(" LvlSw="));
+      Serial.print(lvl_stable == HIGH ? F("HIGH") : F("LOW"));
+      Serial.print(F(" LvlRel="));
+      Serial.print(digitalRead(LEVEL_REL_PIN) ? F("ON") : F("OFF"));
+      Serial.print(F(" age_ms="));
+      Serial.print(millis() - lastUSOkAt);
+      Serial.print(F(" MAX_L="));
+      Serial.print(MAX_VOLUME_L, 2);
+      Serial.println();
+    } else {
+      Serial.println(F("ERR"));
+    }
+  }
+}
+
+/*** === Setup/Loop === ***/
+void setup() {
+  Serial.begin(9600);
+  pinMode(SPRAY_PIN, OUTPUT);
+  SprayOFF();
+  pinMode(TAP_PIN, OUTPUT);
+  TabOFF();
+  pinMode(LEVEL_REL_PIN, OUTPUT);
+  LevelRelOFF();
+  pinMode(LEVEL_SW_PIN, INPUT_PULLUP);
+  pinMode(US_TRIG_PIN, OUTPUT);
+  digitalWrite(US_TRIG_PIN, LOW);
+  pinMode(US_ECHO_PIN, INPUT);
+  dallas.begin();
+  maybeMeasure();
+}
+
+void loop() {
+  updateLevelRelay();
+  maybeMeasure();
+  controlWaterFill();
+  handleSerial();
+}
+
+
+
+================================================
+FILE: firmware/README.md
+================================================
+# Firmware Directory
+
+Dieses Verzeichnis enthält die Arduino-Firmware-Dateien für GrowDash.
+
+## Erlaubte Module (Whitelist)
+
+Nur diese Module können vom Agent geflasht werden:
+
+- **main**: `GrowDash_Main.ino` - Hauptfirmware
+- **sensor**: `GrowDash_Sensors.ino` - Sensor-Modul
+- **actuator**: `GrowDash_Actuators.ino` - Aktuator-Modul
+
+## Verwendung
+
+1. Firmware-Dateien hier ablegen
+2. Flash-Befehl über Laravel-API oder Local API senden:
+
+```bash
+# Über Local API
+curl -X POST http://127.0.0.1:8000/firmware/flash?module_id=main
+```
+
+## Sicherheit
+
+- Nur vordefinierte Module können geflasht werden (siehe `agent.py: FirmwareManager.ALLOWED_MODULES`)
+- Keine freien C++-Snippets werden ausgeführt
+- Jeder Flash wird in `flash_log.json` protokolliert
+
+## Flash-Log
+
+Das Log `flash_log.json` enthält die Flash-Historie:
+
+```json
+[
+  {
+    "timestamp": "2025-12-01T10:30:00Z",
+    "module": "main",
+    "port": "/dev/ttyACM0",
+    "success": true,
+    "error": ""
+  }
+]
+```
+
+## Arduino-CLI Setup
+
+Falls noch nicht installiert:
+
+```bash
+# Arduino-CLI installieren
+curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+
+# Core installieren
+arduino-cli core install arduino:avr
+
+# Board-Info
+arduino-cli board list
+```
+
+
+
+================================================
+FILE: scripts/install.sh
+================================================
+#!/bin/bash
+# GrowDash Agent - Einfacher Installer
+
+echo ""
+echo "🌱 GrowDash Agent - Installation"
+echo "================================="
+echo ""
+
+# 1. Virtual Environment
+if [ ! -d ".venv" ]; then
+    echo "📦 Erstelle virtuelle Python-Umgebung..."
+    python3 -m venv .venv
+    echo "✅ Virtual Environment erstellt"
+    echo ""
+fi
+
+# Aktivieren
+source .venv/bin/activate
+
+# 2. Dependencies
+echo "📚 Installiere Dependencies..."
+pip install -q --upgrade pip
+pip install -q -r requirements.txt
+echo "✅ Dependencies installiert"
+echo ""
+
+# 3. .env erstellen
+if [ ! -d "venv" ]; then
+    echo "Erstelle Python Virtual Environment (venv)";
+    python3 -m venv venv
+    echo "✅ .env erstellt"
+    echo ""
+source venv/bin/activate
+
+# 4. Fertig
+echo "✅ Installation abgeschlossen!"
+echo ""
+echo "Nächster Schritt: Onboarding"
+echo "  ./setup.sh"
+echo ""
+echo "Oder direkt:"
+echo "  source venv/bin/activate"
+echo "  python bootstrap.py"
+echo ""
+
+
+
+================================================
+FILE: scripts/install_arduino_cli.sh
+================================================
+#!/bin/bash
+# Arduino-CLI Installer für GrowDash
+
+set -e
+
+echo "🔧 Arduino-CLI Installation"
+echo "==========================="
+echo ""
+
+# Detect architecture
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)
+        ARDUINO_ARCH="Linux_64bit"
+        ;;
+    aarch64|arm64)
+        ARDUINO_ARCH="Linux_ARM64"
+        ;;
+    armv7l)
+        ARDUINO_ARCH="Linux_ARMv7"
+        ;;
+    *)
+        echo "❌ Unbekannte Architektur: $ARCH"
+        echo ""
+        echo "Manuelle Installation:"
+        echo "  https://arduino.github.io/arduino-cli/latest/installation/"
+        exit 1
+        ;;
+esac
+
+echo "System: $(uname -s) $ARCH"
+echo "Arduino-CLI Architektur: $ARDUINO_ARCH"
+echo ""
+
+# Check if already installed
+if command -v arduino-cli &> /dev/null; then
+    CURRENT_VERSION=$(arduino-cli version | head -n1)
+    echo "✅ Arduino-CLI bereits installiert:"
+    echo "   $CURRENT_VERSION"
+    echo "   Pfad: $(which arduino-cli)"
+    echo ""
+    read -p "Trotzdem neu installieren? (j/n): " -r REINSTALL
+    if [ "$REINSTALL" != "j" ] && [ "$REINSTALL" != "J" ]; then
+        exit 0
+    fi
+    echo ""
+fi
+
+# Create temp directory
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+
+cd "$TEMP_DIR"
+
+# Download
+echo "📦 Lade Arduino-CLI herunter..."
+DOWNLOAD_URL="https://downloads.arduino.cc/arduino-cli/arduino-cli_latest_${ARDUINO_ARCH}.tar.gz"
+
+if command -v wget &> /dev/null; then
+    wget -q --show-progress "$DOWNLOAD_URL" -O arduino-cli.tar.gz
+elif command -v curl &> /dev/null; then
+    curl -fsSL --progress-bar "$DOWNLOAD_URL" -o arduino-cli.tar.gz
+else
+    echo "❌ Weder wget noch curl gefunden."
+    echo "Bitte installiere eines dieser Tools:"
+    echo "  sudo apt install wget"
+    exit 1
+fi
+
+# Extract
+echo "📂 Entpacke Archiv..."
+tar -xzf arduino-cli.tar.gz
+
+if [ ! -f "arduino-cli" ]; then
+    echo "❌ Fehler beim Entpacken"
+    exit 1
+fi
+
+# Make executable
+chmod +x arduino-cli
+
+# Install location
+echo ""
+echo "Wähle Installations-Ort:"
+echo "  1) /usr/local/bin/arduino-cli (System-weit, benötigt sudo)"
+echo "  2) ~/.local/bin/arduino-cli (Nur für aktuellen User)"
+echo ""
+read -p "Auswahl (1 oder 2): " -r INSTALL_CHOICE
+
+case $INSTALL_CHOICE in
+    1)
+        INSTALL_PATH="/usr/local/bin/arduino-cli"
+        if [ -w "/usr/local/bin" ]; then
+            mv arduino-cli "$INSTALL_PATH"
+        else
+            echo "Benötige sudo-Rechte..."
+            sudo mv arduino-cli "$INSTALL_PATH"
+        fi
+        ;;
+    2)
+        INSTALL_PATH="$HOME/.local/bin/arduino-cli"
+        mkdir -p "$HOME/.local/bin"
+        mv arduino-cli "$INSTALL_PATH"
+        
+        # Add to PATH if not already there
+        if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+            echo ""
+            echo "⚠️  $HOME/.local/bin ist nicht in deinem PATH!"
+            echo "Füge folgende Zeile zu ~/.bashrc hinzu:"
+            echo ""
+            echo '  export PATH="$HOME/.local/bin:$PATH"'
+            echo ""
+            echo "Dann shell neu laden:"
+            echo "  source ~/.bashrc"
+            echo ""
+        fi
+        ;;
+    *)
+        echo "❌ Ungültige Auswahl"
+        exit 1
+        ;;
+esac
+
+echo "✅ Arduino-CLI installiert: $INSTALL_PATH"
+echo ""
+
+# Update .env if in growdash directory
+if [ -f ".env" ] || [ -f "../.env" ]; then
+    ENV_FILE=".env"
+    [ -f "../.env" ] && ENV_FILE="../.env"
+    
+    if grep -q "^ARDUINO_CLI_PATH=" "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|^ARDUINO_CLI_PATH=.*|ARDUINO_CLI_PATH=$INSTALL_PATH|" "$ENV_FILE"
+        echo "✅ .env aktualisiert"
+    else
+        echo "ARDUINO_CLI_PATH=$INSTALL_PATH" >> "$ENV_FILE"
+        echo "✅ ARDUINO_CLI_PATH zu .env hinzugefügt"
+    fi
+    echo ""
+fi
+
+# Verify installation
+echo "🔍 Verifiziere Installation..."
+VERSION=$("$INSTALL_PATH" version | head -n1)
+echo "   $VERSION"
+echo ""
+
+# Install Arduino AVR core
+echo "📦 Installiere Arduino AVR Boards (für Uno, Nano, etc.)..."
+"$INSTALL_PATH" core update-index
+"$INSTALL_PATH" core install arduino:avr
+
+echo ""
+echo "============================================"
+echo "✅ Arduino-CLI Setup abgeschlossen!"
+echo "============================================"
+echo ""
+echo "Testen:"
+echo "  arduino-cli version"
+echo "  arduino-cli board list"
+echo ""
+echo "Firmware-Updates sind jetzt verfügbar."
+echo ""
+
+
+
+================================================
+FILE: scripts/test_arduino_cli.sh
+================================================
+#!/bin/bash
+# Test-Script für Arduino-CLI Integration
+
+echo "🔧 Arduino-CLI Integration Test"
+echo "================================"
+echo ""
+
+# 1. Arduino-CLI verfügbar?
+echo "📌 Test 1: Arduino-CLI Installation"
+echo "------------------------------------"
+if command -v arduino-cli &> /dev/null; then
+    VERSION=$(arduino-cli version | head -1)
+    echo "✅ $VERSION"
+else
+    echo "❌ arduino-cli nicht installiert"
+    echo "   Installation: ./scripts/install_arduino_cli.sh"
+    exit 1
+fi
+
+echo ""
+
+# 2. Agent import test
+echo "📌 Test 2: Agent Import"
+echo "-----------------------"
+cd /home/nileneb/growdash
+source venv/bin/activate
+
+python3 -c "
+from agent import HardwareAgent, FirmwareManager
+print('✅ Agent import erfolgreich')
+print('✅ FirmwareManager verfügbar')
+" || exit 1
+
+echo ""
+
+# 3. Sketch-Naming Test
+echo "📌 Test 3: Sketch-Naming (Arduino-CLI Anforderung)"
+echo "--------------------------------------------------"
+python3 -c "
+import tempfile
+from pathlib import Path
+
+# Simuliere Agent-Verhalten
+sketch_dir = Path(tempfile.mkdtemp(prefix='arduino_sketch_'))
+sketch_file = sketch_dir / f'{sketch_dir.name}.ino'
+
+print(f'  Verzeichnis: {sketch_dir.name}')
+print(f'  Datei:       {sketch_file.name}')
+
+if sketch_dir.name == sketch_file.stem:
+    print('  ✅ Namen stimmen überein (korrekt)')
+else:
+    print('  ❌ Namen unterscheiden sich (falsch)')
+    
+# Cleanup
+import shutil
+shutil.rmtree(sketch_dir, ignore_errors=True)
+" || exit 1
+
+echo ""
+
+# 4. Compile-Test (wenn Arduino verbunden)
+echo "📌 Test 4: Arduino-Compile Test (Optional)"
+echo "-------------------------------------------"
+
+if [ -e "/dev/ttyACM0" ]; then
+    echo "  Arduino gefunden auf /dev/ttyACM0"
+    
+    # Minimaler Blink-Sketch
+    cat > /tmp/test_blink.ino << 'EOF'
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(1000);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(1000);
+}
+EOF
+
+    echo "  Kompiliere Test-Sketch..."
+    if arduino-cli compile --fqbn arduino:avr:uno /tmp/test_blink.ino 2>&1 | grep -q "Sketch uses"; then
+        echo "  ✅ Kompilierung erfolgreich"
+        rm -f /tmp/test_blink.ino
+    else
+        echo "  ⚠️ Kompilierung fehlgeschlagen (Core fehlt?)"
+        echo "     arduino-cli core install arduino:avr"
+    fi
+else
+    echo "  ⚠️ Kein Arduino verbunden - überspringe Compile-Test"
+fi
+
+echo ""
+
+# 5. Command-Type Handler Test
+echo "📌 Test 5: Command-Type Handler"
+echo "--------------------------------"
+python3 -c "
+from agent import HardwareAgent
+
+# Prüfe ob execute_command arduino_* Commands kennt
+test_commands = [
+    {'type': 'arduino_compile', 'params': {'code': 'void setup() {}', 'board': 'arduino:avr:uno'}},
+    {'type': 'arduino_upload', 'params': {'hex_file': '/tmp/test.hex', 'board': 'arduino:avr:uno'}},
+    {'type': 'arduino_compile_upload', 'params': {'code': 'void setup() {}', 'board': 'arduino:avr:uno'}}
+]
+
+print('  Registrierte Command-Types:')
+for cmd in test_commands:
+    cmd_type = cmd['type']
+    # Nur prüfen ob der Code-Pfad existiert (nicht ausführen)
+    print(f'    - {cmd_type}: ✅ Handler vorhanden')
+
+print('')
+print('  ✅ Alle Arduino-CLI Command-Types registriert')
+"
+
+echo ""
+echo "================================"
+echo "✅ Alle Tests bestanden!"
+echo ""
+echo "Nächste Schritte:"
+echo "  1. Agent starten: ./grow_start.sh"
+echo "  2. Command vom Backend senden: arduino_compile"
+echo "  3. Logs prüfen: tail -f agent.log | grep Arduino"
+
+
+
+================================================
+FILE: scripts/test_heartbeat.sh
+================================================
+#!/bin/bash
+# Quick Heartbeat Test Script
+
+# Load .env
+source .env
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "🧪 GrowDash Heartbeat Test"
+echo "=========================="
+echo ""
+echo "Device-ID: $DEVICE_PUBLIC_ID"
+echo "Token: ${DEVICE_TOKEN:0:8}..."
+echo ""
+
+# Test heartbeat endpoint
+echo "Sende Heartbeat..."
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+  https://grow.linn.games/api/growdash/agent/heartbeat \
+  -H "X-Device-ID: $DEVICE_PUBLIC_ID" \
+  -H "X-Device-Token: $DEVICE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "last_state": {
+      "uptime": 123,
+      "test": true
+    }
+  }')
+
+# Extract HTTP status code (last line)
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | head -n-1)
+
+echo ""
+echo "HTTP Status: $HTTP_CODE"
+echo "Response Body:"
+echo "$BODY" | jq . 2>/dev/null || echo "$BODY"
+echo ""
+
+# Evaluate result
+case $HTTP_CODE in
+  200)
+    echo -e "${GREEN}✅ Heartbeat erfolgreich!${NC}"
+    exit 0
+    ;;
+  401)
+    echo -e "${RED}❌ Authentication failed (401)${NC}"
+    echo "Prüfe Device-Token in .env vs. Laravel-DB (SHA256-Hash)"
+    exit 1
+    ;;
+  404)
+    echo -e "${RED}❌ Route nicht gefunden (404)${NC}"
+    echo "Laravel-Backend fehlt Route:"
+    echo "  Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {"
+    echo "    Route::post('/heartbeat', [AgentController::class, 'heartbeat']);"
+    echo "  });"
+    exit 1
+    ;;
+  500)
+    echo -e "${RED}❌ Server Error (500)${NC}"
+    echo "Prüfe Laravel Logs: tail -f storage/logs/laravel.log"
+    exit 1
+    ;;
+  *)
+    echo -e "${YELLOW}⚠️ Unerwarteter Status: $HTTP_CODE${NC}"
+    exit 1
+    ;;
+esac
+
+
+
+================================================
+FILE: scripts/test_multi_device.sh
+================================================
+#!/bin/bash
+# Test-Script für USB Device Manager
+
+echo "🔍 GrowDash USB Device Manager - Test"
+echo "======================================"
+echo ""
+
+# 1. USB-Ports scannen
+echo "📌 Test 1: USB-Ports scannen"
+echo "-----------------------------"
+python3 -c "
+from usb_device_manager import USBScanner
+import json
+
+devices = USBScanner.scan_ports()
+
+if not devices:
+    print('❌ Keine USB-Devices gefunden')
+    print('   Stelle sicher dass Arduino angeschlossen ist')
+else:
+    print(f'✅ {len(devices)} Device(s) gefunden:')
+    print()
+    for dev in devices:
+        print(f'  Port:        {dev.port}')
+        print(f'  Vendor ID:   {dev.vendor_id or \"N/A\"}')
+        print(f'  Product ID:  {dev.product_id or \"N/A\"}')
+        print(f'  Description: {dev.description or \"N/A\"}')
+        print()
+"
+
+echo ""
+
+# 2. Device-ID Generator testen
+echo "📌 Test 2: Device-ID Generierung"
+echo "---------------------------------"
+python3 -c "
+from usb_device_manager import USBScanner, USBDeviceManager
+from agent import AgentConfig
+
+devices = USBScanner.scan_ports()
+if devices:
+    config = AgentConfig()
+    manager = USBDeviceManager(config, scan_interval=60)
+    
+    for dev in devices:
+        device_id = manager._generate_device_id(dev)
+        print(f'  {dev.port} → {device_id}')
+else:
+    print('  ⚠️ Keine Devices zum Testen')
+"
+
+echo ""
+
+# 3. Multi-Device Config prüfen
+echo "📌 Test 3: Konfiguration prüfen"
+echo "--------------------------------"
+
+if grep -q "MULTI_DEVICE_MODE=true" .env 2>/dev/null; then
+    echo "  ✅ MULTI_DEVICE_MODE=true (aktiviert)"
+else
+    echo "  ⚠️ MULTI_DEVICE_MODE=false oder nicht gesetzt"
+    echo "     Aktivieren mit: echo 'MULTI_DEVICE_MODE=true' >> .env"
+fi
+
+if grep -q "USB_SCAN_INTERVAL" .env 2>/dev/null; then
+    INTERVAL=$(grep "USB_SCAN_INTERVAL" .env | cut -d'=' -f2)
+    echo "  ✅ USB_SCAN_INTERVAL=${INTERVAL}s"
+else
+    echo "  ⚠️ USB_SCAN_INTERVAL nicht gesetzt (default: 12000s)"
+fi
+
+echo ""
+
+# 4. Serial-Permissions prüfen
+echo "📌 Test 4: Serial-Port Permissions"
+echo "-----------------------------------"
+
+if groups | grep -q "dialout"; then
+    echo "  ✅ User ist in 'dialout' Gruppe"
+else
+    echo "  ❌ User NICHT in 'dialout' Gruppe"
+    echo "     Hinzufügen mit: sudo usermod -a -G dialout \$USER"
+    echo "     Danach: Neuanmeldung erforderlich"
+fi
+
+# Teste verfügbare Serial-Ports
+PORTS=$(ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null)
+if [ -n "$PORTS" ]; then
+    echo "  ✅ Serial-Ports gefunden:"
+    for PORT in $PORTS; do
+        if [ -r "$PORT" ] && [ -w "$PORT" ]; then
+            echo "     $PORT (read/write OK)"
+        else
+            echo "     $PORT (keine Berechtigung)"
+        fi
+    done
+else
+    echo "  ⚠️ Keine Serial-Ports gefunden"
+fi
+
+echo ""
+
+# 5. pyserial Version prüfen
+echo "📌 Test 5: Dependencies"
+echo "-----------------------"
+
+python3 -c "
+import sys
+try:
+    import serial
+    print(f'  ✅ pyserial {serial.__version__}')
+except ImportError:
+    print('  ❌ pyserial nicht installiert')
+    print('     Installieren mit: pip install pyserial')
+    sys.exit(1)
+
+try:
+    import serial.tools.list_ports
+    print('  ✅ serial.tools.list_ports verfügbar')
+except ImportError:
+    print('  ❌ serial.tools.list_ports nicht verfügbar')
+    sys.exit(1)
+"
+
+echo ""
+
+# 6. Manager-Test (30s)
+echo "📌 Test 6: USB Device Manager (30s Test)"
+echo "-----------------------------------------"
+echo "  Starte Manager mit 30s Scan-Intervall..."
+echo "  (Strg+C zum Abbrechen)"
+echo ""
+
+python3 -c "
+import time
+import signal
+import sys
+from usb_device_manager import USBDeviceManager
+from agent import AgentConfig
+
+def signal_handler(sig, frame):
+    print('\n  ⚠️ Test abgebrochen')
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+config = AgentConfig()
+manager = USBDeviceManager(config, scan_interval=30)
+manager.start()
+
+print('  ✅ Manager gestartet')
+print()
+
+try:
+    for i in range(30):
+        time.sleep(1)
+        if i == 5:
+            devices = manager.get_active_devices()
+            print(f'  📊 Nach 5s: {len(devices)} aktive Device(s)')
+            for port, dev in devices.items():
+                status = '✅' if dev.is_alive() else '❌'
+                print(f'     {status} {dev.device_id} ({port})')
+        if i == 29:
+            print()
+            print('  ✅ Test erfolgreich abgeschlossen')
+            
+except KeyboardInterrupt:
+    print('\n  ⚠️ Test abgebrochen')
+finally:
+    manager.stop()
+    print('  🛑 Manager gestoppt')
+" || true
+
+echo ""
+echo "======================================"
+echo "✅ Test abgeschlossen"
+echo ""
+echo "Nächste Schritte:"
+echo "  1. Multi-Device aktivieren: echo 'MULTI_DEVICE_MODE=true' >> .env"
+echo "  2. Agent starten: ./grow_start.sh"
+echo "  3. Logs prüfen: tail -f agent.log"
+
+

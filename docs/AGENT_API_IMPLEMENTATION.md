@@ -40,64 +40,25 @@ curl -X POST https://grow.linn.games/api/growdash/agent/heartbeat \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true
+    "success": true
 }
 ```
 
 **Was Laravel tut:**
-- `device.status = 'online'`
-- `device.last_seen_at = now()`
-- `device.ip_address = ...` (optional)
-- `device.api_port = ...` (optional, default 8000)
+
+-   `device.status = 'online'`
+-   `device.last_seen_at = now()`
+-   `device.ip_address = ...` (optional)
+-   `device.api_port = ...` (optional, default 8000)
 
 **Frequency:** Alle 30 Sekunden
 
 ---
 
-### 2. Telemetry - Sensor-Daten senden
-
-**POST** `/telemetry`
-
-```bash
-curl -X POST https://grow.linn.games/api/growdash/agent/telemetry \
-  -H "X-Device-ID: growdash-test" \
-  -H "X-Device-Token: test_token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "telemetry": [
-      {
-        "type": "WaterLevel",
-        "value": "45",
-        "timestamp": "2025-12-05T10:30:00Z"
-      },
-      {
-        "type": "Temperature",
-        "value": "22.5",
-        "timestamp": "2025-12-05T10:30:01Z"
-      }
-    ]
-  }'
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "inserted": 2
-}
-```
-
-**Was Laravel tut:**
-- Speichert alle Telemetry-Items in `telemetry` Tabelle
-- Jedem Item: `device_id`, `type`, `value`, `timestamp`
-
-**Frequency:** Alle 10 Sekunden (oder wenn Daten vorhanden)
-
----
-
-### 3. Get Pending Commands - Agent holt Commands
+### 2. Get Pending Commands - Agent holt Commands
 
 **GET** `/commands/pending`
 
@@ -108,36 +69,37 @@ curl -X GET https://grow.linn.games/api/growdash/agent/commands/pending \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "commands": [
-    {
-      "id": 1,
-      "type": "serial_command",
-      "params": {
-        "command": "Status"
-      }
-    },
-    {
-      "id": 2,
-      "type": "arduino_upload",
-      "params": {
-        "code": "void setup() {...}",
-        "board": "arduino:avr:uno",
-        "port": "/dev/ttyACM0"
-      }
-    }
-  ]
+    "success": true,
+    "commands": [
+        {
+            "id": 1,
+            "type": "serial_command",
+            "params": {
+                "command": "Status"
+            }
+        },
+        {
+            "id": 2,
+            "type": "arduino_upload",
+            "params": {
+                "code": "void setup() {...}",
+                "board": "arduino:avr:uno",
+                "port": "/dev/ttyACM0"
+            }
+        }
+    ]
 }
 ```
 
 **Command Types:**
 
-- **`serial_command`** - Direktes Serial-Command (z.B. "Status")
-- **`arduino_compile`** - Code kompilieren (ohne Upload)
-- **`arduino_upload`** - Code kompilieren + uploaden
-- **`scan_ports`** - Serial-Ports scannen
+-   **`serial_command`** - Direktes Serial-Command (z.B. "Status")
+-   **`arduino_compile`** - Code kompilieren (ohne Upload)
+-   **`arduino_upload`** - Code kompilieren + uploaden
+-   **`scan_ports`** - Serial-Ports scannen
 
 **Frequency:** Alle 5 Sekunden
 
@@ -148,6 +110,7 @@ curl -X GET https://grow.linn.games/api/growdash/agent/commands/pending \
 **POST** `/commands/{id}/result`
 
 **Success-Case:**
+
 ```bash
 curl -X POST https://grow.linn.games/api/growdash/agent/commands/1/result \
   -H "X-Device-ID: growdash-test" \
@@ -162,6 +125,7 @@ curl -X POST https://grow.linn.games/api/growdash/agent/commands/1/result \
 ```
 
 **Failed-Case:**
+
 ```bash
 curl -X POST https://grow.linn.games/api/growdash/agent/commands/2/result \
   -H "X-Device-ID: growdash-test" \
@@ -176,17 +140,19 @@ curl -X POST https://grow.linn.games/api/growdash/agent/commands/2/result \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true
+    "success": true
 }
 ```
 
 **Was Laravel tut:**
-- Setzt `command.status = 'completed'` oder `'failed'`
-- Speichert `output` + `error` in `result_data` JSON-Feld
-- Setzt `completed_at = now()`
-- Triggered Event für Frontend-Update
+
+-   Setzt `command.status = 'completed'` oder `'failed'`
+-   Speichert `output` + `error` in `result_data` JSON-Feld
+-   Setzt `completed_at = now()`
+-   Triggered Event für Frontend-Update
 
 ---
 
@@ -237,15 +203,17 @@ curl -X POST https://grow.linn.games/api/growdash/agent/capabilities \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true
+    "success": true
 }
 ```
 
 **Was Laravel tut:**
-- Speichert komplette Capabilities in `device.capabilities` JSON-Feld
-- Zählt Sensoren + Aktuatoren für Logging
+
+-   Speichert komplette Capabilities in `device.capabilities` JSON-Feld
+-   Zählt Sensoren + Aktuatoren für Logging
 
 ---
 
@@ -260,6 +228,7 @@ curl -X GET https://grow.linn.games/api/growdash/agent/capabilities \
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -299,10 +268,11 @@ curl -X POST https://grow.linn.games/api/growdash/agent/logs \
 ```
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "inserted": 2
+    "success": true,
+    "inserted": 2
 }
 ```
 
@@ -319,43 +289,66 @@ curl -X GET https://grow.linn.games/api/growdash/agent/ports \
 ```
 
 **Response (Agent online):**
+
 ```json
 {
-  "success": true,
-  "ports": [
-    {
-      "port": "/dev/ttyACM0",
-      "description": "Arduino Uno",
-      "vendor_id": "2341",
-      "product_id": "0043"
-    }
-  ]
+    "success": true,
+    "ports": [
+        {
+            "port": "/dev/ttyACM0",
+            "description": "Arduino Uno",
+            "vendor_id": "2341",
+            "product_id": "0043"
+        }
+    ]
 }
 ```
 
 **Response (Fallback - Agent offline):**
+
 ```json
 {
-  "success": true,
-  "ports": [
-    {"port": "/dev/ttyACM0", "description": "Arduino (ACM)", "vendor_id": "", "product_id": ""},
-    {"port": "/dev/ttyUSB0", "description": "Serial Device (USB)", "vendor_id": "", "product_id": ""},
-    {"port": "COM3", "description": "Serial Port", "vendor_id": "", "product_id": ""},
-    {"port": "COM4", "description": "Serial Port", "vendor_id": "", "product_id": ""}
-  ]
+    "success": true,
+    "ports": [
+        {
+            "port": "/dev/ttyACM0",
+            "description": "Arduino (ACM)",
+            "vendor_id": "",
+            "product_id": ""
+        },
+        {
+            "port": "/dev/ttyUSB0",
+            "description": "Serial Device (USB)",
+            "vendor_id": "",
+            "product_id": ""
+        },
+        {
+            "port": "COM3",
+            "description": "Serial Port",
+            "vendor_id": "",
+            "product_id": ""
+        },
+        {
+            "port": "COM4",
+            "description": "Serial Port",
+            "vendor_id": "",
+            "product_id": ""
+        }
+    ]
 }
 ```
 
 **Was passiert:**
-- Wenn `device.ip_address` gesetzt → Proxied zu `http://{ip}:8000/ports`
-- Wenn Timeout oder kein IP → Fallback-Liste (für manuelle Auswahl)
+
+-   Wenn `device.ip_address` gesetzt → Proxied zu `http://{ip}:8000/ports`
+-   Wenn Timeout oder kein IP → Fallback-Liste (für manuelle Auswahl)
 
 ---
 
 ## 🚀 Agent Implementation Checklist
 
-- [x] **Laravel API** - Komplett überarbeitet und deployed
-- [ ] **Agent Code** - Muss implementiert werden in `~/growdash/agent.py`
+-   [x] **Laravel API** - Komplett überarbeitet und deployed
+-   [ ] **Agent Code** - Muss implementiert werden in `~/growdash/agent.py`
 
 ### Required Agent Methods
 
@@ -364,22 +357,21 @@ class GrowDashAgent:
     def heartbeat_loop(self):
         """Send heartbeat every 30s"""
         # POST /heartbeat with ip_address, api_port
-        
+
     def telemetry_loop(self):
         """Send telemetry every 10s"""
         # Sammle Serial-Daten
-        # POST /telemetry
-        
+
     def command_loop(self):
         """Poll commands every 5s"""
         # GET /commands/pending
         # Führe aus: serial_command, arduino_compile, arduino_upload, scan_ports
         # POST /commands/{id}/result mit status + output + error
-        
+
     def capabilities_loop(self):
         """Send capabilities on startup"""
         # POST /capabilities mit board, sensors, actuators
-        
+
     def logs_loop(self):
         """Send logs periodically"""
         # POST /logs
@@ -435,22 +427,6 @@ created_at          TIMESTAMP
 ---
 
 ## 🔄 Data Flows
-
-### Telemetry Flow: Arduino → Laravel
-
-```
-Arduino (Serial)
-    ↓ "WaterLevel: 45"
-Agent (serial.read_loop)
-    ↓ Parse + Queue
-Agent (telemetry_loop every 10s)
-    ↓ POST /telemetry
-Laravel Backend
-    ↓ Store in telemetry table
-Frontend Dashboard
-    ↓ Live Update (WebSocket)
-User sees: "45% Water Level"
-```
 
 ### Command Execution: Laravel → Arduino
 
@@ -518,13 +494,13 @@ User
 
 ## ✅ Status
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Laravel API | ✅ READY | All 8 endpoints implemented |
-| Routes | ✅ READY | All routes configured |
-| Middleware | ✅ READY | device.auth middleware working |
-| Migrations | ✅ READY | api_port column added |
-| Agent Implementation | ⏳ TODO | Needs Python implementation |
+| Component            | Status   | Notes                          |
+| -------------------- | -------- | ------------------------------ |
+| Laravel API          | ✅ READY | All 8 endpoints implemented    |
+| Routes               | ✅ READY | All routes configured          |
+| Middleware           | ✅ READY | device.auth middleware working |
+| Migrations           | ✅ READY | api_port column added          |
+| Agent Implementation | ⏳ TODO  | Needs Python implementation    |
 
 ---
 
@@ -574,24 +550,28 @@ sudo journalctl -u growdash-agent -f
 ## ❓ Troubleshooting
 
 ### Agent Not Sending Heartbeat?
-- ✅ Check network connectivity: `ping grow.linn.games`
-- ✅ Check device token in .env
-- ✅ Check agent logs: `tail agent.log`
+
+-   ✅ Check network connectivity: `ping grow.linn.games`
+-   ✅ Check device token in .env
+-   ✅ Check agent logs: `tail agent.log`
 
 ### Telemetry Not Arriving?
-- ✅ Check serial port connection
-- ✅ Verify Arduino sends data every 10s
-- ✅ Check Laravel logs: `tail -f storage/logs/laravel.log`
+
+-   ✅ Check serial port connection
+-   ✅ Verify Arduino sends data every 10s
+-   ✅ Check Laravel logs: `tail -f storage/logs/laravel.log`
 
 ### Commands Not Executing?
-- ✅ Device must be `status = 'online'`
-- ✅ Check command_loop is running
-- ✅ Verify agent can execute arduino-cli
+
+-   ✅ Device must be `status = 'online'`
+-   ✅ Check command_loop is running
+-   ✅ Verify agent can execute arduino-cli
 
 ### Port Scan Returns Fallback?
-- ✅ `device.ip_address` is NULL → Agent endpoint unreachable
-- ✅ Try manually selecting port from fallback list
-- ✅ Configure IP: `device.ip_address = '192.168.1.x'`
+
+-   ✅ `device.ip_address` is NULL → Agent endpoint unreachable
+-   ✅ Try manually selecting port from fallback list
+-   ✅ Configure IP: `device.ip_address = '192.168.1.x'`
 
 ---
 

@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DeviceScript;
-use App\Models\Device;
 use App\Models\Command;
+use App\Models\Device;
+use App\Models\DeviceScript;
 use App\Services\ArduinoErrorAnalyzer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ArduinoCompileController extends Controller
 {
@@ -57,7 +57,7 @@ class ArduinoCompileController extends Controller
 
         $script->update([
             'status' => 'compiling',
-            'compile_log' => 'Kompilierung gestartet auf Device: ' . $device->name,
+            'compile_log' => 'Kompilierung gestartet auf Device: '.$device->name,
         ]);
 
         return response()->json([
@@ -112,7 +112,7 @@ class ArduinoCompileController extends Controller
 
         $script->update([
             'status' => 'uploading',
-            'flash_log' => 'Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
+            'flash_log' => 'Upload gestartet auf Device: '.$device->name.' → Port: '.$port,
         ]);
 
         return response()->json([
@@ -163,7 +163,7 @@ class ArduinoCompileController extends Controller
 
         $script->update([
             'status' => 'compiling',
-            'compile_log' => 'Compile & Upload gestartet auf Device: ' . $device->name,
+            'compile_log' => 'Compile & Upload gestartet auf Device: '.$device->name,
         ]);
 
         return response()->json([
@@ -252,7 +252,7 @@ class ArduinoCompileController extends Controller
             $boardFqbn = $command->params['board'] ?? 'unknown';
 
             if ($errorMessage && $originalCode) {
-                $analyzer = new ArduinoErrorAnalyzer();
+                $analyzer = new ArduinoErrorAnalyzer;
                 $analysis = $analyzer->analyzeAndFix($errorMessage, $originalCode, $boardFqbn);
 
                 $response['error_analysis'] = $analysis;
@@ -274,7 +274,7 @@ class ArduinoCompileController extends Controller
         }
 
         // Check if device has IP address
-        if (!$device->ip_address) {
+        if (! $device->ip_address) {
             // Fallback: return common ports if device has no IP
             return response()->json([
                 'success' => true,
@@ -285,7 +285,7 @@ class ArduinoCompileController extends Controller
                     ['port' => 'COM4', 'description' => 'COM4 (Windows)', 'manufacturer' => 'Standard'],
                 ],
                 'count' => 4,
-                'fallback' => true
+                'fallback' => true,
             ]);
         }
 
@@ -305,11 +305,11 @@ class ArduinoCompileController extends Controller
                     ['port' => '/dev/ttyUSB0', 'description' => 'USB-Serial (Fallback)', 'manufacturer' => 'FTDI'],
                 ],
                 'count' => 2,
-                'fallback' => true
+                'fallback' => true,
             ]);
 
         } catch (\Exception $e) {
-            Log::error("Port-Scan failed for Device {$device->id}: " . $e->getMessage());
+            Log::error("Port-Scan failed for Device {$device->id}: ".$e->getMessage());
 
             // Return fallback ports
             return response()->json([
@@ -319,7 +319,7 @@ class ArduinoCompileController extends Controller
                     ['port' => '/dev/ttyUSB0', 'description' => 'USB-Serial (Error)', 'manufacturer' => 'FTDI'],
                 ],
                 'count' => 2,
-                'fallback' => true
+                'fallback' => true,
             ]);
         }
     }

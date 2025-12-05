@@ -6,11 +6,11 @@ Die Laravel-Backend ist **bereit**. Der Agent muss jetzt konfiguriert werden.
 
 ### Deployment-Checklist
 
-- [x] Agent API endpoints sind implementiert
-- [x] Device authentication ist konfiguriert  
-- [x] Database migrations sind bereit
-- [x] Alle routes sind registriert
-- [ ] **NÄCHSTER SCHRITT:** Agent.py implementieren
+-   [x] Agent API endpoints sind implementiert
+-   [x] Device authentication ist konfiguriert
+-   [x] Database migrations sind bereit
+-   [x] Alle routes sind registriert
+-   [ ] **NÄCHSTER SCHRITT:** Agent.py implementieren
 
 ---
 
@@ -19,31 +19,34 @@ Die Laravel-Backend ist **bereit**. Der Agent muss jetzt konfiguriert werden.
 ### ✅ Completed
 
 1. **AgentController** - Komplett rewritten mit 9 Endpoints
-   - `POST /heartbeat` - Device Status aktualisieren
-   - `POST /telemetry` - Sensor-Daten speichern
-   - `GET /commands/pending` - Commands abrufen
-   - `POST /commands/{id}/result` - Command-Ergebnis melden
-   - `POST /capabilities` - Device-Eigenschaften berichten
-   - `GET /capabilities` - Device-Eigenschaften abrufen
-   - `POST /logs` - Device-Logs speichern
-   - `GET /ports` - Verfügbare Serial-Ports
+
+    - `POST /heartbeat` - Device Status aktualisieren
+    - `GET /commands/pending` - Commands abrufen
+    - `POST /commands/{id}/result` - Command-Ergebnis melden
+    - `POST /capabilities` - Device-Eigenschaften berichten
+    - `GET /capabilities` - Device-Eigenschaften abrufen
+    - `POST /logs` - Device-Logs speichern
+    - `GET /ports` - Verfügbare Serial-Ports
 
 2. **Routes** - Alle registriert in `routes/api.php`
-   - Device.auth Middleware verwendet `\App\Http\Middleware\AuthenticateDevice::class`
-   - Prefix: `/api/growdash/agent`
+
+    - Device.auth Middleware verwendet `\App\Http\Middleware\AuthenticateDevice::class`
+    - Prefix: `/api/growdash/agent`
 
 3. **Model Relationships** - Corrected
-   - `telemetryReadings()` statt `telemetry()`
-   - `deviceLogs()` statt `logs()`
-   - `commands()` ✓
+
+    - `telemetryReadings()` statt `telemetry()`
+    - `deviceLogs()` statt `logs()`
+    - `commands()` ✓
 
 4. **Database** - Migration erstellt
-   - `api_port` column zu devices table
+
+    - `api_port` column zu devices table
 
 5. **Fixes Applied**
-   - Device-Token Verification mit SHA256
-   - Telemetry mapping: type → sensor_key, timestamp → measured_at
-   - Logs context JSON für timestamp storage
+    - Device-Token Verification mit SHA256
+    - Telemetry mapping: type → sensor_key, timestamp → measured_at
+    - Logs context JSON für timestamp storage
 
 ---
 
@@ -120,28 +123,28 @@ def report_command_result(command_id, status, message, output="", error=""):
 
 ```json
 {
-  "telemetry": [
-    {
-      "type": "WaterLevel",
-      "value": "45",
-      "timestamp": "2025-12-05T10:30:00Z"
-    },
-    {
-      "type": "Temperature",
-      "value": "22.5",
-      "timestamp": "2025-12-05T10:30:01Z"
-    }
-  ]
+    "telemetry": [
+        {
+            "type": "WaterLevel",
+            "value": "45",
+            "timestamp": "2025-12-05T10:30:00Z"
+        },
+        {
+            "type": "Temperature",
+            "value": "22.5",
+            "timestamp": "2025-12-05T10:30:01Z"
+        }
+    ]
 }
 ```
 
 ### Field Mapping
 
-| Agent sendet | DB speichert als |
-|---|---|
-| `type` | `sensor_key` |
-| `value` | `value` |
-| `timestamp` (ISO8601) | `measured_at` |
+| Agent sendet          | DB speichert als |
+| --------------------- | ---------------- |
+| `type`                | `sensor_key`     |
+| `value`               | `value`          |
+| `timestamp` (ISO8601) | `measured_at`    |
 
 ### Valid Timestamps
 
@@ -160,42 +163,44 @@ def report_command_result(command_id, status, message, output="", error=""):
 
 ```json
 {
-  "id": 123,
-  "type": "serial_command",
-  "params": {
-    "command": "Status"
-  }
+    "id": 123,
+    "type": "serial_command",
+    "params": {
+        "command": "Status"
+    }
 }
 ```
 
 ### Command Types
 
-| Type | Was Agent tun muss |
-|---|---|
-| `serial_command` | `params['command']` an Serial senden |
-| `arduino_compile` | `params['code']` mit `arduino-cli compile` kompilieren |
-| `arduino_upload` | `params['code']` mit `arduino-cli compile --upload` hochladen |
-| `scan_ports` | Verfügbare Serial-Ports scannen |
+| Type              | Was Agent tun muss                                            |
+| ----------------- | ------------------------------------------------------------- |
+| `serial_command`  | `params['command']` an Serial senden                          |
+| `arduino_compile` | `params['code']` mit `arduino-cli compile` kompilieren        |
+| `arduino_upload`  | `params['code']` mit `arduino-cli compile --upload` hochladen |
+| `scan_ports`      | Verfügbare Serial-Ports scannen                               |
 
 ### Response Format
 
 **Success:**
+
 ```json
 {
-  "status": "completed",
-  "result_message": "✅ Command executed successfully",
-  "output": "stdout output here",
-  "error": ""
+    "status": "completed",
+    "result_message": "✅ Command executed successfully",
+    "output": "stdout output here",
+    "error": ""
 }
 ```
 
 **Failure:**
+
 ```json
 {
-  "status": "failed",
-  "result_message": "❌ Serial port timeout",
-  "output": "attempted output here",
-  "error": "TimeoutError: No response after 500ms"
+    "status": "failed",
+    "result_message": "❌ Serial port timeout",
+    "output": "attempted output here",
+    "error": "TimeoutError: No response after 500ms"
 }
 ```
 
@@ -233,41 +238,46 @@ curl -X GET "https://grow.linn.games/api/growdash/agent/commands/pending" \
 ## ✅ Validation Rules
 
 ### Device Authentication
-- ✅ Public ID must exist
-- ✅ Device must have user_id
-- ✅ Device must be paired (paired_at NOT NULL)
-- ✅ Token must verify with SHA256 hash
+
+-   ✅ Public ID must exist
+-   ✅ Device must have user_id
+-   ✅ Device must be paired (paired_at NOT NULL)
+-   ✅ Token must verify with SHA256 hash
 
 ### Telemetry
-- ✅ Array mit 1-100 items
-- ✅ Alle 3 Felder erforderlich: type, value, timestamp
-- ✅ Timestamp muss ISO8601 Format sein
+
+-   ✅ Array mit 1-100 items
+-   ✅ Alle 3 Felder erforderlich: type, value, timestamp
+-   ✅ Timestamp muss ISO8601 Format sein
 
 ### Commands
-- ✅ Nur "completed" oder "failed" status erlaubt
-- ✅ result_message max 1000 chars
-- ✅ output/error beliebig groß
+
+-   ✅ Nur "completed" oder "failed" status erlaubt
+-   ✅ result_message max 1000 chars
+-   ✅ output/error beliebig groß
 
 ---
 
 ## 🎯 Next Steps
 
 1. **Agent Repository** - Implementierung
-   - Heartbeat loop (30s)
-   - Telemetry loop (10s)
-   - Command polling loop (5s)
-   - Serial communication handlers
+
+    - Heartbeat loop (30s)
+    - Telemetry loop (10s)
+    - Command polling loop (5s)
+    - Serial communication handlers
 
 2. **Testing**
-   - Agent mit Device ID/Token testen
-   - Heartbeat überprüfen
-   - Telemetry speichern verifizieren
-   - Commands ausführen
+
+    - Agent mit Device ID/Token testen
+    - Heartbeat überprüfen
+    - Telemetry speichern verifizieren
+    - Commands ausführen
 
 3. **Monitoring**
-   - Agent restart bei Fehler
-   - Logging konfigurieren
-   - Health checks einrichten
+    - Agent restart bei Fehler
+    - Logging konfigurieren
+    - Health checks einrichten
 
 ---
 

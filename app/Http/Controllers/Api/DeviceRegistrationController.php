@@ -80,7 +80,10 @@ class DeviceRegistrationController extends Controller
 
         // Optionally revoke the user token (hardening)
         if (!empty($data['revoke_user_token']) && $request->user()->currentAccessToken()) {
-            $request->user()->currentAccessToken()->delete();
+            $token = $request->user()->currentAccessToken();
+            if ($token) {
+                \Laravel\Sanctum\PersonalAccessToken::where('id', $token->id)->delete();
+            }
         }
 
         return response()->json([

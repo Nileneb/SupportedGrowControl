@@ -1,203 +1,66 @@
+// Removed ShellyWebhookController as it is no longer used
 <?php
 
-use App\Http\Controllers\BootstrapController;
-use App\Http\Controllers\DevicePairingController;
-use App\Http\Controllers\GrowdashWebhookController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\DeviceController;
-use App\Http\Controllers\Api\DeviceRegistrationController;
 use App\Http\Controllers\Api\AgentController;
-use App\Http\Controllers\Api\ShellyWebhookController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CommandController;
+use App\Http\Controllers\Api\DeviceRegistrationController;
+use App\Http\Controllers\BootstrapController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Growdash API Routes
-|--------------------------------------------------------------------------
-|
-| These routes handle webhook callbacks from Growdash devices and provide
-| public API endpoints for retrieving device status and historical data.
-|
-*/
+/**
+ * GROWDASH API ROUTES (CLEAN ARCHITECTURE)
+ *
+ * Three authentication strategies:
+ * 1. PUBLIC (no auth) - Agent bootstrap & pairing
+ * 2. SANCTUM (auth:sanctum) - User authentication for web/app
+ * 3. DEVICE (X-Device-ID + X-Device-Token) - Agent device communication
+ */
 
-// ==================== Auth & Device Registration ====================
+// ============================================================================
+// PUBLIC ENDPOINTS - No Authentication Required
+// ============================================================================
 
-// API login (Sanctum token issuance)
-Route::post('/auth/login', [AuthController::class, 'login']);
-
-// API logout (token revocation)
-Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
-
-// Direct device registration from an authenticated agent (alternative to pairing flow)
-Route::middleware('auth:sanctum')->post('/growdash/devices/register-from-agent', [DeviceRegistrationController::class, 'registerFromAgent']);
-// Alias für Agent-Kompatibilität (Direct-Login-Flow)
-Route::middleware('auth:sanctum')->prefix('growdash')->group(function () {
-    Route::post('/devices/register', [DeviceController::class, 'register']);
-});
-
-// ==================== Bootstrap & Pairing ====================
-
-// Public bootstrap endpoint for agents (no auth required)
+// Agent Bootstrap: Device gets initial configuration
 Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
 
-// Pairing status polling endpoint (agent checks if user paired)
+// Pairing Status: Agent checks if user has paired it
 Route::get('/agents/pairing/status', [BootstrapController::class, 'status']);
 
-// Device pairing endpoints (require user authentication)
-Route::middleware('auth:web')->prefix('devices')->group(function () {
-    Route::post('/pair', [DevicePairingController::class, 'pair']);
-    Route::get('/unclaimed', [DevicePairingController::class, 'unclaimed']);
-});
+// ============================================================================
+// USER AUTHENTICATION - Sanctum (API tokens for web/mobile apps)
+// ============================================================================
 
-// ==================== Agent API (Device-Authenticated) ====================
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/devices/register', [DeviceRegistrationController::class, 'registerFromAgent']);
 
-// Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
-Route::middleware(\App\Http\Middleware\AuthenticateDevice::class)->prefix('growdash/agent')->group(function () {
-    // -------- Heartbeat & Status --------
-    Route::post('/heartbeat', [\App\Http\Controllers\Api\AgentController::class, 'heartbeat']);
-
-    // -------- Telemetry --------
-    Route::post('/telemetry', [\App\Http\Controllers\Api\AgentController::class, 'telemetry']);
-
-    // -------- Commands --------
-    Route::get('/commands/pending', [\App\Http\Controllers\Api\AgentController::class, 'pendingCommands']);
-    Route::post('/commands/{id}/result', [\App\Http\Controllers\Api\AgentController::class, 'commandResult']);
-
-    // -------- Capabilities --------
-    Route::post('/capabilities', [\App\Http\Controllers\Api\AgentController::class, 'updateCapabilities']);
-    Route::get('/capabilities', [\App\Http\Controllers\Api\AgentController::class, 'getCapabilities']);
-
-    // -------- Device Logs --------
-    Route::post('/logs', [\App\Http\Controllers\Api\AgentController::class, 'storeLogs']);
-
-    // -------- Serial Ports --------
-    Route::get('/ports', [\App\Http\Controllers\Api\AgentController::class, 'getPorts']);
-});
-
-// ==================== User API (Sanctum-Authenticated) ====================
-
-// Get user's devices with credentials for testing/agent management
-Route::middleware('auth:sanctum')->get('/user/devices', function (Request $request) {
-    $devices = $request->user()->devices()
-        ->select('id', 'public_id', 'name', 'status', 'last_seen_at', 'capabilities', 'board_type')
-        ->get()
-        ->map(function ($device) {
-            return [
-                'id' => $device->id,
-                'public_id' => $device->public_id,
-                'name' => $device->name,
-                'status' => $device->status,
-                'last_seen_at' => $device->last_seen_at,
-                'board_type' => $device->board_type,
-                'capabilities' => $device->capabilities,
-            ];
-        });
-
-    return response()->json([
-        'success' => true,
-        'devices' => $devices,
-        'count' => $devices->count(),
-    ]);
-});
-
-// Delete a device (removes all associated data)
-Route::middleware('auth:sanctum')->delete('/user/devices/{device}', function (Request $request, \App\Models\Device $device) {
-    // Verify device belongs to authenticated user
-    if ($device->user_id !== $request->user()->id) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-
-    $deviceName = $device->name;
-    $device->delete(); // Cascading deletes will remove related data
-
-    return response()->json([
-        'success' => true,
-        'message' => "Device '{$deviceName}' deleted successfully",
-    ]);
-});
-
-// Regenerate agent token for testing (returns NEW plaintext token)
-Route::middleware('auth:sanctum')->post('/user/devices/{device}/regenerate-token', function (Request $request, \App\Models\Device $device) {
-    // Verify device belongs to authenticated user
-    if ($device->user_id !== $request->user()->id) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-
-    // Generate new token
-    $plaintextToken = \Illuminate\Support\Str::random(64);
-    $device->agent_token = hash('sha256', $plaintextToken);
-    $device->save();
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Agent token regenerated successfully',
-        'public_id' => $device->public_id,
-        'agent_token' => $plaintextToken,
-        'warning' => 'Store this token securely - it will not be shown again!',
-    ]);
-});
-
-// Send command to device (web UI → device)
-Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'send'])
+// Send command to device (web → device)
+Route::post('/growdash/devices/{device}/commands', [CommandController::class, 'send'])
     ->middleware('auth:sanctum')
     ->name('api.devices.commands.create');
 
-// Refresh device capabilities (trigger agent to send updated capabilities)
-Route::post('/devices/{device}/refresh-capabilities', function (Request $request, \App\Models\Device $device) {
-    // Verify ownership
-    if ($device->user_id !== Auth::id()) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-    
-    // Create a command for the agent to refresh capabilities
-    \App\Models\Command::create([
-        'device_id' => $device->id,
-        'created_by_user_id' => Auth::id(),
-        'type' => 'refresh_capabilities',
-        'params' => [],
-        'status' => 'pending',
-    ]);
-    
-    return response()->json([
-        'success' => true,
-        'message' => 'Capability refresh requested'
-    ]);
-})->middleware('auth:sanctum');
+// ============================================================================
+// DEVICE AUTHENTICATION - Agent API (X-Device-ID + X-Device-Token headers)
+// ============================================================================
 
-// ==================== Legacy Webhook Endpoints ====================
+Route::middleware(\App\Http\Middleware\AuthenticateDevice::class)->prefix('growdash/agent')->group(function () {
+    // Heartbeat: Device tells server it's alive
+    Route::post('/heartbeat', [AgentController::class, 'heartbeat']);
 
-// Shelly device webhooks (public endpoint with token authentication)
-Route::post('/shelly/webhook/{shelly}', [ShellyWebhookController::class, 'handle'])
-    ->name('api.shelly.webhook');
+    // Commands: Agent polls for pending commands
+    Route::get('/commands/pending', [AgentController::class, 'pendingCommands']);
 
-// Protected webhook endpoints (require X-Growdash-Token header)
-Route::middleware('growdash.webhook')->prefix('growdash')->group(function () {
-    // Webhook: Receive log messages from devices
-    Route::post('/log', [GrowdashWebhookController::class, 'log']);
+    // Command Result: Agent reports command execution result
+    Route::post('/commands/{id}/result', [AgentController::class, 'commandResult']);
 
-    // Webhook: Receive structured events from devices (optional)
-    Route::post('/event', [GrowdashWebhookController::class, 'event']);
+    // Capabilities: Agent sends/receives device capabilities
+    Route::post('/capabilities', [AgentController::class, 'updateCapabilities']);
+    Route::get('/capabilities', [AgentController::class, 'getCapabilities']);
 
-    // Manual control endpoints (require authentication)
-    Route::post('/manual-spray', [GrowdashWebhookController::class, 'manualSpray']);
-    Route::post('/manual-fill', [GrowdashWebhookController::class, 'manualFill']);
-});
+    // Logs: Agent stores debug/execution logs
+    Route::post('/logs', [AgentController::class, 'storeLogs']);
 
-// Public API endpoints (require authentication for data access)
-Route::prefix('growdash')->middleware('auth:web')->group(function () {
-    // Current system status
-    Route::get('/status', [GrowdashWebhookController::class, 'status']);
-
-    // Historical data endpoints
-    Route::get('/water-history', [GrowdashWebhookController::class, 'waterHistory']);
-    Route::get('/tds-history', [GrowdashWebhookController::class, 'tdsHistory']);
-    Route::get('/temperature-history', [GrowdashWebhookController::class, 'temperatureHistory']);
-
-    // Event histories
-    Route::get('/spray-events', [GrowdashWebhookController::class, 'sprayEvents']);
-    Route::get('/fill-events', [GrowdashWebhookController::class, 'fillEvents']);
-
-    // Arduino logs
-    Route::get('/logs', [GrowdashWebhookController::class, 'logs']);
+    // Ports: Agent gets available serial ports for scanning
+    Route::get('/ports', [AgentController::class, 'getPorts']);
 });
