@@ -273,20 +273,18 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Check if device is online
-        if ($device->status !== 'online') {
+        // Check if device has IP address
+        if (!$device->ip_address) {
             return response()->json([
-                'error' => 'Device offline',
+                'error' => 'Device IP not configured',
                 'ports' => []
             ], 400);
         }
 
         try {
             // Call agent's local API to get available ports
-            // Use device's agent_url if set, otherwise fallback to APP_URL
-            $agentUrl = $device->agent_url ?? config('app.url');
-
-            $response = Http::timeout(5)->get("{$agentUrl}/ports");
+            // Agent runs on http://{device_ip}:8000
+            $response = Http::timeout(10)->get("http://{$device->ip_address}:8000/ports");
 
             if ($response->successful()) {
                 return response()->json($response->json());
@@ -294,14 +292,16 @@ class ArduinoCompileController extends Controller
 
             return response()->json([
                 'error' => 'Agent nicht erreichbar',
-                'ports' => []
+                'ports' => [],
+                'status' => $response->status()
             ], 503);
 
         } catch (\Exception $e) {
             Log::error("Port-Scan fehlgeschlagen für Device {$device->id}: " . $e->getMessage());
 
             return response()->json([
-                'error' => 'Port-Scan fehlgeschlagen: ' . $e->getMessage(),
+                'error' => 'Port-Scan fehlgeschlagen',
+                'message' => $e->getMessage(),
                 'ports' => []
             ], 500);
         }

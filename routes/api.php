@@ -73,6 +73,9 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 
     // POST heartbeat/last_seen update
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
+
+    // GET available serial ports (proxied to agent's local API)
+    Route::get('/ports', [\App\Http\Controllers\Api\AgentController::class, 'getPorts']);
 });
 
 // ==================== User API (Sanctum-Authenticated) ====================
