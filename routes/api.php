@@ -53,28 +53,24 @@ Route::middleware('auth:web')->prefix('devices')->group(function () {
 
 // Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
 Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
-    // POST telemetry data (sensor readings)
-    Route::post('/telemetry', [\App\Http\Controllers\Api\TelemetryController::class, 'store']);
+    // -------- Heartbeat & Status --------
+    Route::post('/heartbeat', [\App\Http\Controllers\Api\AgentController::class, 'heartbeat']);
 
-    // GET pending commands for this device
-    Route::get('/commands/pending', [\App\Http\Controllers\Api\CommandController::class, 'pending']);
+    // -------- Telemetry --------
+    Route::post('/telemetry', [\App\Http\Controllers\Api\AgentController::class, 'telemetry']);
 
-    // POST command result/acknowledgement
-    Route::post('/commands/{id}/result', [\App\Http\Controllers\Api\CommandController::class, 'result']);
+    // -------- Commands --------
+    Route::get('/commands/pending', [\App\Http\Controllers\Api\AgentController::class, 'pendingCommands']);
+    Route::post('/commands/{id}/result', [\App\Http\Controllers\Api\AgentController::class, 'commandResult']);
 
-    // POST/PUT device capabilities (what sensors/actuators are available)
-    Route::post('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'updateCapabilities']);
+    // -------- Capabilities --------
+    Route::post('/capabilities', [\App\Http\Controllers\Api\AgentController::class, 'updateCapabilities']);
+    Route::get('/capabilities', [\App\Http\Controllers\Api\AgentController::class, 'getCapabilities']);
 
-    // GET device capabilities in agent-ready flat format
-    Route::get('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'getCapabilities']);
+    // -------- Device Logs --------
+    Route::post('/logs', [\App\Http\Controllers\Api\AgentController::class, 'storeLogs']);
 
-    // POST device logs
-    Route::post('/logs', [\App\Http\Controllers\Api\LogController::class, 'store']);
-
-    // POST heartbeat/last_seen update
-    Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
-
-    // GET available serial ports (proxied to agent's local API)
+    // -------- Serial Ports --------
     Route::get('/ports', [\App\Http\Controllers\Api\AgentController::class, 'getPorts']);
 });
 
