@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Trust all proxies (behind Nginx reverse proxy)
+        $middleware->trustProxies(at: '*');
+        
         $middleware->alias([
             'growdash.webhook' => \App\Http\Middleware\VerifyGrowdashToken::class,
             'device.auth' => \App\Http\Middleware\AuthenticateDevice::class,
