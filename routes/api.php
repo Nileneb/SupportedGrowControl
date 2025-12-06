@@ -75,6 +75,9 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
     
     // POST webcam endpoints registration (Camera Module)
     Route::post('/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'registerFromAgent']);
+    
+    // GET list of registered webcams for this device
+    Route::get('/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'indexForAgent']);
 });
 
 // ==================== User API (Sanctum-Authenticated) ====================
@@ -165,8 +168,10 @@ Route::get('/log-patterns', [\App\Http\Controllers\Api\LogPatternController::cla
 Route::middleware('auth:web')->group(function () {
     Route::get('/logs/all', [\App\Http\Controllers\LogsController::class, 'all']);
     Route::delete('/logs/clear', [\App\Http\Controllers\LogsController::class, 'clear']);
-    
-    // Webcam API (Browser session auth)
+});
+
+// Webcam API (Browser + Agent, accepts both Session and Sanctum tokens)
+Route::middleware('auth.user-or-agent')->group(function () {
     Route::get('/devices/{device}/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'index']);
     Route::patch('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'update']);
     Route::delete('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'destroy']);

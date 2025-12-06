@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'growdash.webhook' => \App\Http\Middleware\VerifyGrowdashToken::class,
             'device.auth' => \App\Http\Middleware\AuthenticateDevice::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'auth.user-or-agent' => \App\Http\Middleware\AuthenticateUserOrAgent::class,
         ]);
         
         // Enable session for API routes (needed for auth:web in api.php)

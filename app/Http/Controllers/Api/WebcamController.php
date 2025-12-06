@@ -100,7 +100,49 @@ class WebcamController extends Controller
     }
     
     /**
-     * Liste aller Webcams für ein Device (für Frontend)
+     * Liste aller Webcams für ein Device (für Browser-Nutzer)
+     * 
+     * GET /api/devices/{device}/webcams
+     * Auth: Session oder Sanctum (Browser-Nutzer oder API-Client)
+     */
+    public function listForDevice(Device $device)
+    {
+        // Authorization: User muss Owner des Devices sein
+        $this->authorize('view', $device);
+        
+        $webcams = WebcamFeed::where('device_id', $device->id)
+            ->where('is_active', true)
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'webcams' => $webcams,
+        ]);
+    }
+
+    /**
+     * Liste aller Webcams für das Device (für Agent über device.auth Middleware)
+     * 
+     * GET /api/growdash/agent/webcams
+     * Auth: Device-Token (X-Device-ID + X-Device-Token Header)
+     */
+    public function indexForAgent(Request $request)
+    {
+        // Device wurde durch device.auth Middleware validiert
+        $device = $request->device;
+        
+        $webcams = WebcamFeed::where('device_id', $device->id)
+            ->where('is_active', true)
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'webcams' => $webcams,
+        ]);
+    }
+    
+    /**
+     * Alte Methode (für Rückwärtskompatibilität)
      * 
      * GET /api/devices/{device}/webcams
      */
