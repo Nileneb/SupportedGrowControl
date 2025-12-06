@@ -41,6 +41,11 @@ class ShellySyncController extends Controller
         // Generate webhook URL
         $webhookUrl = route('api.shelly.webhook', $device->public_id) . '?token=' . $token;
 
+        Log::info('🎯 ENDPOINT_TRACKED: ShellySyncController@setup', [
+            'user_id' => auth()->id(),
+            'device_id' => $device->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Shelly integration configured successfully',
@@ -73,6 +78,16 @@ class ShellySyncController extends Controller
             'shelly_device_id' => $validated['shelly_device_id'],
         ]);
 
+        Log::info('🎯 ENDPOINT_TRACKED: ShellySyncController@update', [
+            'user_id' => auth()->id(),
+            'device_id' => $device->id,
+        ]);
+
+        Log::info('🎯 ENDPOINT_TRACKED: ShellySyncController@update', [
+            'user_id' => auth()->id(),
+            'device_id' => $device->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Shelly configuration updated successfully',
@@ -95,6 +110,11 @@ class ShellySyncController extends Controller
             'shelly_auth_token' => null,
             'shelly_config' => null,
             'shelly_last_webhook_at' => null,
+        ]);
+
+        Log::info('🎯 ENDPOINT_TRACKED: ShellySyncController@remove', [
+            'user_id' => auth()->id(),
+            'device_id' => $device->id,
         ]);
 
         return response()->json([
@@ -179,6 +199,12 @@ class ShellySyncController extends Controller
                     'response' => $body,
                 ];
                 $device->update(['shelly_config' => $config]);
+
+                Log::info('🎯 ENDPOINT_TRACKED: ShellySyncController@control', [
+                    'user_id' => auth()->id(),
+                    'device_id' => $device->id,
+                    'action' => $action,
+                ]);
 
                 return response()->json([
                     'success' => true,

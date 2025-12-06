@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Device;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DeviceViewController extends Controller
 {
@@ -20,20 +21,41 @@ class DeviceViewController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
         
-        // Don't load logs on initial page load - use AJAX instead
-        $logs = [];
-        
         // Get capabilities
         $capabilities = $device->capabilities ?? [];
         $sensors = $capabilities['sensors'] ?? [];
         $actuators = $capabilities['actuators'] ?? [];
         
-        // Don't load readings on initial page load - WebSocket will populate them
+        // Don't load readings/logs on initial page load - WebSocket + AJAX will populate them
         $sensorReadings = [];
         
-        // Use new modular view (v2) - can be toggled via query param for testing
-        $viewName = $request->query('view', 'v2') === 'v1' ? 'devices.show' : 'devices.show-v2';
+        // Use new workstation view with flexible layout
+        $viewName = 'devices.show-workstation';
         
-        return view($viewName, compact('device', 'logs', 'sensors', 'actuators', 'sensorReadings'));
+        Log::info('🎯 ENDPOINT_TRACKED: DeviceViewController@show', [
+            'user_id' => $request->user()->id,
+            'device_id' => $device->id,
+            'view' => $viewName,
+        ]);
+        
+        return view($viewName, compact('device', 'sensors', 'actuators', 'sensorReadings'));
+    }
+
+    public function destroy(Request $request, string $deviceId)
+    {
+        $device = Device::where('public_id', $deviceId)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $name = $device->name;
+        $device->delete();
+
+        Log::info('🎯 ENDPOINT_TRACKED: DeviceViewController@destroy', [
+            'user_id' => $request->user()->id,
+            'device_id' => $device->id,
+            'public_id' => $device->public_id,
+        ]);
+
+        return redirect()->route('devices.index')->with('status', "Device '{$name}' deleted");
     }
 }

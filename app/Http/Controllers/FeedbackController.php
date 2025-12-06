@@ -33,6 +33,10 @@ class FeedbackController extends Controller
         ]);
 
         Log::info('Feedback created successfully');
+        Log::info('🎯 ENDPOINT_TRACKED: FeedbackController@store', [
+            'user_id' => $user->id,
+            'rating' => $request->input('rating'),
+        ]);
 
         return back()->with('status', 'Thank you for your feedback! We appreciate your input.');
     }

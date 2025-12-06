@@ -53,20 +53,11 @@ Route::middleware('auth:web')->prefix('devices')->group(function () {
 
 // Agent endpoints protected by device token (X-Device-ID + X-Device-Token)
 Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
-    // POST telemetry data (sensor readings)
-    Route::post('/telemetry', [\App\Http\Controllers\Api\TelemetryController::class, 'store']);
-
     // GET pending commands for this device
     Route::get('/commands/pending', [\App\Http\Controllers\Api\CommandController::class, 'pending']);
 
     // POST command result/acknowledgement
     Route::post('/commands/{id}/result', [\App\Http\Controllers\Api\CommandController::class, 'result']);
-
-    // POST/PUT device capabilities (what sensors/actuators are available)
-    Route::post('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'updateCapabilities']);
-
-    // GET device capabilities in agent-ready flat format
-    Route::get('/capabilities', [\App\Http\Controllers\Api\DeviceManagementController::class, 'getCapabilities']);
 
     // POST device logs
     Route::post('/logs', [\App\Http\Controllers\Api\LogController::class, 'store']);
@@ -80,7 +71,7 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 // Get user's devices with credentials for testing/agent management
 Route::middleware('auth:sanctum')->get('/user/devices', function (Request $request) {
     $devices = $request->user()->devices()
-        ->select('id', 'public_id', 'name', 'status', 'last_seen_at', 'capabilities', 'board_type')
+        ->select('id', 'public_id', 'name', 'status', 'last_seen_at')
         ->get()
         ->map(function ($device) {
             return [
@@ -89,8 +80,6 @@ Route::middleware('auth:sanctum')->get('/user/devices', function (Request $reque
                 'name' => $device->name,
                 'status' => $device->status,
                 'last_seen_at' => $device->last_seen_at,
-                'board_type' => $device->board_type,
-                'capabilities' => $device->capabilities,
             ];
         });
 
@@ -143,27 +132,15 @@ Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\Co
     ->middleware('auth:sanctum')
     ->name('api.devices.commands.create');
 
-// Refresh device capabilities (trigger agent to send updated capabilities)
-Route::post('/devices/{device}/refresh-capabilities', function (Request $request, \App\Models\Device $device) {
-    // Verify ownership
-    if ($device->user_id !== Auth::id()) {
-        return response()->json(['error' => 'Unauthorized'], 403);
-    }
-    
-    // Create a command for the agent to refresh capabilities
-    \App\Models\Command::create([
-        'device_id' => $device->id,
-        'created_by_user_id' => Auth::id(),
-        'type' => 'refresh_capabilities',
-        'params' => [],
-        'status' => 'pending',
-    ]);
-    
-    return response()->json([
-        'success' => true,
-        'message' => 'Capability refresh requested'
-    ]);
-})->middleware('auth:sanctum');
+// ==================== Device Logs API ====================
+
+// Device logs endpoints (authenticated users can view their devices' logs)
+Route::middleware('auth:sanctum')->prefix('devices/{device}/logs')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\DeviceLogsController::class, 'index']);
+    Route::get('/stats', [\App\Http\Controllers\Api\DeviceLogsController::class, 'stats']);
+    Route::delete('/', [\App\Http\Controllers\Api\DeviceLogsController::class, 'clear']);
+    Route::get('/export', [\App\Http\Controllers\Api\DeviceLogsController::class, 'export']);
+});
 
 // ==================== Legacy Webhook Endpoints ====================
 

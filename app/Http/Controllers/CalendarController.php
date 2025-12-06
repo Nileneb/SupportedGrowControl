@@ -12,6 +12,10 @@ class CalendarController extends Controller
 {
     public function index()
     {
+        Log::info('🎯 ENDPOINT_TRACKED: CalendarController@index', [
+            'user_id' => Auth::id(),
+        ]);
+
         return view('calendar.index');
     }
 
@@ -95,6 +99,11 @@ class CalendarController extends Controller
                 }
             }
         }
+
+        Log::info('🎯 ENDPOINT_TRACKED: CalendarController@events', [
+            'user_id' => $user->id,
+            'event_count' => count($expanded),
+        ]);
 
         return response()->json([
             'success' => true,

@@ -83,6 +83,12 @@ class DeviceRegistrationController extends Controller
             $request->user()->currentAccessToken()->delete();
         }
 
+        \Log::info('🎯 ENDPOINT_TRACKED: DeviceRegistrationController@registerFromAgent', [
+            'user_id' => $user->id,
+            'device_id' => $device->id,
+            'reused' => $reused,
+        ]);
+
         return response()->json([
             'success' => true,
             'device' => [

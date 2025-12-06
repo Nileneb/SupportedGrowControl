@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -34,6 +35,11 @@ class AuthController extends Controller
         $tokenName = $data['token_name'] ?? 'agent-registration';
         $plainToken = $user->createToken($tokenName)->plainTextToken;
 
+        Log::info('🎯 ENDPOINT_TRACKED: AuthController@login', [
+            'user_id' => $user->id,
+            'token_name' => $tokenName,
+        ]);
+
         return response()->json([
             'success' => true,
             'token' => $plainToken,
@@ -51,7 +57,12 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        $userId = $request->user()->id;
         $request->user()->currentAccessToken()->delete();
+
+        Log::info('🎯 ENDPOINT_TRACKED: AuthController@logout', [
+            'user_id' => $userId,
+        ]);
 
         return response()->json([
             'success' => true,

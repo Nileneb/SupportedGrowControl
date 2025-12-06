@@ -20,6 +20,11 @@ class DashboardController extends Controller
             $onlineDevices = $devices->where('status', 'online')->count();
             $pairedDevices = $devices->where('status', 'paired')->count();
             
+            \Log::info('🎯 ENDPOINT_TRACKED: DashboardController@index', [
+                'user_id' => $user->id,
+                'device_count' => $totalDevices,
+            ]);
+            
             return view('dashboard', compact('devices', 'totalDevices', 'onlineDevices', 'pairedDevices'));
         } catch (\Exception $e) {
             \Log::error('Dashboard error: ' . $e->getMessage(), [

@@ -64,6 +64,11 @@ class LogController extends Controller
 
         // TODO: Broadcast WebSocket event for critical errors (level=error)
 
+        Log::info('🎯 ENDPOINT_TRACKED: LogController@store', [
+            'device_id' => $device->id,
+            'log_count' => count($inserted),
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Logs stored successfully',

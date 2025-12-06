@@ -49,6 +49,11 @@ class BootstrapController extends Controller
                 'slug' => 'device-' . Str::random(8),
             ]);
 
+            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@bootstrap (new)', [
+                'bootstrap_id' => $bootstrapId,
+                'device_id' => $device->id,
+            ]);
+
             return response()->json([
                 'status' => 'unpaired',
                 'bootstrap_code' => $device->bootstrap_code,
@@ -64,6 +69,11 @@ class BootstrapController extends Controller
             $device->agent_token = hash('sha256', $plaintextToken);
             $device->save();
 
+            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@bootstrap (paired)', [
+                'bootstrap_id' => $bootstrapId,
+                'device_id' => $device->id,
+            ]);
+
             return response()->json([
                 'status' => 'paired',
                 'public_id' => $device->public_id,
@@ -74,6 +84,11 @@ class BootstrapController extends Controller
         }
 
         // Device exists but not yet paired
+        Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@bootstrap (pending)', [
+            'bootstrap_id' => $bootstrapId,
+            'device_id' => $device->id,
+        ]);
+
         return response()->json([
             'status' => 'unpaired',
             'bootstrap_code' => $device->bootstrap_code,
@@ -114,6 +129,10 @@ class BootstrapController extends Controller
             ->first();
 
         if (!$device) {
+            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (not_found)', [
+                'bootstrap_id' => $data['bootstrap_id'],
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid bootstrap_id or bootstrap_code',
@@ -122,6 +141,10 @@ class BootstrapController extends Controller
 
         // Not yet paired
         if (!$device->isPaired()) {
+            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (pending)', [
+                'device_id' => $device->id,
+            ]);
+
             return response()->json([
                 'status' => 'pending',
             ]);
@@ -132,6 +155,10 @@ class BootstrapController extends Controller
         $plaintextToken = Str::random(64);
         $device->agent_token = hash('sha256', $plaintextToken);
         $device->save();
+
+        Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (paired)', [
+            'device_id' => $device->id,
+        ]);
 
         return response()->json([
             'status' => 'paired',

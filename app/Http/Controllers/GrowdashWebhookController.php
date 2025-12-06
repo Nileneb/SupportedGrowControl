@@ -53,6 +53,11 @@ class GrowdashWebhookController extends Controller
         // Parse the message for structured data
         $this->parseMessage($device, $log->message);
 
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@log', [
+            'device_id' => $device->id,
+            'level' => $log->level,
+        ]);
+
         return response()->json(['success' => true, 'log_id' => $log->id]);
     }
 
@@ -154,6 +159,11 @@ class GrowdashWebhookController extends Controller
                 $this->updateStatus($device, ['filling_active' => false]);
                 break;
         }
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@event', [
+            'device_id' => $device->id,
+            'event_type' => $type,
+        ]);
 
         return response()->json(['success' => true]);
     }
@@ -335,6 +345,11 @@ class GrowdashWebhookController extends Controller
             ]);
         }
 
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@status', [
+            'device_slug' => $deviceSlug,
+            'device_id' => $device->id,
+        ]);
+
         return response()->json([
             'water_level' => $status->water_level,
             'water_liters' => $status->water_liters,
@@ -369,6 +384,11 @@ class GrowdashWebhookController extends Controller
                 'liters' => $wl->liters,
             ]);
 
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@waterHistory', [
+            'device_id' => $device->id,
+            'record_count' => $history->count(),
+        ]);
+
         return response()->json(['history' => $history]);
     }
 
@@ -394,6 +414,11 @@ class GrowdashWebhookController extends Controller
                 'value_ppm' => $tds->value_ppm,
             ]);
 
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@tdsHistory', [
+            'device_id' => $device->id,
+            'record_count' => $history->count(),
+        ]);
+
         return response()->json(['history' => $history]);
     }
 
@@ -418,6 +443,11 @@ class GrowdashWebhookController extends Controller
                 'timestamp' => $temp->measured_at->timestamp,
                 'value_c' => $temp->value_c,
             ]);
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@temperatureHistory', [
+            'device_id' => $device->id,
+            'record_count' => $history->count(),
+        ]);
 
         return response()->json(['history' => $history]);
     }
@@ -445,6 +475,11 @@ class GrowdashWebhookController extends Controller
                 'duration_seconds' => $event->duration_seconds,
                 'manual' => $event->manual,
             ]);
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@sprayEvents', [
+            'device_id' => $device->id,
+            'event_count' => $events->count(),
+        ]);
 
         return response()->json(['events' => $events]);
     }
@@ -476,6 +511,11 @@ class GrowdashWebhookController extends Controller
                 'manual' => $event->manual,
             ]);
 
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@fillEvents', [
+            'device_id' => $device->id,
+            'event_count' => $events->count(),
+        ]);
+
         return response()->json(['events' => $events]);
     }
 
@@ -506,6 +546,11 @@ class GrowdashWebhookController extends Controller
                 'level' => $log->level,
                 'message' => $log->message,
             ]);
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@logs', [
+            'device_id' => $device->id,
+            'log_count' => $logs->count(),
+        ]);
 
         return response()->json(['logs' => $logs]);
     }
@@ -557,6 +602,11 @@ class GrowdashWebhookController extends Controller
         }
 
         $this->updateStatus($device, ['spray_active' => $active]);
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@manualSpray', [
+            'device_id' => $device->id,
+            'action' => $data['action'],
+        ]);
 
         return response()->json([
             'success' => true,
@@ -617,6 +667,11 @@ class GrowdashWebhookController extends Controller
 
             $this->updateStatus($device, ['filling_active' => false]);
         }
+
+        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@manualFill', [
+            'device_id' => $device->id,
+            'action' => $data['action'],
+        ]);
 
         return response()->json([
             'success' => true,

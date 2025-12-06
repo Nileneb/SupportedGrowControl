@@ -60,6 +60,13 @@ class ArduinoCompileController extends Controller
             'compile_log' => 'Kompilierung gestartet auf Device: ' . $device->name,
         ]);
 
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@compile', [
+            'user_id' => Auth::id(),
+            'device_id' => $device->id,
+            'script_id' => $script->id,
+            'command_id' => $command->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Compile-Befehl an Device gesendet',
@@ -115,6 +122,13 @@ class ArduinoCompileController extends Controller
             'flash_log' => 'Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
         ]);
 
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@upload', [
+            'user_id' => Auth::id(),
+            'device_id' => $device->id,
+            'script_id' => $script->id,
+            'command_id' => $command->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Upload-Befehl an Device gesendet',
@@ -166,6 +180,13 @@ class ArduinoCompileController extends Controller
             'compile_log' => 'Compile & Upload gestartet auf Device: ' . $device->name,
         ]);
 
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@compileAndUpload', [
+            'user_id' => Auth::id(),
+            'device_id' => $device->id,
+            'script_id' => $script->id,
+            'command_id' => $command->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Compile & Upload-Befehl an Device gesendet',
@@ -180,6 +201,11 @@ class ArduinoCompileController extends Controller
         if ($script->user_id !== Auth::id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@status', [
+            'user_id' => Auth::id(),
+            'script_id' => $script->id,
+        ]);
 
         return response()->json([
             'script' => $script,
@@ -198,6 +224,11 @@ class ArduinoCompileController extends Controller
             ->where('status', 'online')
             ->select('id', 'name', 'bootstrap_id', 'device_info')
             ->get();
+
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@listDevices', [
+            'user_id' => Auth::id(),
+            'device_count' => $devices->count(),
+        ]);
 
         return response()->json(['devices' => $devices]);
     }
@@ -232,6 +263,12 @@ class ArduinoCompileController extends Controller
             }
         }
 
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@checkCommandStatus', [
+            'user_id' => Auth::id(),
+            'command_id' => $command->id,
+            'status' => $command->status,
+        ]);
+
         return response()->json($response);
     }
 
@@ -261,6 +298,12 @@ class ArduinoCompileController extends Controller
             $response = Http::timeout(5)->get("{$agentUrl}/ports");
 
             if ($response->successful()) {
+                Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@getPorts', [
+                    'user_id' => Auth::id(),
+                    'device_id' => $device->id,
+                    'success' => true,
+                ]);
+
                 return response()->json($response->json());
             }
 

@@ -45,6 +45,11 @@ class DevicePairingController extends Controller
         // Pair device with authenticated user (returns plaintext token once!)
         $plaintextToken = $device->pairWithUser(Auth::id());
 
+        Log::info('🎯 ENDPOINT_TRACKED: DevicePairingController@pair', [
+            'user_id' => Auth::id(),
+            'device_id' => $device->id,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Device paired successfully!',
@@ -68,6 +73,10 @@ class DevicePairingController extends Controller
         $devices = Device::unclaimed()
             ->select(['id', 'name', 'bootstrap_id', 'bootstrap_code', 'created_at'])
             ->get();
+
+        Log::info('🎯 ENDPOINT_TRACKED: DevicePairingController@unclaimed', [
+            'device_count' => $devices->count(),
+        ]);
 
         return response()->json([
             'devices' => $devices,

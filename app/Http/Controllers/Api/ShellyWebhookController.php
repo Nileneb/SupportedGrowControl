@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Device;
-use App\Models\TelemetryReading;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -68,10 +67,7 @@ class ShellyWebhookController extends Controller
             'payload' => $payload,
         ]);
 
-        // Store telemetry readings if device is linked
-        if ($shelly->device_id) {
-            $this->storeTelemetryReadings($shelly->device, $payload);
-        }
+        // Telemetry storage removed (telemetry disabled)
 
         // Record webhook received
         $shelly->recordWebhook();
@@ -81,78 +77,18 @@ class ShellyWebhookController extends Controller
         $config['last_webhook'] = [
             'timestamp' => now()->toIso8601String(),
             'payload' => $payload,
-        ];
+        ]);
         $shelly->update(['config' => $config]);
+
+        Log::info('🎯 ENDPOINT_TRACKED: ShellyWebhookController@handle', [
+            'shelly_id' => $shellyId,
+            'event' => $payload['event'] ?? 'unknown',
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Webhook processed successfully',
             'shelly_id' => $shellyId,
         ]);
-    }
-
-    /**
-     * Store telemetry readings from Shelly webhook payload.
-     */
-    private function storeTelemetryReadings(\App\Models\Device $device, array $payload): void
-    {
-        $readings = [];
-
-        // Map Shelly payload fields to telemetry readings
-        $fieldMapping = [
-            'power' => ['unit' => 'W', 'category' => 'power'],
-            'voltage' => ['unit' => 'V', 'category' => 'power'],
-            'current' => ['unit' => 'A', 'category' => 'power'],
-            'temperature' => ['unit' => '°C', 'category' => 'environmental'],
-            'energy' => ['unit' => 'Wh', 'category' => 'power'],
-            'humidity' => ['unit' => '%', 'category' => 'environmental'],
-            'illuminance' => ['unit' => 'lux', 'category' => 'environmental'],
-        ];
-
-        foreach ($fieldMapping as $field => $meta) {
-            if (isset($payload[$field]) && is_numeric($payload[$field])) {
-                $readings[] = [
-                    'device_id' => $device->id,
-                    'sensor_key' => "shelly_{$field}",
-                    'value' => (float) $payload[$field],
-                    'unit' => $meta['unit'],
-                    'metadata' => [
-                        'source' => 'shelly_webhook',
-                        'shelly_device' => $payload['device'] ?? null,
-                        'event' => $payload['event'] ?? null,
-                    ],
-                    'measured_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-        }
-
-        // Store switch state as boolean telemetry
-        if (isset($payload['state'])) {
-            $readings[] = [
-                'device_id' => $device->id,
-                'sensor_key' => 'shelly_switch_state',
-                'value' => $payload['state'] === 'on' ? 1.0 : 0.0,
-                'unit' => 'bool',
-                'metadata' => [
-                    'source' => 'shelly_webhook',
-                    'event' => $payload['event'] ?? null,
-                    'state_string' => $payload['state'],
-                ],
-                'measured_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        if (!empty($readings)) {
-            TelemetryReading::insert($readings);
-
-            Log::info('Stored Shelly telemetry readings', [
-                'device_id' => $device->id,
-                'count' => count($readings),
-            ]);
-        }
     }
 }

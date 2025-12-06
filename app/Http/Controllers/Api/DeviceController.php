@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class DeviceController extends Controller
@@ -49,6 +50,11 @@ class DeviceController extends Controller
                 'last_seen_at' => now(),
             ]);
             
+            \Log::info('🎯 ENDPOINT_TRACKED: DeviceController@register (re-pair)', [
+                'user_id' => $user->id,
+                'device_id' => $device->id,
+            ]);
+            
             return response()->json([
                 'success' => true,
                 'device_id' => $device->public_id,
@@ -86,6 +92,11 @@ class DeviceController extends Controller
             ]);
             throw $e;
         }
+        
+        \Log::info('🎯 ENDPOINT_TRACKED: DeviceController@register (new)', [
+            'user_id' => $user->id,
+            'device_id' => $device->id,
+        ]);
         
         return response()->json([
             'success' => true,

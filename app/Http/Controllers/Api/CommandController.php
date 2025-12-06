@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\DTOs\DeviceCapabilities;
 use App\Events\CommandStatusUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Command;
@@ -30,6 +29,11 @@ class CommandController extends Controller
             ->where('status', 'pending')
             ->orderBy('created_at', 'asc')
             ->get(['id', 'type', 'params', 'created_at']);
+
+        Log::info('🎯 ENDPOINT_TRACKED: CommandController@pending', [
+            'device_id' => $device->id,
+            'command_count' => $commands->count(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -103,6 +107,12 @@ class CommandController extends Controller
         // Broadcast WebSocket event
         broadcast(new CommandStatusUpdated($command));
 
+        Log::info('🎯 ENDPOINT_TRACKED: CommandController@result', [
+            'device_id' => $device->id,
+            'command_id' => $command->id,
+            'new_status' => $request->input('status'),
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Command status updated',
@@ -166,6 +176,12 @@ class CommandController extends Controller
                     'status' => 'pending',
                 ]);
 
+                Log::info('🎯 ENDPOINT_TRACKED: CommandController@send (serial_command)', [
+                    'user_id' => Auth::id(),
+                    'device_id' => $device->id,
+                    'command_id' => $command->id,
+                ]);
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Serial command queued',
@@ -177,73 +193,6 @@ class CommandController extends Controller
                         'created_at' => $command->created_at->toISOString(),
                     ]
                 ], 201);
-            }
-
-            // Validate actuator-based commands against device capabilities (skip for serial_command above)
-            if ($device->capabilities) {
-                try {
-                    $capabilitiesDTO = DeviceCapabilities::fromArray($device->capabilities);
-                    $actuator = $capabilitiesDTO->getActuatorById($validated['type']);
-
-                    if (!$actuator) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "Unknown actuator: {$validated['type']}",
-                            'available_actuators' => array_map(
-                                fn($a) => $a->id,
-                                $capabilitiesDTO->actuators
-                            ),
-                        ], 422);
-                    }
-
-                    // Validate params against actuator spec
-                    $providedParams = $validated['params'] ?? [];
-                    $paramErrors = $actuator->validateParams($providedParams);
-
-                    if (!empty($paramErrors)) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'Invalid command parameters',
-                            'errors' => $paramErrors,
-                        ], 422);
-                    }
-
-                    // Map actuator command to Arduino serial command
-                    $arduinoCommand = $this->mapActuatorToArduinoCommand($validated['type'], $providedParams);
-
-                    // Create serial_command instead of actuator-specific type
-                    $command = Command::create([
-                        'device_id' => $device->id,
-                        'created_by_user_id' => Auth::id(),
-                        'type' => 'serial_command',
-                        'params' => ['command' => $arduinoCommand],
-                        'status' => 'pending',
-                    ]);
-
-                    Log::info('Actuator command mapped to serial', [
-                        'actuator_type' => $validated['type'],
-                        'arduino_command' => $arduinoCommand,
-                        'command_id' => $command->id,
-                    ]);
-
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Command queued successfully',
-                        'command' => [
-                            'id' => $command->id,
-                            'type' => $command->type,
-                            'params' => $command->params,
-                            'status' => $command->status,
-                            'created_at' => $command->created_at->toISOString(),
-                        ]
-                    ], 201);
-                } catch (\Exception $e) {
-                    // If capabilities validation fails, continue without it
-                    Log::warning('Failed to validate command against capabilities', [
-                        'device_id' => $device->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
             }
 
             // Create command
@@ -260,6 +209,13 @@ class CommandController extends Controller
                 'device_id' => $device->id,
                 'type' => $command->type,
                 'created_by' => Auth::id(),
+            ]);
+
+            Log::info('🎯 ENDPOINT_TRACKED: CommandController@send', [
+                'user_id' => Auth::id(),
+                'device_id' => $device->id,
+                'command_id' => $command->id,
+                'command_type' => $command->type,
             ]);
 
             return response()->json([
@@ -325,6 +281,12 @@ class CommandController extends Controller
                         'completed_at' => $command->completed_at?->toISOString(),
                     ];
                 });
+
+            Log::info('🎯 ENDPOINT_TRACKED: CommandController@history', [
+                'user_id' => Auth::id(),
+                'device_id' => $device->id,
+                'command_count' => $commands->count(),
+            ]);
 
             return response()->json([
                 'success' => true,
