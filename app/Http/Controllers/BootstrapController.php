@@ -36,6 +36,7 @@ class BootstrapController extends Controller
         $data = $request->validate([
             'bootstrap_id' => 'required|string|max:64',
             'name' => 'nullable|string|max:255',
+            'board_type' => 'nullable|string|max:100',
         ]);
 
         $bootstrapId = $data['bootstrap_id'];
@@ -47,6 +48,7 @@ class BootstrapController extends Controller
                 'bootstrap_id' => $bootstrapId,
                 'name' => $data['name'] ?? 'Unclaimed Device',
                 'slug' => 'device-'.Str::random(8),
+                'board_type' => $data['board_type'] ?? null,
             ]);
 
             return response()->json([
@@ -67,7 +69,7 @@ class BootstrapController extends Controller
             return response()->json([
                 'status' => 'paired',
                 'public_id' => $device->public_id,
-                'agent_token' => $plaintextToken, // New plaintext token (never stored!)
+                'device_token' => $plaintextToken, // New plaintext token (never stored!)
                 'device_name' => $device->name,
                 'user_email' => $device->user->email ?? null,
             ]);
@@ -136,7 +138,7 @@ class BootstrapController extends Controller
         return response()->json([
             'status' => 'paired',
             'public_id' => $device->public_id,
-            'agent_token' => $plaintextToken,
+            'device_token' => $plaintextToken,
             'device_name' => $device->name,
             'user_email' => $device->user->email ?? null,
         ]);

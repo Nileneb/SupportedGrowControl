@@ -1,4 +1,3 @@
-// Removed ShellyWebhookController as it is no longer used
 <?php
 
 use App\Http\Controllers\Api\AgentController;
@@ -6,6 +5,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommandController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
 use App\Http\Controllers\BootstrapController;
+use App\Http\Controllers\GrowdashApiController;
+use App\Http\Controllers\GrowdashManualController;
+use App\Http\Controllers\GrowdashWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -15,6 +17,7 @@ use Illuminate\Support\Facades\Route;
  * 1. PUBLIC (no auth) - Agent bootstrap & pairing
  * 2. SANCTUM (auth:sanctum) - User authentication for web/app
  * 3. DEVICE (X-Device-ID + X-Device-Token) - Agent device communication
+ * 4. WEBHOOK (X-Growdash-Token) - Webhook authentication for Arduino logs
  */
 
 // ============================================================================
@@ -26,6 +29,14 @@ Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
 
 // Pairing Status: Agent checks if user has paired it
 Route::get('/agents/pairing/status', [BootstrapController::class, 'status']);
+
+// ============================================================================
+// WEBHOOK AUTHENTICATION - Arduino/Growdash Logs (X-Growdash-Token header)
+// ============================================================================
+
+Route::post('/growdash/log', [GrowdashWebhookController::class, 'log']);
+Route::post('/growdash/manual-spray', [GrowdashManualController::class, 'manualSpray']);
+Route::post('/growdash/manual-fill', [GrowdashManualController::class, 'manualFill']);
 
 // ============================================================================
 // USER AUTHENTICATION - Sanctum (API tokens for web/mobile apps)
@@ -42,6 +53,17 @@ Route::middleware('auth:sanctum')->post('/devices/pair', [BootstrapController::c
 Route::post('/growdash/devices/{device}/commands', [CommandController::class, 'send'])
     ->middleware('auth:sanctum')
     ->name('api.devices.commands.create');
+
+// Growdash data endpoints (user authenticated)
+Route::middleware('auth:sanctum')->prefix('growdash')->group(function () {
+    Route::get('/status', [GrowdashApiController::class, 'status']);
+    Route::get('/water-history', [GrowdashApiController::class, 'waterHistory']);
+    Route::get('/tds-history', [GrowdashApiController::class, 'tdsHistory']);
+    Route::get('/temperature-history', [GrowdashApiController::class, 'temperatureHistory']);
+    Route::get('/spray-events', [GrowdashApiController::class, 'sprayEvents']);
+    Route::get('/fill-events', [GrowdashApiController::class, 'fillEvents']);
+    Route::get('/logs', [GrowdashApiController::class, 'logs']);
+});
 
 // ============================================================================
 // DEVICE AUTHENTICATION - Agent API (X-Device-ID + X-Device-Token headers)

@@ -22,13 +22,61 @@ class AgentController extends Controller
         /** @var Device $device */
         $device = $request->attributes->get('device');
 
-        $device->update([
-            'last_seen_at' => now(),
-            'status' => 'online',
+        // Validate optional payload
+        $data = $request->validate([
+            'last_state' => 'nullable|array',
+            'logs' => 'nullable|array',
+            'board_type' => 'nullable|string|max:100',
+            'port' => 'nullable|string|max:255',
+            'vendor_id' => 'nullable|string|max:50',
+            'product_id' => 'nullable|string|max:50',
+            'description' => 'nullable|string|max:255',
         ]);
 
-        Log::info('Agent heartbeat received', [
+        // Update device status
+        $updateData = [
+            'last_seen_at' => now(),
+            'status' => 'online',
+        ];
+
+        // Update hardware info if provided
+        if (isset($data['board_type'])) {
+            $updateData['board_type'] = $data['board_type'];
+        }
+        if (isset($data['port'])) {
+            $updateData['serial_port'] = $data['port'];
+        }
+
+        $device->update($updateData);
+
+        // Store last_state if provided
+        if (isset($data['last_state'])) {
+            $device->last_state = $data['last_state'];
+            $device->save();
+        }
+
+        // Process logs batch if provided
+        if (isset($data['logs']) && is_array($data['logs'])) {
+            foreach ($data['logs'] as $logEntry) {
+                if (isset($logEntry['message'])) {
+                    \App\Models\ArduinoLog::create([
+                        'device_id' => $device->id,
+                        'message' => $logEntry['message'],
+                        'level' => $logEntry['level'] ?? 'info',
+                        'context' => $logEntry['context'] ?? null,
+                    ]);
+                }
+            }
+            Log::info('Logs batch processed', [
+                'device_id' => $device->id,
+                'count' => count($data['logs']),
+            ]);
+        }
+
+        Log::debug('Agent heartbeat received', [
             'device_id' => $device->id,
+            'has_state' => isset($data['last_state']),
+            'has_logs' => isset($data['logs']),
         ]);
 
         return response()->json(['success' => true]);

@@ -158,7 +158,7 @@ test('device auth middleware accepts valid credentials', function () {
         'name' => 'Middleware Test',
         'slug' => 'device-middleware-test',
     ]);
-    $device->pairWithUser($user->id);
+    $plaintextToken = $device->pairWithUser($user->id);
 
     // Mock endpoint that uses device.auth middleware
     Route::get('/api/test-device-auth', function (Illuminate\Http\Request $request) {
@@ -169,7 +169,7 @@ test('device auth middleware accepts valid credentials', function () {
 
     $response = $this->getJson('/api/test-device-auth', [
         'X-Device-ID' => $device->public_id,
-        'X-Device-Token' => $device->agent_token,
+        'X-Device-Token' => $plaintextToken,
     ]);
 
     $response->assertStatus(200)

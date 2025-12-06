@@ -8,10 +8,6 @@ test('bootstrap creates unpaired device', function () {
         'bootstrap_id' => 'test-device-001',
         'name' => 'Test Device',
         'board_type' => 'arduino_uno',
-        'capabilities' => [
-            'sensors' => ['water_level', 'tds'],
-            'actuators' => ['spray_pump'],
-        ],
     ]);
 
     $response->assertStatus(201)

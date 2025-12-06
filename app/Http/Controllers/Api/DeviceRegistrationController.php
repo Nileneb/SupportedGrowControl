@@ -21,7 +21,6 @@ class DeviceRegistrationController extends Controller
             'bootstrap_id' => 'required|string|max:64',
             'name' => 'required|string|max:255',
             'board_type' => 'nullable|string|max:50',
-            'capabilities' => 'nullable|array',
             'regenerate_token' => 'sometimes|boolean',
             'revoke_user_token' => 'sometimes|boolean',
         ]);
@@ -55,9 +54,6 @@ class DeviceRegistrationController extends Controller
             // Update meta fields
             $existing->name = $data['name'];
             $existing->board_type = $data['board_type'] ?? $existing->board_type;
-            if (array_key_exists('capabilities', $data)) {
-                $existing->capabilities = $data['capabilities'];
-            }
             $existing->save();
             $device = $existing;
             $reused = true;
@@ -68,7 +64,6 @@ class DeviceRegistrationController extends Controller
             $device->name = $data['name'];
             $device->slug = Str::slug($data['name']) . '-' . substr($data['bootstrap_id'], 0, 6);
             $device->board_type = $data['board_type'] ?? null;
-            $device->capabilities = $data['capabilities'] ?? [];
             $device->user_id = $user->id;
             $device->paired_at = now();
             $device->public_id = (string) Str::uuid();

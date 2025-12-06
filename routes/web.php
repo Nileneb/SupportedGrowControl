@@ -45,9 +45,16 @@ Route::middleware(['auth'])->group(function () {
     // Feedback submission
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
     Route::view('/feedback', 'feedback.form')->name('feedback.form');
-});
-
-// Admin routes
+    
+    // Settings/Profile routes
+    Volt::route('/profile', 'profile.edit')->name('profile.edit');
+    Volt::route('/password', 'user-password.edit')->name('user-password.edit');
+    Volt::route('/appearance', 'appearance.edit')->name('appearance.edit');
+    Volt::route('/two-factor', 'two-factor.show')->name('two-factor.show');
+    
+    // Shelly devices
+    Volt::route('/shelly', 'shelly.index')->name('shelly.index');
+});// Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/feedback', App\Livewire\Admin\FeedbackList::class)->name('admin.feedback');
     Route::get('/users', App\Livewire\Admin\UserManagement::class)->name('admin.users');
