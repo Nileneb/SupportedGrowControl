@@ -25,11 +25,13 @@ class EventForm extends Component
 
     // Scheduling & command linkage
     public ?string $rrule = null; // e.g., FREQ=DAILY;INTERVAL=2
-    public ?string $command_type = null; // e.g., spray_pump
-    public ?int $duration_minutes = null; // e.g., 4 -> 4 minutes
+    public ?int $shelly_device_id = null; // Shelly device target
+    public ?string $shelly_action = null; // on|off|toggle
+    public ?int $duration_minutes = null; // duration for auto-off
 
     // Device list for dropdown
     public array $devices = [];
+    public array $shellyDevices = [];
 
     public function render()
     {
@@ -40,6 +42,13 @@ class EventForm extends Component
         } else {
             $this->devices = [];
         }
+        if (\Illuminate\Support\Facades\Schema::hasTable('shelly_devices')) {
+            $this->shellyDevices = \App\Models\ShellyDevice::where('user_id', Auth::id())
+                ->orderBy('name')->get(['id','name','ip_address'])->toArray();
+        } else {
+            $this->shellyDevices = [];
+        }
+
         return view('livewire.event-form');
     }
 
@@ -66,25 +75,23 @@ class EventForm extends Component
             'calendar_id' => ['nullable', 'integer'],
             'device_id' => ['nullable', 'integer'],
             'color' => ['nullable', 'string', 'max:32'],
-            'status' => ['required', Rule::in(['planned','active','done','canceled'])],
+            'status' => ['required', Rule::in(['scheduled','completed','canceled'])],
             'rrule' => ['nullable', 'string', 'max:255'],
-            'command_type' => ['nullable', 'string', 'max:50'],
+            'shelly_device_id' => ['nullable', 'integer'],
+            'shelly_action' => ['nullable', Rule::in(['on','off','toggle'])],
             'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
         ]);
 
-        // Build meta from command fields
+        // Build meta for Shelly actions (aligned with scheduler)
         $meta = null;
-        if (!empty($validated['command_type'])) {
-            $durationMs = null;
-            if (!empty($validated['duration_minutes'])) {
-                $durationMs = (int)$validated['duration_minutes'] * 60 * 1000;
-            }
+        if (!empty($validated['shelly_device_id']) && !empty($validated['shelly_action'])) {
             $meta = [
-                'command_type' => $validated['command_type'],
-                'params' => array_filter([
-                    'duration_ms' => $durationMs,
-                ], fn($v) => $v !== null),
+                'shelly_device_id' => $validated['shelly_device_id'],
+                'action' => $validated['shelly_action'],
             ];
+            if (!empty($validated['duration_minutes'])) {
+                $meta['duration'] = (int)$validated['duration_minutes'] * 60; // seconds
+            }
         }
 
         if ($this->id) {
@@ -102,6 +109,7 @@ class EventForm extends Component
                 'user_id' => Auth::id(),
                 'rrule' => $validated['rrule'] ?? null,
                 'meta' => $meta,
+                'status' => $validated['status'] ?? 'scheduled',
             ]));
             $this->dispatch('event-saved', ['id' => $event->id]);
         }

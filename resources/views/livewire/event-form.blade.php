@@ -1,5 +1,5 @@
 <div x-data="{ open: $wire.entangle('open') }" x-show="open" class="fixed inset-0 bg-black/30 flex items-center justify-center">
-    <div class="bg-white rounded shadow p-4 w-[420px]">
+    <div class="bg-white rounded shadow p-4 w-[460px]">
         <div class="font-semibold mb-2">Event</div>
         <div class="space-y-2">
             <input type="text" wire:model="title" class="w-full border rounded px-2 py-1" placeholder="Titel" />
@@ -13,30 +13,27 @@
             </label>
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <label class="text-xs">Device</label>
-                    <select wire:model="device_id" class="w-full border rounded px-2 py-1">
+                    <label class="text-xs">Shelly Gerät</label>
+                    <select wire:model="shelly_device_id" class="w-full border rounded px-2 py-1">
                         <option value="">Keins</option>
-                        @foreach($devices as $dev)
-                            <option value="{{ $dev['id'] }}">{{ $dev['name'] }}</option>
+                        @foreach($shellyDevices as $sh)
+                            <option value="{{ $sh['id'] }}">{{ $sh['name'] ?? ('Shelly #' . $sh['id']) }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
-                    <label class="text-xs">Aktion</label>
-                    <select wire:model="command_type" class="w-full border rounded px-2 py-1">
+                    <label class="text-xs">Shelly Aktion</label>
+                    <select wire:model="shelly_action" class="w-full border rounded px-2 py-1">
                         <option value="">Keine</option>
-                        <option value="spray_pump">Spray Pump</option>
-                        <option value="fill_valve">Fill Valve</option>
-                        <option value="pump">Pump</option>
-                        <option value="valve">Valve</option>
-                        <option value="light">Light</option>
-                        <option value="fan">Fan</option>
+                        <option value="on">An</option>
+                        <option value="off">Aus</option>
+                        <option value="toggle">Toggle</option>
                     </select>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <div>
-                    <label class="text-xs">Dauer (Minuten)</label>
+                    <label class="text-xs">Auto-Off Dauer (Minuten)</label>
                     <input type="number" min="1" max="1440" wire:model="duration_minutes" class="w-full border rounded px-2 py-1" placeholder="z.B. 4" />
                 </div>
                 <div>
@@ -52,9 +49,8 @@
             <div class="flex gap-2">
                 <input type="text" wire:model="color" class="border rounded px-2 py-1 w-1/2" placeholder="#color" />
                 <select wire:model="status" class="border rounded px-2 py-1 w-1/2">
-                    <option value="planned">planned</option>
-                    <option value="active">active</option>
-                    <option value="done">done</option>
+                    <option value="scheduled">scheduled</option>
+                    <option value="completed">completed</option>
                     <option value="canceled">canceled</option>
                 </select>
             </div>

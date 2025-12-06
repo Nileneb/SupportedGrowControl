@@ -103,7 +103,19 @@
                                 </div>
                                 <div class="mt-1 space-y-1">
                                     @foreach ($eventsByDate->get($dayStr, []) as $evt)
-                                        <div class="text-[11px] px-2 py-0.5 truncate rounded bg-neutral-200 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 cursor-pointer"
+                                        @php
+                                            $statusColors = [
+                                                'scheduled' => 'bg-blue-500 dark:bg-blue-600',
+                                                'completed' => 'bg-gray-500 dark:bg-gray-600',
+                                                'canceled' => 'bg-red-500 dark:bg-red-600',
+                                                'active' => 'bg-green-500 dark:bg-green-600',
+                                            ];
+                                            $bgColor = $statusColors[$evt['status'] ?? 'scheduled'] ?? 'bg-neutral-200 dark:bg-neutral-800';
+                                            $textColor = in_array($evt['status'] ?? '', ['scheduled', 'completed', 'canceled', 'active']) 
+                                                ? 'text-white' 
+                                                : 'text-neutral-900 dark:text-neutral-100';
+                                        @endphp
+                                        <div class="text-[11px] px-2 py-0.5 truncate rounded {{ $bgColor }} {{ $textColor }} cursor-pointer"
                                              wire:click.stop="openEvent({{ $evt['id'] }})"
                                              title="{{ $evt['title'] }}">
                                             {{ \Illuminate\Support\Str::limit($evt['title'], 24) }}
