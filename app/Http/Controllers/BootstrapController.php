@@ -94,10 +94,11 @@ class BootstrapController extends Controller
             return response()->json([
                 'status' => 'paired',
                 'bootstrap_id' => $device->bootstrap_id,
+                'device_id' => $device->public_id, // Agent expects device_id (which is our public_id UUID)
                 'public_id' => $device->public_id,
                 'agent_token' => $plaintextToken, // New plaintext token (never stored!)
                 'device_name' => $device->name,
-                'user_email' => $device->user->email ?? null,
+                'user_email' => optional($device->user)->email,
             ]);
         }
 
@@ -185,10 +186,11 @@ class BootstrapController extends Controller
         return response()->json([
             'status' => 'paired',
             'bootstrap_id' => $device->bootstrap_id,
+            'device_id' => $device->public_id, // Agent expects device_id (which is our public_id UUID)
             'public_id' => $device->public_id,
             'agent_token' => $plaintextToken,
             'device_name' => $device->name,
-            'user_email' => $device->user->email ?? null,
+            'user_email' => optional($device->user)->email,
         ]);
     }
 }
