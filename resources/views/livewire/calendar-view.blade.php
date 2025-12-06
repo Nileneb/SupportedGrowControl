@@ -3,13 +3,14 @@
         <button wire:click="goToPrevious" class="px-2 py-1 border rounded">&lt;</button>
         <button wire:click="goToToday" class="px-2 py-1 border rounded">Heute</button>
         <button wire:click="goToNext" class="px-2 py-1 border rounded">&gt;</button>
-        <span class="ml-4 font-semibold">{{ \Illuminate\Support\Carbon::parse($currentDate)->isoFormat('MMMM YYYY') }}</span>
+        <span
+            class="ml-4 font-semibold">{{ \Illuminate\Support\Carbon::parse($currentDate)->isoFormat('MMMM YYYY') }}</span>
 
         <div class="ml-auto flex items-center gap-2">
             <select wire:change="setViewMode($event.target.value)" class="border rounded px-2 py-1">
-                <option value="month" @selected($viewMode==='month')>Monat</option>
-                <option value="week" @selected($viewMode==='week')>Woche</option>
-                <option value="day" @selected($viewMode==='day')>Tag</option>
+                <option value="month" @selected($viewMode === 'month')>Monat</option>
+                <option value="week" @selected($viewMode === 'week')>Woche</option>
+                <option value="day" @selected($viewMode === 'day')>Tag</option>
             </select>
         </div>
     </div>
@@ -34,7 +35,7 @@
             }
             $weeks[] = $week;
         }
-        $weekdayNames = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+        $weekdayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     @endphp
 
     <div class="max-w-[1200px] mx-auto grid grid-cols-12 gap-4">
@@ -62,10 +63,14 @@
                 <div>
                     <div class="text-sm font-semibold mb-1">Legende</div>
                     <div class="text-xs text-neutral-600 dark:text-neutral-300 space-y-1">
-                        <div class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-green-500 inline-block"></span> Aktiv</div>
-                        <div class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-blue-500 inline-block"></span> Geplant</div>
-                        <div class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-gray-500 inline-block"></span> Erledigt</div>
-                        <div class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-red-500 inline-block"></span> Gecancelt</div>
+                        <div class="flex items-center gap-2"><span
+                                class="h-3 w-3 rounded bg-green-500 inline-block"></span> Aktiv</div>
+                        <div class="flex items-center gap-2"><span
+                                class="h-3 w-3 rounded bg-blue-500 inline-block"></span> Geplant</div>
+                        <div class="flex items-center gap-2"><span
+                                class="h-3 w-3 rounded bg-gray-500 inline-block"></span> Erledigt</div>
+                        <div class="flex items-center gap-2"><span
+                                class="h-3 w-3 rounded bg-red-500 inline-block"></span> Gecancelt</div>
                     </div>
                 </div>
 
@@ -96,8 +101,9 @@
                         @foreach ($week as $day)
                             @php $dayStr = $day->toDateString(); @endphp
                             <div class="p-2 min-h-[110px] bg-white dark:bg-zinc-900 border border-neutral-200 dark:border-zinc-700 hover:bg-neutral-50 dark:hover:bg-zinc-800"
-                                 wire:click="createEventFromDay('{{ $dayStr }}')">
-                                <div class="text-[11px] text-neutral-700 dark:text-neutral-200 flex items-center justify-between">
+                                wire:click="createEventFromDay('{{ $dayStr }}')">
+                                <div
+                                    class="text-[11px] text-neutral-700 dark:text-neutral-200 flex items-center justify-between">
                                     <span class="font-medium">{{ $day->isoFormat('DD.MM.') }}</span>
                                     <span class="text-[10px] opacity-70">{{ $day->isoFormat('dd') }}</span>
                                 </div>
@@ -111,13 +117,12 @@
                                                 'active' => 'bg-green-500 dark:bg-green-600',
                                             ];
                                             $bgColor = $statusColors[$evt['status'] ?? 'scheduled'] ?? 'bg-neutral-200 dark:bg-neutral-800';
-                                            $textColor = in_array($evt['status'] ?? '', ['scheduled', 'completed', 'canceled', 'active']) 
-                                                ? 'text-white' 
+                                            $textColor = in_array($evt['status'] ?? '', ['scheduled', 'completed', 'canceled', 'active'])
+                                                ? 'text-white'
                                                 : 'text-neutral-900 dark:text-neutral-100';
                                         @endphp
                                         <div class="text-[11px] px-2 py-0.5 truncate rounded {{ $bgColor }} {{ $textColor }} cursor-pointer"
-                                             wire:click.stop="openEvent({{ $evt['id'] }})"
-                                             title="{{ $evt['title'] }}">
+                                            wire:click.stop="openEvent({{ $evt['id'] }})" title="{{ $evt['title'] }}">
                                             {{ \Illuminate\Support\Str::limit($evt['title'], 24) }}
                                         </div>
                                     @endforeach
