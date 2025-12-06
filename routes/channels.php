@@ -16,7 +16,8 @@ use App\Models\Device;
 
 // Device status updates - user can subscribe to their own devices
 Broadcast::channel('device.{deviceId}', function ($user, $deviceId) {
-    $device = Device::find($deviceId);
+    // deviceId is the public_id (UUID), not the integer id
+    $device = Device::where('public_id', $deviceId)->first();
     
     // User can listen to their own device's channel
     return $device && $device->user_id === $user->id;
