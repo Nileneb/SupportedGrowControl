@@ -40,7 +40,7 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        $board = $request->input('board', 'esp32:esp32:esp32');
+        $board = $request->input('board', 'arduino:avr:uno');
 
         $command = Command::create([
             'device_id' => $device->id,
@@ -77,7 +77,7 @@ class ArduinoCompileController extends Controller
 
         $request->validate([
             'device_id' => 'required|exists:devices,id',
-            'port' => 'required|string',
+            'port' => 'nullable|string', // Optional: Agent nutzt Board-Registry falls leer
             'board' => 'nullable|string',
             'target_device_id' => 'nullable|string',
         ]);
@@ -92,27 +92,37 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Script must be compiled first'], 400);
         }
 
-        $port = $request->input('port');
-        $board = $request->input('board', 'esp32:esp32:esp32');
+        $port = $request->input('port'); // Kann null sein
+        $board = $request->input('board', 'arduino:avr:uno');
+
+        $params = [
+            'script_id' => $script->id,
+            'script_name' => $script->name,
+            'code' => $script->code,  // Agent needs code to compile+upload
+            'board' => $board,
+            'target_device_id' => $request->input('target_device_id'),
+        ];
+
+        // Port nur hinzufügen wenn explizit angegeben (sonst nutzt Agent Board-Registry)
+        if ($port) {
+            $params['port'] = $port;
+        }
 
         $command = Command::create([
             'device_id' => $device->id,
             'created_by_user_id' => Auth::id(),
             'type' => 'arduino_upload',
-            'params' => [
-                'script_id' => $script->id,
-                'script_name' => $script->name,
-                'code' => $script->code,  // Agent needs code to compile+upload
-                'port' => $port,
-                'board' => $board,
-                'target_device_id' => $request->input('target_device_id'),
-            ],
+            'params' => $params,
             'status' => 'pending',
         ]);
 
+        $logMessage = $port 
+            ? "Upload gestartet auf Device: {$device->name} → Port: {$port}"
+            : "Upload gestartet auf Device: {$device->name} (Port aus Board-Registry)";
+
         $script->update([
             'status' => 'uploading',
-            'flash_log' => 'Upload gestartet auf Device: '.$device->name.' → Port: '.$port,
+            'flash_log' => $logMessage,
         ]);
 
         return response()->json([
@@ -132,7 +142,7 @@ class ArduinoCompileController extends Controller
 
         $request->validate([
             'device_id' => 'required|exists:devices,id',
-            'port' => 'required|string',
+            'port' => 'nullable|string', // Optional: Agent nutzt Board-Registry falls leer
             'board' => 'nullable|string',
             'target_device_id' => 'nullable|string',
         ]);
@@ -143,21 +153,27 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        $port = $request->input('port');
-        $board = $request->input('board', 'esp32:esp32:esp32');
+        $port = $request->input('port'); // Kann null sein
+        $board = $request->input('board', 'arduino:avr:uno');
+
+        $params = [
+            'script_id' => $script->id,
+            'script_name' => $script->name,
+            'code' => $script->code,
+            'board' => $board,
+            'target_device_id' => $request->input('target_device_id'),
+        ];
+
+        // Port nur hinzufügen wenn explizit angegeben
+        if ($port) {
+            $params['port'] = $port;
+        }
 
         $command = Command::create([
             'device_id' => $device->id,
             'created_by_user_id' => Auth::id(),
             'type' => 'arduino_compile_upload',
-            'params' => [
-                'script_id' => $script->id,
-                'script_name' => $script->name,
-                'code' => $script->code,
-                'port' => $port,
-                'board' => $board,
-                'target_device_id' => $request->input('target_device_id'),
-            ],
+            'params' => $params,
             'status' => 'pending',
         ]);
 
@@ -196,7 +212,7 @@ class ArduinoCompileController extends Controller
     {
         $devices = Device::where('user_id', Auth::id())
             ->where('status', 'online')
-            ->select('id', 'name', 'bootstrap_id', 'device_info')
+            ->select('id', 'name', 'bootstrap_id', 'public_id', 'board_type', 'port', 'last_state', 'device_info')
             ->get();
 
         return response()->json(['devices' => $devices]);
