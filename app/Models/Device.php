@@ -31,7 +31,7 @@ class Device extends Model
         'paired_at',
         'last_seen_at',
         'board_type',
-        'capabilities',
+        // 'capabilities', // REMOVED: Agent is just a bridge, capabilities are detected via regex parsing of serial messages
         'last_state',
         'shelly_device_id',
         'shelly_auth_token',
@@ -59,8 +59,8 @@ class Device extends Model
         return [
             'paired_at' => 'datetime',
             'last_seen_at' => 'datetime',
-            'capabilities' => 'array',
-            'last_state' => 'array',
+            // 'capabilities' => 'array', // REMOVED: not used anymore
+            'last_state' => 'array', // Agent status: uptime, memory_free, python_version, platform
             'device_info' => 'array',
             'shelly_config' => 'array',
             'shelly_last_webhook_at' => 'datetime',

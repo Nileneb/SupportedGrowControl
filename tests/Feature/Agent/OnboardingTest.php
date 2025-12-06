@@ -44,7 +44,7 @@ test('pairing status returns paired after user pairs', function () {
 
     $response->assertStatus(200)
         ->assertJson(['status' => 'paired'])
-        ->assertJsonStructure(['public_id', 'agent_token', 'device_name', 'user_email']);
+        ->assertJsonStructure(['public_id', 'device_token', 'device_name', 'user_email']);
 });
 
 test('device pairing by user', function () {

@@ -32,11 +32,8 @@ class DeviceFactory extends Factory
             'serial_port' => null,
             'status' => 'offline',
             'board_type' => 'esp32',
-            'capabilities' => [
-                'sensors' => ['water_level', 'tds'],
-                'actuators' => ['spray_pump'],
-            ],
-            'last_state' => null,
+            // capabilities removed - Agent is just a bridge, no capabilities tracking
+            // last_state removed - will be populated from parsed serial messages
             'last_seen_at' => now(),
             'paired_at' => null,
         ];
