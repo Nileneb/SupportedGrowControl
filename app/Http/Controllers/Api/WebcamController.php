@@ -107,8 +107,56 @@ class WebcamController extends Controller
      */
     public function listForDevice(Device $device)
     {
-        // Authorization: User muss Owner des Devices sein
-        $this->authorize('view', $device);
+        // Umfassendes Debugging der Session/Auth-Situation
+        $debugInfo = [
+            'endpoint' => 'GET /api/devices/{device}/webcams',
+            'timestamp' => now()->toIso8601String(),
+            'device_id' => $device->id,
+            'device_uuid' => $device->public_id,
+            
+            // Cookie-Info
+            'cookies_received' => request()->header('cookie') ? 'YES' : 'NO',
+            'cookie_count' => count($_COOKIE),
+            'laravel_session_cookie' => isset($_COOKIE['XSRF-TOKEN']) ? 'YES' : 'NO',
+            
+            // Session-Info
+            'session_id' => session()->getId(),
+            'session_has_driver' => session()->getDefaultDriver(),
+            'session_exists' => session()->exists('_token') ? 'YES' : 'NO',
+            
+            // Auth Guards
+            'auth_web_check' => auth('web')->check() ? 'YES' : 'NO',
+            'auth_web_id' => auth('web')->id(),
+            'auth_web_user' => auth('web')->user() ? auth('web')->user()->email : 'NULL',
+            'auth_sanctum_check' => auth('sanctum')->check() ? 'YES' : 'NO',
+            'auth_sanctum_id' => auth('sanctum')->id(),
+            
+            // Request Headers
+            'authorization_header' => request()->header('authorization') ? 'YES (Bearer/Token)' : 'NO',
+            'csrf_token_in_header' => request()->header('X-CSRF-TOKEN') ? 'YES' : 'NO',
+            'user_agent' => request()->header('user-agent'),
+        ];
+        
+        \Illuminate\Support\Facades\Log::info('🔍 Webcam API Auth Debug', $debugInfo);
+        
+        // Authentifizierung: Session ODER Sanctum Token
+        if (!auth('web')->check() && !auth('sanctum')->check()) {
+            \Illuminate\Support\Facades\Log::warning('❌ Webcam API Auth Failed', [
+                'reason' => 'Neither web nor sanctum auth passed',
+                'debug' => $debugInfo,
+            ]);
+            
+            return response()->json([
+                'error' => 'Unauthenticated',
+                'message' => 'Please login or provide a valid API token',
+                'debug' => config('app.debug') ? $debugInfo : null,
+            ], 401);
+        }
+        
+        \Illuminate\Support\Facades\Log::info('✅ Webcam API Auth Success', [
+            'auth_method' => auth('web')->check() ? 'session' : 'sanctum',
+            'user_id' => auth('web')->id() ?? auth('sanctum')->id(),
+        ]);
         
         $webcams = WebcamFeed::where('device_id', $device->id)
             ->where('is_active', true)
@@ -168,8 +216,17 @@ class WebcamController extends Controller
      */
     public function update(Request $request, WebcamFeed $webcam)
     {
+        // Authentifizierung: Session ODER Sanctum Token
+        if (!auth('web')->check() && !auth('sanctum')->check()) {
+            return response()->json([
+                'error' => 'Unauthenticated',
+                'message' => 'Please login or provide a valid API token'
+            ], 401);
+        }
+        
         // Authorization: User muss Owner sein
-        if ($webcam->user_id !== auth()->id()) {
+        $userId = auth('web')->id() ?? auth('sanctum')->id();
+        if ($webcam->user_id !== $userId) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         
@@ -194,8 +251,17 @@ class WebcamController extends Controller
      */
     public function destroy(WebcamFeed $webcam)
     {
+        // Authentifizierung: Session ODER Sanctum Token
+        if (!auth('web')->check() && !auth('sanctum')->check()) {
+            return response()->json([
+                'error' => 'Unauthenticated',
+                'message' => 'Please login or provide a valid API token'
+            ], 401);
+        }
+        
         // Authorization: User muss Owner sein
-        if ($webcam->user_id !== auth()->id()) {
+        $userId = auth('web')->id() ?? auth('sanctum')->id();
+        if ($webcam->user_id !== $userId) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
         

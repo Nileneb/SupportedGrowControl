@@ -171,8 +171,14 @@ Route::middleware('auth:web')->group(function () {
 });
 
 // Webcam API (Browser + Agent, accepts both Session and Sanctum tokens)
-Route::middleware('auth.user-or-agent')->group(function () {
-    Route::get('/devices/{device}/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'index']);
+// CRITICAL: Cookie decryption MUST happen before StartSession!
+Route::middleware([
+    \Illuminate\Cookie\Middleware\EncryptCookies::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+])->group(function () {
+    Route::get('/devices/{device}/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'listForDevice']);
     Route::patch('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'update']);
     Route::delete('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'destroy']);
 });

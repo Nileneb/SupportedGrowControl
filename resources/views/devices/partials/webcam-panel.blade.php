@@ -16,7 +16,8 @@
 </div>
 
 <script>
-    const devicePublicId = '{{ $device->public_id }}';
+    // Use existing devicePublicId from parent page (defined in show-workstation.blade.php)
+    // const devicePublicId is already defined globally
     let webcams = [];
 
     async function refreshWebcams() {

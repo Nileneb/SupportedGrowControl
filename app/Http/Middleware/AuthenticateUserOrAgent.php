@@ -13,12 +13,19 @@ class AuthenticateUserOrAgent
      *
      * Authenticates using EITHER user session (auth:web) OR API token (auth:sanctum).
      * This allows both browser-based users and API clients to access the same endpoints.
+     * 
+     * IMPORTANT: This middleware REQUIRES StartSession to be loaded BEFORE it runs!
+     * Session must be available in the request when this middleware executes.
      */
     public function handle(Request $request, Closure $next)
     {
-        // Try web guard (session)
-        if (auth('web')->check()) {
-            return $next($request);
+        // Session wurde durch bootstrap/app.php StartSession Middleware bereits initialisiert
+        
+        // Try web guard (session) - nur wenn session_id vorhanden
+        if ($request->session() && $request->session()->getId()) {
+            if (auth('web')->check()) {
+                return $next($request);
+            }
         }
 
         // Try sanctum guard (API token)
@@ -30,3 +37,4 @@ class AuthenticateUserOrAgent
         throw new AuthenticationException('Unauthenticated.');
     }
 }
+
