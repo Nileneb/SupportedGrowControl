@@ -141,12 +141,23 @@ class ShellyDevice extends Model
             }
 
             $body = $response->json();
+            $success = $response->successful();
 
-            // Update last seen
-            $this->update(['last_seen_at' => now()]);
+            if ($success) {
+                // Update last seen only on success
+                $this->update(['last_seen_at' => now()]);
+
+                return [
+                    'success' => true,
+                    'response' => $body,
+                    'status' => $response->status(),
+                ];
+            }
 
             return [
-                'success' => true,
+                'success' => false,
+                'error' => $body['error'] ?? 'Request failed',
+                'status' => $response->status(),
                 'response' => $body,
             ];
 

@@ -53,6 +53,10 @@ Route::middleware('auth:sanctum')->post('/devices/register', [DeviceRegistration
 // User pairs device with bootstrap code
 Route::middleware('auth:sanctum')->post('/devices/pair', [BootstrapController::class, 'pair']);
 
+// Shelly control (user authenticated)
+Route::middleware('auth:sanctum')->post('/shelly/{shelly}/{action}', [\App\Http\Controllers\Api\ShellyControlController::class, 'control'])
+    ->name('api.shelly.control');
+
 // Send command to device (web → device)
 Route::post('/growdash/devices/{device}/commands', [CommandController::class, 'send'])
     ->middleware('auth:sanctum')

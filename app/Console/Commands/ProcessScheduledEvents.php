@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Event;
 use App\Models\ShellyDevice;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ProcessScheduledEvents extends Command
@@ -34,21 +33,28 @@ class ProcessScheduledEvents extends Command
 
         // Get events that should be executed now
         $events = Event::where('status', 'scheduled')
-            ->where('start_at', '<=', now())
-            ->whereNull('last_executed_at')
-            ->orWhere(function ($query) {
-                // Recurring events that haven't been executed recently
-                $query->whereNotNull('rrule')
-                    ->where('start_at', '<=', now())
-                    ->where(function ($q) {
-                        $q->whereNull('last_executed_at')
-                            ->orWhere('last_executed_at', '<', now()->subMinutes(5));
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    // One-time events that are due and not executed yet
+                    $q->whereNull('rrule')
+                        ->where('start_at', '<=', now())
+                        ->whereNull('last_executed_at');
+                })
+                    ->orWhere(function ($q) {
+                        // Recurring events that haven't been executed recently
+                        $q->whereNotNull('rrule')
+                            ->where('start_at', '<=', now())
+                            ->where(function ($qq) {
+                                $qq->whereNull('last_executed_at')
+                                    ->orWhere('last_executed_at', '<', now()->subMinutes(5));
+                            });
                     });
             })
             ->get();
 
         if ($events->isEmpty()) {
             $this->info('✓ No events to process');
+
             return self::SUCCESS;
         }
 
@@ -63,9 +69,9 @@ class ProcessScheduledEvents extends Command
             try {
                 if ($this->processEvent($event, $dryRun)) {
                     $processed++;
-                    $this->info("  ✓ Event processed successfully");
+                    $this->info('  ✓ Event processed successfully');
                 } else {
-                    $this->warn("  ⚠ Event has no actions to execute");
+                    $this->warn('  ⚠ Event has no actions to execute');
                 }
             } catch (\Exception $e) {
                 $failed++;
@@ -123,7 +129,7 @@ class ProcessScheduledEvents extends Command
         }
 
         // Update event execution timestamp only if at least one action succeeded
-        if ($actionsExecuted > 0 && !$dryRun) {
+        if ($actionsExecuted > 0 && ! $dryRun) {
             $event->update([
                 'last_executed_at' => now(),
                 'status' => $event->rrule ? 'scheduled' : 'completed', // Recurring stays scheduled
@@ -140,12 +146,13 @@ class ProcessScheduledEvents extends Command
     {
         $shelly = ShellyDevice::find($deviceId);
 
-        if (!$shelly) {
+        if (! $shelly) {
             $this->warn("  ⚠ Shelly device {$deviceId} not found");
+
             return false;
         }
 
-        $this->line("  → {$shelly->name}: {$action}" . ($duration ? " ({$duration}s)" : ''));
+        $this->line("  → {$shelly->name}: {$action}".($duration ? " ({$duration}s)" : ''));
 
         if ($dryRun) {
             return true; // Dry run counts as success
@@ -165,16 +172,18 @@ class ProcessScheduledEvents extends Command
                     break;
                 default:
                     $this->warn("  ⚠ Unknown action: {$action}");
+
                     return false;
             }
 
             // Check if action succeeded
-            if (!$result || !($result['success'] ?? false)) {
-                $this->error("  ✗ Failed: " . ($result['error'] ?? 'Unknown error'));
+            if (! $result || ! ($result['success'] ?? false)) {
+                $this->error('  ✗ Failed: '.($result['error'] ?? 'Unknown error'));
+
                 return false;
             }
 
-            $this->info("  ✓ Success");
+            $this->info('  ✓ Success');
 
             // If duration is set, schedule turn off
             if ($duration && $action === 'on') {
@@ -184,7 +193,8 @@ class ProcessScheduledEvents extends Command
 
             return true;
         } catch (\Exception $e) {
-            $this->error("  ✗ Exception: " . $e->getMessage());
+            $this->error('  ✗ Exception: '.$e->getMessage());
+
             return false;
         }
     }

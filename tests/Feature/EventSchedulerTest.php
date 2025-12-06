@@ -120,6 +120,81 @@ test('recurring event stays scheduled after execution', function () {
     expect($event->status)->toBe('scheduled'); // Still scheduled for next occurrence
 });
 
+test('scheduler processes multiple shelly actions', function () {
+    $user = User::factory()->create();
+    $calendar = Calendar::factory()->create(['user_id' => $user->id]);
+    $shelly1 = ShellyDevice::factory()->create([
+        'user_id' => $user->id,
+        'ip_address' => '10.0.0.10',
+        'model' => 'Shelly Plus 1',
+    ]);
+    $shelly2 = ShellyDevice::factory()->create([
+        'user_id' => $user->id,
+        'ip_address' => '10.0.0.11',
+        'model' => 'Shelly Plus 1',
+    ]);
+
+    Http::fake([
+        '10.0.0.10/rpc/Switch.Set' => Http::response(['was_on' => false], 200),
+        '10.0.0.11/rpc/Switch.Set' => Http::response(['was_on' => true], 200),
+    ]);
+
+    $event = Event::create([
+        'user_id' => $user->id,
+        'calendar_id' => $calendar->id,
+        'title' => 'Multiple actions',
+        'start_at' => now()->subMinute(),
+        'end_at' => now()->addHour(),
+        'status' => 'scheduled',
+        'meta' => [
+            'shelly_actions' => [
+                ['device_id' => $shelly1->id, 'action' => 'on'],
+                ['device_id' => $shelly2->id, 'action' => 'off'],
+            ],
+        ],
+    ]);
+
+    Artisan::call('events:process');
+
+    $event->refresh();
+    expect($event->last_executed_at)->not->toBeNull();
+    expect($event->status)->toBe('completed');
+});
+
+test('scheduler marks event completed only on success', function () {
+    $user = User::factory()->create();
+    $calendar = Calendar::factory()->create(['user_id' => $user->id]);
+    $shelly = ShellyDevice::factory()->create([
+        'user_id' => $user->id,
+        'ip_address' => '10.0.0.20',
+        'model' => 'Shelly Plus 1',
+    ]);
+
+    // Shelly call fails
+    Http::fake([
+        '10.0.0.20/rpc/Switch.Set' => Http::response(['error' => 'timeout'], 500),
+    ]);
+
+    $event = Event::create([
+        'user_id' => $user->id,
+        'calendar_id' => $calendar->id,
+        'title' => 'Should remain scheduled',
+        'start_at' => now()->subMinute(),
+        'end_at' => now()->addHour(),
+        'status' => 'scheduled',
+        'meta' => [
+            'shelly_device_id' => $shelly->id,
+            'action' => 'on',
+        ],
+    ]);
+
+    Artisan::call('events:process');
+
+    $event->refresh();
+    expect($event->last_executed_at)->toBeNull();
+    expect($event->status)->toBe('scheduled');
+});
+
 test('dry run does not execute actions', function () {
     $user = User::factory()->create();
     $calendar = Calendar::factory()->create(['user_id' => $user->id]);
