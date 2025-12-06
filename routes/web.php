@@ -39,13 +39,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // API command endpoints using session auth (web guard) to allow Blade console without Sanctum token
-Route::middleware(['auth'])->prefix('api/growdash/devices')->group(function () {
+Route::middleware(['web', 'auth'])->prefix('api/growdash/devices')->group(function () {
     Route::post('/{device}/commands', [CommandController::class, 'send']);
     Route::get('/{device}/commands', [CommandController::class, 'history']);
 });
 
 // Arduino CLI API endpoints (commands sent to device agents)
-Route::middleware(['auth'])->prefix('api/arduino')->group(function () {
+Route::middleware(['web', 'auth'])->prefix('api/arduino')->group(function () {
     Route::get('/devices', [\App\Http\Controllers\ArduinoCompileController::class, 'listDevices']);
     Route::get('/devices/{device}/ports', [\App\Http\Controllers\ArduinoCompileController::class, 'getPorts']);
     Route::get('/scripts/{script}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'status']);
