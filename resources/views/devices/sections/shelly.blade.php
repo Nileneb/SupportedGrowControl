@@ -1,7 +1,7 @@
 <div class="space-y-4">
     <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-6">
         <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Shelly Integration</h3>
-        
+
         @if($device->hasShellyIntegration())
             <!-- Existing Configuration -->
             <div class="space-y-4">
@@ -18,12 +18,12 @@
                 <div class="p-4 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-700/30">
                     <h4 class="font-medium text-neutral-900 dark:text-neutral-100 mb-3">Quick Control</h4>
                     <div class="flex gap-2">
-                        <button 
+                        <button
                             onclick="sendShellyCommand('on')"
                             class="flex-1 px-4 py-3 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
                             <span class="mr-2">⚡</span> Turn ON
                         </button>
-                        <button 
+                        <button
                             onclick="sendShellyCommand('off')"
                             class="flex-1 px-4 py-3 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
                             <span class="mr-2">⭕</span> Turn OFF
