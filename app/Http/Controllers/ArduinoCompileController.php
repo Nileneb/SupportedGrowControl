@@ -116,7 +116,7 @@ class ArduinoCompileController extends Controller
             'status' => 'pending',
         ]);
 
-        $logMessage = $port 
+        $logMessage = $port
             ? "Upload gestartet auf Device: {$device->name} → Port: {$port}"
             : "Upload gestartet auf Device: {$device->name} (Port aus Board-Registry)";
 

@@ -329,20 +329,20 @@
                         document.getElementById('uploadBoardInfo').classList.add('hidden');
                         return;
                     }
-                    
+
                     // Finde Device in Cache
                     const device = window.scriptManagerState.availableDevices.find(d => d.id == deviceId);
                     if (device && device.last_state) {
                         const state = typeof device.last_state === 'string' ? JSON.parse(device.last_state) : device.last_state;
-                        
+
                         // Zeige erkannte Board-Info
                         const boardType = device.board_type || state.board_type || 'Unbekannt';
                         const port = device.port || state.port || 'Auto-detect';
-                        
+
                         document.getElementById('detectedBoardType').textContent = boardType;
                         document.getElementById('detectedPort').textContent = port;
                         document.getElementById('uploadBoardInfo').classList.remove('hidden');
-                        
+
                         // Auto-select passenden Board-Typ im Dropdown (wenn erkannt)
                         const boardSelect = document.getElementById('uploadBoardSelect');
                         if (boardType.includes('uno')) boardSelect.value = 'arduino:avr:uno';
@@ -395,12 +395,12 @@
         window.submitUpload = async function() {
             const deviceId = document.getElementById('uploadDeviceSelect').value;
             const board = document.getElementById('uploadBoardSelect').value;
-            
+
             if (!deviceId || !board) {
                 alert('❌ Device und Board-Typ auswählen!');
                 return;
             }
-            
+
             try {
                 // Port wird NICHT mehr mitgeschickt - Agent nutzt Board-Registry!
                 const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/upload`, {
