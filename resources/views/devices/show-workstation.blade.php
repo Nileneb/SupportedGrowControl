@@ -34,6 +34,8 @@
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
+                    @include('devices.partials.webcam-panel')
+
                     <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
                         <div class="mb-4 flex items-center justify-between">
                             <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-50">Device Information</h2>
