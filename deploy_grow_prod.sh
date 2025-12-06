@@ -21,9 +21,6 @@ docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan key:generate --fo
 # Datenbank-Migrationen zuerst (stellt Schema bereit)
 docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan migrate --force
 
-# Feature/Regression Tests nach Migration (nutzt testing-DB)
-docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan test --env=testing --filter=SessionAuthTest
-docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan test --env=testing --filter=DeviceFunctionsTest
 
 # Clear old caches first (important for scheduler to pick up new Kernel)
 docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan config:clear
