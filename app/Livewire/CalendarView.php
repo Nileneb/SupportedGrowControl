@@ -209,7 +209,7 @@ class CalendarView extends Component
         if (! $event || ! Auth::user()->can('view', $event)) {
             return;
         }
-        
+
         $meta = $event->meta ?? [];
         $shelly_device_id = $meta['shelly_device_id'] ?? null;
         $shelly_action = $meta['action'] ?? null;
@@ -217,7 +217,7 @@ class CalendarView extends Component
         if (isset($meta['duration']) && is_numeric($meta['duration'])) {
             $duration_minutes = (int)($meta['duration'] / 60); // Convert seconds to minutes
         }
-        
+
         $this->dispatch('open-event-form', [
             'id' => $event->id,
             'title' => $event->title,
