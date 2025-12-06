@@ -101,8 +101,7 @@ class DeviceManagementController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Heartbeat received',
-            'last_seen_at' => $device->last_seen_at,
-        ]);
+        ], 200);
     }
 
 }

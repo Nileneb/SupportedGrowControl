@@ -42,6 +42,9 @@ class BootstrapController extends Controller
             'device_info' => 'nullable|array',
         ]);
 
+        // Fallback name for devices that have not provided one yet
+        $deviceName = $data['name'] ?? 'GrowDash Device';
+
         // If no bootstrap_id provided, generate one server-side (agent now asks Laravel to create it)
         $bootstrapId = $data['bootstrap_id'] ?? null;
         if ($bootstrapId === null) {
@@ -57,7 +60,7 @@ class BootstrapController extends Controller
         if (!$device) {
             $device = Device::create([
                 'bootstrap_id' => $bootstrapId,
-                'name' => $data['name'] ?? 'Unclaimed Device',
+                'name' => $deviceName,
                 'slug' => 'device-' . Str::random(8),
                 'device_info' => $data['device_info'] ?? [
                     'platform' => $data['platform'] ?? null,

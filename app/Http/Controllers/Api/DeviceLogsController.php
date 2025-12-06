@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Device;
-use App\Models\ArduinoLog;
+use App\Models\DeviceLog;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Log;
 
 class DeviceLogsController extends Controller
@@ -21,12 +20,7 @@ class DeviceLogsController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $query = ArduinoLog::where('device_id', $deviceId);
-
-        // Filter by log type if provided
-        if ($request->has('type')) {
-            $query->where('log_type', $request->input('type'));
-        }
+        $query = DeviceLog::where('device_id', $device->id);
 
         // Filter by level if provided
         if ($request->has('level')) {
@@ -41,7 +35,7 @@ class DeviceLogsController extends Controller
         $logs = $query
             ->orderBy('created_at', 'desc')
             ->limit($request->input('limit', 50))
-            ->get(['id', 'log_type', 'level', 'message', 'created_at']);
+            ->get(['id', 'level', 'message', 'context', 'created_at']);
 
         Log::info('🎯 ENDPOINT_TRACKED: DeviceLogsController@index', [
             'user_id' => $request->user()->id,
@@ -69,7 +63,7 @@ class DeviceLogsController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $stats = ArduinoLog::where('device_id', $deviceId)
+        $stats = DeviceLog::where('device_id', $device->id)
             ->selectRaw('level, COUNT(*) as count')
             ->groupBy('level')
             ->pluck('count', 'level')
@@ -93,7 +87,7 @@ class DeviceLogsController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $count = ArduinoLog::where('device_id', $deviceId)->delete();
+        $count = DeviceLog::where('device_id', $device->id)->delete();
 
         Log::info('🎯 ENDPOINT_TRACKED: DeviceLogsController@clear', [
             'user_id' => $request->user()->id,
@@ -119,20 +113,19 @@ class DeviceLogsController extends Controller
 
         $format = $request->input('format', 'json'); // json, csv
 
-        $logs = ArduinoLog::where('device_id', $deviceId)
+        $logs = DeviceLog::where('device_id', $device->id)
             ->orderBy('created_at', 'desc')
             ->limit($request->input('limit', 1000))
             ->get();
 
         if ($format === 'csv') {
-            $filename = "device-{$deviceId}-logs-" . now()->format('Y-m-d-His') . ".csv";
+            $filename = "device-{$device->id}-logs-" . now()->format('Y-m-d-His') . ".csv";
             
-            $csv = "Timestamp,Type,Level,Message\n";
+            $csv = "Timestamp,Level,Message\n";
             foreach ($logs as $log) {
                 $csv .= sprintf(
-                    '"%s","%s","%s","%s"',
+                    '"%s","%s","%s"',
                     $log->created_at,
-                    $log->log_type,
                     $log->level,
                     str_replace('"', '""', $log->message)
                 ) . "\n";

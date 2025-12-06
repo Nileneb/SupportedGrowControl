@@ -252,9 +252,12 @@ class Device extends Model
     /**
      * Get all Arduino logs for this device.
      */
+    /**
+     * Legacy alias: previously arduinoLogs; keep for compatibility.
+     */
     public function arduinoLogs(): HasMany
     {
-        return $this->hasMany(ArduinoLog::class);
+        return $this->deviceLogs();
     }
 
     /**

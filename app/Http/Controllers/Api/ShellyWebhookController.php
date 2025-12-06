@@ -78,7 +78,7 @@ class ShellyWebhookController extends Controller
         $config['last_webhook'] = [
             'timestamp' => now()->toIso8601String(),
             'payload' => $payload,
-        ]);
+        ];
         $shelly->update(['config' => $config]);
 
         Log::info('🎯 ENDPOINT_TRACKED: ShellyWebhookController@handle', [

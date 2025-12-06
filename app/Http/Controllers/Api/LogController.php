@@ -41,6 +41,7 @@ class LogController extends Controller
             'logs.*.level' => 'required|in:debug,info,warning,error',
             'logs.*.message' => 'required|string|max:5000',
             'logs.*.context' => 'nullable|array',
+            'logs.*.timestamp' => 'nullable|string', // Agent sendet ISO8601 timestamp
         ]);
 
         if ($validator->fails()) {
@@ -58,6 +59,7 @@ class LogController extends Controller
                 'level' => $log['level'],
                 'message' => $log['message'],
                 'context' => $log['context'] ?? null,
+                'agent_timestamp' => isset($log['timestamp']) ? $log['timestamp'] : null,
             ]);
 
             $inserted[] = $deviceLog->id;
@@ -73,8 +75,6 @@ class LogController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Logs stored successfully',
-            'inserted_count' => count($inserted),
-            'ids' => $inserted,
         ], 201);
     }
 }

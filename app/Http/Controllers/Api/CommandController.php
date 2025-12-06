@@ -195,12 +195,21 @@ class CommandController extends Controller
                 ], 201);
             }
 
+            // For arduino_compile* commands: ensure sketch_name is set properly
+            $params = $validated['params'] ?? [];
+            if (in_array($validated['type'], ['arduino_compile', 'arduino_compile_upload', 'arduino_upload'])) {
+                // Set sketch_name to current timestamp-based identifier if not provided
+                if (empty($params['sketch_name'])) {
+                    $params['sketch_name'] = 'growdash_' . str_replace(['-', ':'], '', now()->toIso8601String());
+                }
+            }
+
             // Create command
             $command = Command::create([
                 'device_id' => $device->id,
                 'created_by_user_id' => Auth::id(),
                 'type' => $validated['type'],
-                'params' => $validated['params'] ?? [],
+                'params' => $params,
                 'status' => 'pending',
             ]);
 

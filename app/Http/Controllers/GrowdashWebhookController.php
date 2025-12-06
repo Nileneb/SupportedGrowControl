@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ArduinoLog;
+use App\Models\DeviceLog;
 use App\Models\Device;
 use App\Models\FillEvent;
 use App\Models\SprayEvent;
@@ -43,11 +43,11 @@ class GrowdashWebhookController extends Controller
 
         $device = $this->findDevice($data['device_slug']);
 
-        $log = ArduinoLog::create([
+        $log = DeviceLog::create([
             'device_id' => $device->id,
             'level' => $data['level'] ?? 'info',
             'message' => $data['message'],
-            'logged_at' => now(),
+            'context' => null,
         ]);
 
         // Parse the message for structured data
@@ -533,7 +533,7 @@ class GrowdashWebhookController extends Controller
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
         $this->authorize('view', $device);
 
-        $query = $device->arduinoLogs()->latest('logged_at');
+        $query = $device->deviceLogs()->latest('created_at');
 
         if ($level) {
             $query->where('level', $level);
@@ -541,10 +541,11 @@ class GrowdashWebhookController extends Controller
 
         $logs = $query->limit($limit)
             ->get()
-            ->map(fn (ArduinoLog $log) => [
-                'timestamp' => $log->logged_at->timestamp,
+            ->map(fn (DeviceLog $log) => [
+                'timestamp' => $log->created_at->timestamp,
                 'level' => $log->level,
                 'message' => $log->message,
+                'context' => $log->context,
             ]);
 
         \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@logs', [

@@ -135,7 +135,11 @@ Route::middleware('auth:sanctum')->post('/user/devices/{device}/regenerate-token
     ]);
 });
 
-// Send command to device (web UI → device)
+// Command management for devices (web UI)
+Route::get('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'history'])
+    ->middleware('auth:sanctum')
+    ->name('api.devices.commands.history');
+
 Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\CommandController::class, 'send'])
     ->middleware('auth:sanctum')
     ->name('api.devices.commands.create');
@@ -175,13 +179,13 @@ Route::prefix('growdash')->middleware('auth:web')->group(function () {
     Route::get('/status', [GrowdashWebhookController::class, 'status']);
 
     // Historical data endpoints
-    Route::get('/water-history', [GrowdashWebhookController::class, 'waterHistory']);
-    Route::get('/tds-history', [GrowdashWebhookController::class, 'tdsHistory']);
-    Route::get('/temperature-history', [GrowdashWebhookController::class, 'temperatureHistory']);
+   # Route::get('/water-history', [GrowdashWebhookController::class, 'waterHistory']);
+   # Route::get('/tds-history', [GrowdashWebhookController::class, 'tdsHistory']);
+   # Route::get('/temperature-history', [GrowdashWebhookController::class, 'temperatureHistory']);
 
     // Event histories
-    Route::get('/spray-events', [GrowdashWebhookController::class, 'sprayEvents']);
-    Route::get('/fill-events', [GrowdashWebhookController::class, 'fillEvents']);
+   # Route::get('/spray-events', [GrowdashWebhookController::class, 'sprayEvents']);
+   # Route::get('/fill-events', [GrowdashWebhookController::class, 'fillEvents']);
 
     // Arduino logs
     Route::get('/logs', [GrowdashWebhookController::class, 'logs']);

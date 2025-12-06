@@ -17,6 +17,7 @@ class DeviceLog extends Model
         'level',
         'message',
         'context',
+        'agent_timestamp',
     ];
 
     /**
