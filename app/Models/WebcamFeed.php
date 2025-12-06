@@ -10,6 +10,7 @@ class WebcamFeed extends Model
     protected $fillable = [
         'user_id',
         'device_id',
+        'device_path',
         'name',
         'stream_url',
         'snapshot_url',

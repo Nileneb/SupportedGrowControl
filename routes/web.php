@@ -49,6 +49,7 @@ Route::middleware(['auth'])->prefix('api/arduino')->group(function () {
     Route::get('/devices', [\App\Http\Controllers\ArduinoCompileController::class, 'listDevices']);
     Route::get('/devices/{device}/ports', [\App\Http\Controllers\ArduinoCompileController::class, 'getPorts']);
     Route::get('/scripts/{script}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'status']);
+    Route::get('/scripts/status/batch', [\App\Http\Controllers\ArduinoCompileController::class, 'statusMultiple']);
     Route::get('/commands/{command}/status', [\App\Http\Controllers\ArduinoCompileController::class, 'checkCommandStatus']);
     Route::post('/scripts/{script}/compile', [\App\Http\Controllers\ArduinoCompileController::class, 'compile']);
     Route::post('/scripts/{script}/upload', [\App\Http\Controllers\ArduinoCompileController::class, 'upload']);
@@ -94,4 +95,10 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/calendar/events', [\App\Http\Controllers\CalendarController::class, 'events'])->name('calendar.events');
+    
+    // System Logs Viewer (Zentral mit Arduino-Filter)
+    Route::get('/logs', [\App\Http\Controllers\LogsController::class, 'index'])->name('logs.index');
+
+    // Device Commands API for Calendar
+    Route::get('/devices/{device}/commands', [\App\Http\Controllers\DeviceActuatorController::class, 'getCommands'])->name('devices.commands');
 });

@@ -130,7 +130,7 @@
             </div>
 
             <script>
-                const deviceId = {{ $device->id }};
+                const deviceId = '{{ $device->public_id }}';
                 const devicePublicId = '{{ $device->public_id }}';
                 window.deviceId = deviceId;
                 window.devicePublicId = devicePublicId;
@@ -158,9 +158,10 @@
                     wsStatusEl.textContent = label;
                 }
 
-                function addSerialLog(message, source = 'device') {
+                // Enhanced addSerialLog to support timestamps and parsing
+                function addSerialLog(message, source = 'device', timestamp = null) {
                     if (!serialConsole) return;
-                    const ts = new Date().toLocaleTimeString();
+                    const ts = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
                     const prefix = source === 'user' ? '→' : '←';
                     const color = source === 'user' ? 'text-blue-300' : 'text-green-300';
 
@@ -274,8 +275,130 @@
                     renderCommandHistory();
                 });
 
-                document.addEventListener('DOMContentLoaded', () => {
+                // Load historical logs from database
+                async function loadHistoricalLogs() {
+                    try {
+                        const response = await fetch(`/api/devices/${deviceId}/logs?limit=100`, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            credentials: 'same-origin' // wichtig: Cookies mitschicken!
+                        });
+
+                        if (!response.ok) {
+                            console.error('Failed to load historical logs:', response.statusText);
+                            return;
+                        }
+
+                        const data = await response.json();
+                        if (data.logs && data.logs.length > 0) {
+                            // Display logs in reverse chronological order (oldest first)
+                            data.logs.reverse().forEach(log => {
+                                processAndDisplayLog(log.message, 'device', log.created_at);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error loading historical logs:', error);
+                    }
+                }
+
+                // Dynamic log patterns loaded from database
+                let logPatterns = [];
+
+                // Load log patterns from API
+                async function loadLogPatterns() {
+                    try {
+                        const response = await fetch('/api/log-patterns', {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            },
+                            credentials: 'same-origin'
+                        });
+
+                        if (!response.ok) {
+                            console.error('Failed to load log patterns:', response.statusText);
+                            return;
+                        }
+
+                        const data = await response.json();
+                        if (data.patterns) {
+                            // Convert regex strings to RegExp objects
+                            logPatterns = data.patterns.map(pattern => ({
+                                name: pattern.name,
+                                regex: new RegExp(pattern.regex.slice(1, pattern.regex.lastIndexOf('/')), 
+                                                pattern.regex.slice(pattern.regex.lastIndexOf('/') + 1)),
+                                icon: pattern.icon,
+                                color: pattern.color,
+                                parser_config: pattern.parser_config,
+                                priority: pattern.priority,
+                                format: (matches) => {
+                                    const result = {
+                                        type: pattern.name.toLowerCase().replace(/\s+/g, '_'),
+                                        raw: matches[0],
+                                        icon: pattern.icon || '',
+                                        color: pattern.color || 'text-green-300'
+                                    };
+
+                                    // Extract key-value pairs if configured
+                                    if (pattern.parser_config?.extractor === 'key_value_pairs') {
+                                        const data = matches[1] || matches[0];
+                                        const kvRegex = /(\w+)=([\d.]+)/g;
+                                        const parsed = {};
+                                        let match;
+                                        while ((match = kvRegex.exec(data)) !== null) {
+                                            parsed[match[1]] = match[2];
+                                        }
+                                        result.parsed = parsed;
+                                        result.display = `${result.icon} ${pattern.name}: ${Object.entries(parsed).map(([k,v]) => `${k}=${v}`).join(' | ')}`;
+                                    } else {
+                                        // Use second capture group if available, otherwise full match
+                                        const text = matches[2] || matches[1] || matches[0];
+                                        result.display = `${result.icon} ${pattern.name}: ${text}`;
+                                    }
+
+                                    return result;
+                                }
+                            }));
+                            console.log(`✅ Loaded ${logPatterns.length} log patterns from database`);
+                        }
+                    } catch (error) {
+                        console.error('Error loading log patterns:', error);
+                        // Fallback to empty patterns array
+                        logPatterns = [];
+                    }
+                }
+
+                // Process log with regex patterns and display
+                function processAndDisplayLog(message, source = 'device', timestamp = null) {
+                    let parsed = null;
+
+                    // Try to match against known patterns
+                    for (const pattern of logPatterns) {
+                        const match = message.match(pattern.regex);
+                        if (match) {
+                            parsed = pattern.format(match);
+                            break;
+                        }
+                    }
+
+                    if (parsed) {
+                        addSerialLog(parsed.display || message, source, timestamp);
+                    } else {
+                        // Display raw message if no pattern matches
+                        addSerialLog(message, source, timestamp);
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', async () => {
                     renderCommandHistory();
+                    
+                    // Load patterns first, then historical logs
+                    await loadLogPatterns();
+                    await loadHistoricalLogs();
+                    
                     if (!window.Echo) {
                         setWsStatus('No WebSocket', 'error');
                         return;
@@ -283,12 +406,13 @@
 
                     try {
                         const channel = window.Echo.private(`device.${deviceId}`)
-                            .listen('DeviceTelemetryReceived', (event) => {
-                                if (event.telemetry && event.telemetry.serial_output) {
-                                    addSerialLog(event.telemetry.serial_output, 'device');
+                            .listen('device.log.received', (event) => {
+                                // Real-time logs from Agent (Arduino Serial Monitor, etc.)
+                                if (event.message) {
+                                    processAndDisplayLog(event.message, 'device');
                                 }
                             })
-                            .listen('CommandStatusUpdated', (event) => updateCommandHistory(event));
+                            .listen('device.command.status.updated', (event) => updateCommandHistory(event));
 
                         const connection = window.Echo.connector?.pusher?.connection;
                         if (connection) {

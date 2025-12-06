@@ -72,6 +72,9 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 
     // POST heartbeat/last_seen update
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
+    
+    // POST webcam endpoints registration (Camera Module)
+    Route::post('/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'registerFromAgent']);
 });
 
 // ==================== User API (Sanctum-Authenticated) ====================
@@ -147,11 +150,28 @@ Route::post('/growdash/devices/{device}/commands', [\App\Http\Controllers\Api\Co
 // ==================== Device Logs API ====================
 
 // Device logs endpoints (authenticated users can view their devices' logs)
-Route::middleware('auth:sanctum')->prefix('devices/{device}/logs')->group(function () {
+// Using auth:web because these are accessed from the blade templates (session auth)
+Route::middleware('auth:web')->prefix('devices/{device}/logs')->group(function () {
     Route::get('/', [\App\Http\Controllers\Api\DeviceLogsController::class, 'index']);
     Route::get('/stats', [\App\Http\Controllers\Api\DeviceLogsController::class, 'stats']);
     Route::delete('/', [\App\Http\Controllers\Api\DeviceLogsController::class, 'clear']);
     Route::get('/export', [\App\Http\Controllers\Api\DeviceLogsController::class, 'export']);
+});
+
+// Log patterns for dynamic parsing (public endpoint for simplicity, can be cached)
+Route::get('/log-patterns', [\App\Http\Controllers\Api\LogPatternController::class, 'index']);
+
+// Zentrale Logs API (alle Devices)
+Route::middleware('auth:web')->group(function () {
+    Route::get('/logs/all', [\App\Http\Controllers\LogsController::class, 'all']);
+    Route::delete('/logs/clear', [\App\Http\Controllers\LogsController::class, 'clear']);
+});
+
+// Webcam API (Frontend)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/devices/{device}/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'index']);
+    Route::patch('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'update']);
+    Route::delete('/webcams/{webcam}', [\App\Http\Controllers\Api\WebcamController::class, 'destroy']);
 });
 
 // ==================== Legacy Webhook Endpoints ====================

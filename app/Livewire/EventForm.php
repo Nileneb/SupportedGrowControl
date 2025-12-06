@@ -25,8 +25,12 @@ class EventForm extends Component
 
     // Scheduling & command linkage
     public ?string $rrule = null; // e.g., FREQ=DAILY;INTERVAL=2
-    public ?string $command_type = null; // e.g., spray_pump
-    public ?int $duration_minutes = null; // e.g., 4 -> 4 minutes
+    public ?string $command_type = null;
+    public array $command_params = [];
+    
+    // Available commands for selected device
+    public array $availableCommands = [];
+    public array $paramTemplate = [];
 
     // Device list for dropdown
     public array $devices = [];
@@ -47,7 +51,122 @@ class EventForm extends Component
     public function open(array $data = []): void
     {
         $this->fill($data);
+        
+        // Load available commands if device is selected
+        if ($this->device_id) {
+            $this->loadDeviceCommands();
+        }
+        
         $this->open = true;
+    }
+
+    public function updatedDeviceId(): void
+    {
+        $this->loadDeviceCommands();
+        $this->command_type = null;
+        $this->command_params = [];
+        $this->paramTemplate = [];
+    }
+
+    public function updatedCommandType(): void
+    {
+        $this->command_params = [];
+        
+        // Find selected command and load parameter template
+        $selected = collect($this->availableCommands)->firstWhere('command_type', $this->command_type);
+        $this->paramTemplate = $selected['params_template'] ?? [];
+        
+        // Initialize default values
+        foreach ($this->paramTemplate as $param) {
+            if (isset($param['default'])) {
+                $this->command_params[$param['name']] = $param['default'];
+            }
+        }
+    }
+
+    private function loadDeviceCommands(): void
+    {
+        if (!$this->device_id) {
+            $this->availableCommands = [];
+            return;
+        }
+
+        $device = \App\Models\Device::find($this->device_id);
+        if (!$device) {
+            $this->availableCommands = [];
+            return;
+        }
+
+        // Fetch from DeviceActuatorController logic
+        $capabilities = $device->capabilities ?? [];
+        $actuators = $capabilities['actuators'] ?? [];
+
+        $commands = [];
+
+        foreach ($actuators as $actuator) {
+            $commands[] = [
+                'command_type' => 'serial_command',
+                'label' => $actuator['display_name'] ?? $actuator['id'],
+                'actuator_id' => $actuator['id'],
+                'params_template' => $this->getActuatorParamsTemplate($actuator),
+            ];
+        }
+
+        // Generic commands
+        $commands[] = [
+            'command_type' => 'serial_command',
+            'label' => 'Custom Serial Command',
+            'params_template' => [
+                ['name' => 'command', 'type' => 'text', 'required' => true, 'label' => 'Command Text'],
+            ],
+        ];
+
+        $this->availableCommands = $commands;
+    }
+
+    private function getActuatorParamsTemplate(array $actuator): array
+    {
+        $template = [];
+        $commandType = $actuator['command_type'] ?? 'toggle';
+
+        switch ($commandType) {
+            case 'duration':
+                $template[] = [
+                    'name' => 'duration_ms',
+                    'type' => 'number',
+                    'required' => true,
+                    'label' => 'Duration (ms)',
+                    'default' => 1000,
+                ];
+                break;
+
+            case 'toggle':
+                $template[] = [
+                    'name' => 'state',
+                    'type' => 'select',
+                    'required' => true,
+                    'label' => 'State',
+                    'options' => ['on', 'off'],
+                    'default' => 'on',
+                ];
+                break;
+
+            case 'value':
+                $params = $actuator['params'] ?? [];
+                foreach ($params as $param) {
+                    $template[] = [
+                        'name' => $param['name'],
+                        'type' => $param['type'] === 'int' ? 'number' : 'text',
+                        'required' => true,
+                        'label' => ucfirst($param['name']),
+                        'min' => $param['min'] ?? null,
+                        'max' => $param['max'] ?? null,
+                    ];
+                }
+                break;
+        }
+
+        return $template;
     }
 
     public function close(): void
@@ -69,39 +188,19 @@ class EventForm extends Component
             'status' => ['required', Rule::in(['planned','active','done','canceled'])],
             'rrule' => ['nullable', 'string', 'max:255'],
             'command_type' => ['nullable', 'string', 'max:50'],
-            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
+            'command_params' => ['nullable', 'array'],
         ]);
-
-        // Build meta from command fields
-        $meta = null;
-        if (!empty($validated['command_type'])) {
-            $durationMs = null;
-            if (!empty($validated['duration_minutes'])) {
-                $durationMs = (int)$validated['duration_minutes'] * 60 * 1000;
-            }
-            $meta = [
-                'command_type' => $validated['command_type'],
-                'params' => array_filter([
-                    'duration_ms' => $durationMs,
-                ], fn($v) => $v !== null),
-            ];
-        }
 
         if ($this->id) {
             $event = Event::where('user_id', Auth::id())->find($this->id);
             if (! $event || ! Auth::user()->can('update', $event)) {
                 return;
             }
-            $event->update(array_merge($validated, [
-                'rrule' => $validated['rrule'] ?? $event->rrule,
-                'meta' => $meta ?? $event->meta,
-            ]));
+            $event->update($validated);
             $this->dispatch('event-updated', ['id' => $event->id]);
         } else {
             $event = Event::create(array_merge($validated, [
                 'user_id' => Auth::id(),
-                'rrule' => $validated['rrule'] ?? null,
-                'meta' => $meta,
             ]));
             $this->dispatch('event-saved', ['id' => $event->id]);
         }

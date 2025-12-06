@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DeviceEventBroadcast;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,11 @@ class DeviceManagementController extends Controller
 
         $validator = Validator::make($request->all(), [
             'last_state' => 'nullable|array',
+            'logs' => 'nullable|array|max:100',
+            'logs.*.level' => 'required_with:logs|in:debug,info,warning,error',
+            'logs.*.message' => 'required_with:logs|string|max:5000',
+            'logs.*.context' => 'nullable|array',
+            'logs.*.timestamp' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -93,9 +99,47 @@ class DeviceManagementController extends Controller
 
         $device->update($updateData);
 
+        // Process logs if included in heartbeat (Agent optimization)
+        $logsProcessed = 0;
+        if ($request->has('logs')) {
+            $logs = $request->input('logs');
+            
+            foreach ($logs as $log) {
+                $context = $log['context'] ?? [];
+                
+                $device->deviceLogs()->create([
+                    'level' => $log['level'],
+                    'message' => $log['message'],
+                    'context' => !empty($context) ? $context : null,
+                    'agent_timestamp' => $log['timestamp'] ?? null,
+                ]);
+                
+                // Broadcast log to WebSocket (Real-time Serial Console); do not fail heartbeat if broadcast backend is down
+                try {
+                    broadcast(new DeviceEventBroadcast(
+                        $device,
+                        'log.received',
+                        [
+                            'level' => $log['level'],
+                            'message' => $log['message'],
+                            'agent_timestamp' => $log['timestamp'] ?? null,
+                        ]
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning('Broadcast failed for device log', [
+                        'device_id' => $device->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+                
+                $logsProcessed++;
+            }
+        }
+
         Log::info('🎯 ENDPOINT_TRACKED: DeviceManagementController@heartbeat', [
             'device_id' => $device->id,
             'status' => 'online',
+            'logs_processed' => $logsProcessed,
         ]);
 
         return response()->json([

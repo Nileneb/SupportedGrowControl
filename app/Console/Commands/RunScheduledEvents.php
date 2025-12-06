@@ -63,18 +63,18 @@ class RunScheduledEvents extends Command
                     continue;
                 }
 
-                $commandPayload = $this->buildCommandFromEventMeta($event);
+                $commandPayload = $this->buildCommandFromEvent($event);
                 if (!$commandPayload) {
-                    Log::warning('Event missing command meta; skipping', ['event_id' => $event->id]);
+                    Log::warning('Event missing command; skipping', ['event_id' => $event->id]);
                     continue;
                 }
 
-                // Create the command for the device (serial_command expected by agent)
+                // Create the command for the device
                 $cmd = CommandModel::create([
                     'device_id' => $event->device_id,
                     'created_by_user_id' => $event->user_id,
-                    'type' => 'serial_command',
-                    'params' => ['command' => $commandPayload],
+                    'type' => $commandPayload['type'],
+                    'params' => $commandPayload['params'],
                     'status' => 'pending',
                 ]);
 
@@ -91,12 +91,34 @@ class RunScheduledEvents extends Command
         return Command::SUCCESS;
     }
 
-    private function buildCommandFromEventMeta(Event $event): ?string
+    private function buildCommandFromEvent(Event $event): ?array
     {
+        // New: Use command_type and command_params directly from Event model
+        if ($event->command_type) {
+            return [
+                'type' => $event->command_type,
+                'params' => $event->command_params ?? [],
+            ];
+        }
+
+        // Legacy: fallback to meta field
         $meta = $event->meta ?? [];
         $type = $meta['command_type'] ?? null;
         $params = $meta['params'] ?? [];
         if (!$type) return null;
+
+        // Legacy actuator mapping to serial_command
+        $serialCommand = $this->buildLegacySerialCommand($type, $params);
+        if (!$serialCommand) return null;
+
+        return [
+            'type' => 'serial_command',
+            'params' => ['command' => $serialCommand],
+        ];
+    }
+
+    private function buildLegacySerialCommand(string $type, array $params): ?string
+    {
 
         // Map actuator type to Arduino serial command (mirror logic from API controller)
         return match($type) {

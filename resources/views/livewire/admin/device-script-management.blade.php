@@ -42,9 +42,10 @@
                             🔨 Kompilieren
                         </button>
                         <button
+                            id="flash-btn-{{ $script->id }}"
                             onclick="uploadScript(event, {{ $script->id }})"
-                            class="flex-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                            {{ $script->status !== 'compiled' && $script->status !== 'flashed' ? 'disabled' : '' }}>
+                            data-script-id="{{ $script->id }}"
+                            class="flex-1 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                             📤 Flashen
                         </button>
                     </div>
@@ -317,13 +318,23 @@
 
                 const select = document.getElementById('uploadDeviceSelect');
                 select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
-                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
+                    `<option value="${d.id}">${d.name} ${d.serial_port ? '✅' : '⚠️'} (${d.bootstrap_id})</option>`
                 ).join('');
 
                 select.onchange = async () => {
                     const deviceId = select.value;
                     if (!deviceId) return;
+                    
                     const portSelect = document.getElementById('uploadPortSelect');
+                    const selectedDevice = window.scriptManagerState.availableDevices.find(d => d.id == deviceId);
+                    
+                    // Device hat bereits einen konfigurierten Port? Verwende diesen!
+                    if (selectedDevice && selectedDevice.serial_port) {
+                        portSelect.innerHTML = `<option value="${selectedDevice.serial_port}" selected>✅ ${selectedDevice.serial_port} (konfiguriert)</option>`;
+                        return;
+                    }
+                    
+                    // Sonst: Port-Scan
                     portSelect.innerHTML = '<option value="">⏳ Lädt Ports...</option>';
                     try {
                         const resp = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
@@ -479,8 +490,8 @@
                     const data = await resp.json();
                     if (data.status === 'completed') {
                         clearInterval(window.scriptManagerState.pollInterval);
-                        alert('✅ Erfolg!');
-                        location.reload();
+                        alert('✅ Erfolgreich kompiliert!');
+                        // Nicht reload - Button wird automatisch nach 3 Sekunden enabled via updateFlashButtonStates()
                     } else if (data.status === 'failed') {
                         clearInterval(window.scriptManagerState.pollInterval);
                         window.openErrorModal(commandId, data.original_error || 'Fehler', data.error_analysis);
@@ -495,5 +506,39 @@
             setTimeout(checkStatus, 2000);
             window.scriptManagerState.pollInterval = setInterval(checkStatus, 3000);
         };
+
+        // ==================== UPDATE FLASH BUTTON STATE ====================
+        function updateFlashButtonStates() {
+            document.querySelectorAll('[id^="flash-btn-"]').forEach(btn => {
+                const scriptId = btn.getAttribute('data-script-id');
+                if (!scriptId) return;
+
+                // Fetch aktuellen Status vom Backend
+                fetch(`/api/arduino/scripts/${scriptId}/status`, {
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                })
+                .then(r => r.json())
+                .then(data => {
+                    const status = data.script?.status;
+                    // Enable button wenn status compiled oder flashed ist
+                    if (status === 'compiled' || status === 'flashed') {
+                        btn.removeAttribute('disabled');
+                    } else {
+                        btn.setAttribute('disabled', 'disabled');
+                    }
+                })
+                .catch(err => console.error('Status poll error:', err));
+            });
+        }
+
+        // Poll Status regelmäßig
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial check
+            updateFlashButtonStates();
+            
+            // Poll alle 3 Sekunden
+            setInterval(updateFlashButtonStates, 3000);
+        });
+
     </script>
 </div>

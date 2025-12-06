@@ -14,6 +14,7 @@ class Event extends Model
     protected $fillable = [
         'user_id', 'device_id', 'calendar_id', 'title', 'description',
         'start_at', 'end_at', 'all_day', 'status', 'color', 'meta', 'rrule', 'last_executed_at',
+        'command_type', 'command_params',
     ];
 
     protected $casts = [
@@ -21,6 +22,7 @@ class Event extends Model
         'end_at' => 'datetime',
         'all_day' => 'boolean',
         'meta' => 'array',
+        'command_params' => 'array',
         'last_executed_at' => 'datetime',
     ];
 

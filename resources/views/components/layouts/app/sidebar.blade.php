@@ -17,6 +17,7 @@
                     <flux:navlist.item icon="cpu-chip" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>{{ __('Devices') }}</flux:navlist.item>
                     <flux:navlist.item icon="bolt" :href="route('shelly.index')" :current="request()->routeIs('shelly.*')" wire:navigate>{{ __('Shelly Devices') }}</flux:navlist.item>
                     <flux:navlist.item icon="calendar" :href="route('calendar.index')" :current="request()->routeIs('calendar.*')" wire:navigate>{{ __('Calendar') }}</flux:navlist.item>
+                    <flux:navlist.item icon="document-text" :href="route('logs.index')" :current="request()->routeIs('logs.*')" wire:navigate>{{ __('System Logs') }}</flux:navlist.item>
                 </flux:navlist.group>
 
                 @if(auth()->user()->is_admin)

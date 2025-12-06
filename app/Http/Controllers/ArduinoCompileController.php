@@ -95,21 +95,19 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        if ($script->status !== 'compiled') {
-            return response()->json(['error' => 'Script must be compiled first'], 400);
-        }
-
         $port = $request->input('port');
         $board = $request->input('board', 'esp32:esp32:esp32');
 
+        // Upload bedeutet: Compile + Upload in einem Schritt (arduino_compile_upload)
+        // Der Agent kompiliert den Code frisch und uploaded ihn dann sofort
         $command = Command::create([
             'device_id' => $device->id,
             'created_by_user_id' => Auth::id(),
-            'type' => 'arduino_upload',
+            'type' => 'arduino_compile_upload',  // Nicht arduino_upload!
             'params' => [
                 'script_id' => $script->id,
-                'script_name' => $script->name,
-                'code' => $script->code,  // Agent needs code to compile+upload
+                'sketch_name' => $script->name,
+                'code' => $script->code,
                 'port' => $port,
                 'board' => $board,
                 'target_device_id' => $request->input('target_device_id'),
@@ -119,7 +117,7 @@ class ArduinoCompileController extends Controller
 
         $script->update([
             'status' => 'uploading',
-            'flash_log' => 'Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
+            'flash_log' => 'Compile + Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
         ]);
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@upload', [
@@ -131,7 +129,7 @@ class ArduinoCompileController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Upload-Befehl an Device gesendet',
+            'message' => 'Compile + Upload-Befehl an Device gesendet',
             'command_id' => $command->id,
             'device' => $device->name,
             'script' => $script->fresh(),
@@ -218,11 +216,34 @@ class ArduinoCompileController extends Controller
         ]);
     }
 
+    /**
+     * Get status for multiple scripts at once (for polling)
+     */
+    public function statusMultiple(Request $request)
+    {
+        $scriptIds = $request->input('script_ids', []);
+        if (!is_array($scriptIds) || empty($scriptIds)) {
+            return response()->json(['scripts' => []]);
+        }
+
+        $scripts = DeviceScript::whereIn('id', $scriptIds)
+            ->where('user_id', Auth::id())
+            ->get(['id', 'status', 'name'])
+            ->keyBy('id');
+
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@statusMultiple', [
+            'user_id' => Auth::id(),
+            'script_count' => $scripts->count(),
+        ]);
+
+        return response()->json(['scripts' => $scripts]);
+    }
+
     public function listDevices()
     {
         $devices = Device::where('user_id', Auth::id())
             ->where('status', 'online')
-            ->select('id', 'name', 'bootstrap_id', 'device_info')
+            ->select('id', 'name', 'bootstrap_id', 'serial_port', 'device_info')
             ->get();
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@listDevices', [

@@ -5,7 +5,17 @@
         <button wire:click="goToNext" class="px-2 py-1 border rounded">&gt;</button>
         <span class="ml-4 font-semibold">{{ \Illuminate\Support\Carbon::parse($currentDate)->isoFormat('MMMM YYYY') }}</span>
 
-        <div class="ml-auto flex items-center gap-2">
+        <div class="ml-auto flex items-center gap-3">
+            {{-- Server Time Clock --}}
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                <svg class="w-4 h-4 text-neutral-600 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-sm font-mono text-neutral-700 dark:text-neutral-300" id="server-time">
+                    {{ now()->format('H:i:s') }}
+                </span>
+            </div>
+
             <select wire:change="setViewMode($event.target.value)" class="border rounded px-2 py-1">
                 <option value="month" @selected($viewMode==='month')>Monat</option>
                 <option value="week" @selected($viewMode==='week')>Woche</option>
@@ -122,4 +132,46 @@
     @if($hasEventForm)
         @livewire('event-form')
     @endif
+
+    @push('scripts')
+    <script>
+        // Update server time clock every second
+        function updateServerTime() {
+            const timeEl = document.getElementById('server-time');
+            if (!timeEl) return;
+            
+            // Get initial server time from the element
+            const initialTime = timeEl.textContent.trim();
+            let serverTime = new Date();
+            
+            // Parse the initial server time (HH:mm:ss format)
+            const [hours, minutes, seconds] = initialTime.split(':').map(Number);
+            if (!isNaN(hours) && !isNaN(minutes) && !isNaN(seconds)) {
+                serverTime.setHours(hours, minutes, seconds, 0);
+            }
+            
+            setInterval(() => {
+                serverTime = new Date(serverTime.getTime() + 1000);
+                const h = String(serverTime.getHours()).padStart(2, '0');
+                const m = String(serverTime.getMinutes()).padStart(2, '0');
+                const s = String(serverTime.getSeconds()).padStart(2, '0');
+                timeEl.textContent = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+        
+        // Initialize on page load and after Livewire updates
+        document.addEventListener('DOMContentLoaded', updateServerTime);
+        document.addEventListener('livewire:navigated', updateServerTime);
+        
+        // For Livewire 3
+        if (typeof Livewire !== 'undefined') {
+            Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
+                succeed(({ snapshot, effect }) => {
+                    // Reinitialize after Livewire updates
+                    setTimeout(updateServerTime, 100);
+                });
+            });
+        }
+    </script>
+    @endpush
 </div>

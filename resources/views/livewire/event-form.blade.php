@@ -14,7 +14,7 @@
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-xs">Device</label>
-                    <select wire:model="device_id" class="w-full border rounded px-2 py-1">
+                    <select wire:model.live="device_id" class="w-full border rounded px-2 py-1">
                         <option value="">Keins</option>
                         @foreach($devices as $dev)
                             <option value="{{ $dev['id'] }}">{{ $dev['name'] }}</option>
@@ -23,22 +23,50 @@
                 </div>
                 <div>
                     <label class="text-xs">Aktion</label>
-                    <select wire:model="command_type" class="w-full border rounded px-2 py-1">
+                    <select wire:model.live="command_type" class="w-full border rounded px-2 py-1" @if(empty($availableCommands)) disabled @endif>
                         <option value="">Keine</option>
-                        <option value="spray_pump">Spray Pump</option>
-                        <option value="fill_valve">Fill Valve</option>
-                        <option value="pump">Pump</option>
-                        <option value="valve">Valve</option>
-                        <option value="light">Light</option>
-                        <option value="fan">Fan</option>
+                        @foreach($availableCommands as $cmd)
+                            <option value="{{ $cmd['command_type'] }}">{{ $cmd['label'] }}</option>
+                        @endforeach
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-xs">Dauer (Minuten)</label>
-                    <input type="number" min="1" max="1440" wire:model="duration_minutes" class="w-full border rounded px-2 py-1" placeholder="z.B. 4" />
+            
+            @if($command_type && !empty($paramTemplate))
+                <div class="bg-gray-50 rounded p-3 space-y-2">
+                    <div class="text-xs font-semibold text-gray-700">Command Parameters</div>
+                    @foreach($paramTemplate as $param)
+                        <div>
+                            <label class="text-xs">{{ $param['label'] ?? ucfirst($param['name']) }}</label>
+                            @if($param['type'] === 'select')
+                                <select wire:model="command_params.{{ $param['name'] }}" class="w-full border rounded px-2 py-1">
+                                    @foreach($param['options'] ?? [] as $opt)
+                                        <option value="{{ $opt }}">{{ ucfirst($opt) }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif($param['type'] === 'number')
+                                <input 
+                                    type="number" 
+                                    wire:model="command_params.{{ $param['name'] }}" 
+                                    class="w-full border rounded px-2 py-1"
+                                    @if(isset($param['min'])) min="{{ $param['min'] }}" @endif
+                                    @if(isset($param['max'])) max="{{ $param['max'] }}" @endif
+                                    @if($param['required'] ?? false) required @endif
+                                />
+                            @else
+                                <input 
+                                    type="text" 
+                                    wire:model="command_params.{{ $param['name'] }}" 
+                                    class="w-full border rounded px-2 py-1"
+                                    @if($param['required'] ?? false) required @endif
+                                />
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
+            @endif
+            
+            <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-xs">Wiederholung (RRULE)</label>
                     <select wire:model="rrule" class="w-full border rounded px-2 py-1">
@@ -48,15 +76,19 @@
                         <option value="FREQ=WEEKLY;INTERVAL=1">Wöchentlich</option>
                     </select>
                 </div>
+                <div>
+                    <label class="text-xs">Status</label>
+                    <select wire:model="status" class="w-full border rounded px-2 py-1">
+                        <option value="planned">planned</option>
+                        <option value="active">active</option>
+                        <option value="done">done</option>
+                        <option value="canceled">canceled</option>
+                    </select>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <input type="text" wire:model="color" class="border rounded px-2 py-1 w-1/2" placeholder="#color" />
-                <select wire:model="status" class="border rounded px-2 py-1 w-1/2">
-                    <option value="planned">planned</option>
-                    <option value="active">active</option>
-                    <option value="done">done</option>
-                    <option value="canceled">canceled</option>
-                </select>
+            <div>
+                <label class="text-xs">Farbe</label>
+                <input type="text" wire:model="color" class="w-full border rounded px-2 py-1" placeholder="#3788d8" />
             </div>
         </div>
 

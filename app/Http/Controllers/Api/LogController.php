@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DeviceLogReceived;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,14 @@ class LogController extends Controller
             ]);
 
             $inserted[] = $deviceLog->id;
+            
+            // Broadcast log to WebSocket (Real-time Serial Console)
+            broadcast(new DeviceLogReceived(
+                $device,
+                $log['level'],
+                $log['message'],
+                $log['timestamp'] ?? null
+            ))->toOthers();
         }
 
         // TODO: Broadcast WebSocket event for critical errors (level=error)

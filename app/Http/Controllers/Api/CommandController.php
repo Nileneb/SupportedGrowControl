@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\CommandStatusUpdated;
+use App\Events\DeviceEventBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\Command;
 use App\Models\Device;
@@ -104,8 +104,26 @@ class CommandController extends Controller
             'status' => $request->input('status'),
         ]);
 
-        // Broadcast WebSocket event
-        broadcast(new CommandStatusUpdated($command));
+        // Broadcast WebSocket event; do not fail request if broadcast backend is down
+        try {
+            broadcast(new DeviceEventBroadcast(
+                $command->device,
+                'command.status.updated',
+                [
+                    'command_id' => $command->id,
+                    'type' => $command->type,
+                    'status' => $command->status,
+                    'result_message' => $command->result_message,
+                    'completed_at' => $command->completed_at?->toIso8601String(),
+                ]
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('Broadcast failed for command status update', [
+                'command_id' => $command->id,
+                'device_id' => $device->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         Log::info('🎯 ENDPOINT_TRACKED: CommandController@result', [
             'device_id' => $device->id,
