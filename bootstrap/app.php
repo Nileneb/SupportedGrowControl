@@ -13,8 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Trust all proxies (behind Nginx reverse proxy)
-        $middleware->trustProxies(at: '*');
+        // Trust proxies from Nginx reverse proxy (192.168.178.14)
+        $middleware->trustProxies(at: ['192.168.178.14']);
         
         $middleware->alias([
             'growdash.webhook' => \App\Http\Middleware\VerifyGrowdashToken::class,

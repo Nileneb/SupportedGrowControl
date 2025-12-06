@@ -16,8 +16,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /var/www
 COPY . /var/www
+
+# Install Composer and dependencies as root (with --no-scripts to avoid permission issues)
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts
+
+# Create ALL required Laravel directories
+RUN mkdir -p storage/framework/{sessions,views,cache,testing} \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache
+
+# Set ownership to www-data FIRST, then permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 775 storage bootstrap/cache
 
 ############################
 # Stage: Node assets build #
@@ -25,17 +36,19 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 FROM node:20-alpine AS node-build
 WORKDIR /var/www
 
-# Build args for Vite environment variables
+# Build args for Vite environment variables AND APP_URL
 ARG VITE_REVERB_APP_KEY
 ARG VITE_REVERB_HOST
 ARG VITE_REVERB_PORT
 ARG VITE_REVERB_SCHEME
+ARG APP_URL=https://grow.linn.games
 
 # Make them available during build
 ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
 ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
 ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
 ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+ENV APP_URL=$APP_URL
 
 # Lockfile-based deterministic install
 COPY package.json package-lock.json vite.config.js /var/www/

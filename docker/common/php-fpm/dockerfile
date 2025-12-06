@@ -32,17 +32,28 @@ WORKDIR /var/www
 # Copy the entire Laravel application code into the container
 COPY . /var/www
 
-# Install Composer and dependencies
+# Ensure Laravel cache/storage directories exist and are writable before composer scripts run
+RUN mkdir -p storage/framework/{sessions,views,cache,testing} \
+    && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
+    && chown -R www-data:www-data /var/www \
+    && chmod -R 775 storage bootstrap/cache
+
+# Install Composer and dependencies (skip scripts in build)
+ENV COMPOSER_ALLOW_SUPERUSER=1
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+    && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --no-scripts
 
 # Stage 1b: CLI tools with dev dependencies (for tests)
 FROM builder AS php-cli
-RUN composer install --no-interaction --no-progress --prefer-dist
+RUN composer install --no-interaction --no-progress --prefer-dist --no-scripts
 CMD ["php", "-v"]
 
 # Stage 1.5: Build frontend assets with Node.js
 FROM node:20-alpine AS node-builder
+
+# Accept build arguments for proper asset URL generation
+ARG APP_URL=https://grow.linn.games
 
 WORKDIR /var/www
 
@@ -55,7 +66,8 @@ RUN npm ci
 # Copy application code and vendor from builder (needed for Flux CSS)
 COPY --from=builder /var/www /var/www
 
-# Build frontend assets
+# Build frontend assets with correct APP_URL
+ENV APP_URL=$APP_URL
 RUN npm run build
 
 # Stage 2: Production environment
