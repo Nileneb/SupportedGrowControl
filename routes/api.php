@@ -1,4 +1,3 @@
-// Removed ShellyWebhookController as it is no longer used
 <?php
 
 use App\Http\Controllers\Api\AgentController;
@@ -26,6 +25,9 @@ Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
 
 // Pairing Status: Agent checks if user has paired it
 Route::get('/agents/pairing/status', [BootstrapController::class, 'status']);
+
+// Pair device using user credentials (no session needed)
+Route::post('/agents/pair-with-credentials', [BootstrapController::class, 'pairWithCredentials']);
 
 // ============================================================================
 // USER AUTHENTICATION - Sanctum (API tokens for web/mobile apps)

@@ -15,10 +15,6 @@
     @endphp
 
     <div class="flex h-full w-full flex-1 flex-col gap-4 rounded-xl">
-        <!-- Digital Twin Section -->
-        <div class="relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-6">
-            @livewire('digital-twin')
-        </div>
 
         <div class="grid auto-rows-min gap-4 md:grid-cols-3">
             <!-- Total Devices -->

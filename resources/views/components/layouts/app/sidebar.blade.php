@@ -15,26 +15,12 @@
                 <flux:navlist.group :heading="__('Platform')" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
                     <flux:navlist.item icon="cpu-chip" :href="route('devices.index')" :current="request()->routeIs('devices.*')" wire:navigate>{{ __('Devices') }}</flux:navlist.item>
-                    <flux:navlist.item icon="bolt" :href="route('shelly.index')" :current="request()->routeIs('shelly.*')" wire:navigate>{{ __('Shelly Devices') }}</flux:navlist.item>
-                    <flux:navlist.item icon="calendar" :href="route('calendar.index')" :current="request()->routeIs('calendar.*')" wire:navigate>{{ __('Calendar') }}</flux:navlist.item>
                 </flux:navlist.group>
-
-                @if(auth()->user()->is_admin)
-                    <flux:navlist.group :heading="__('Admin')" class="grid">
-                        <flux:navlist.item icon="document-text" :href="route('admin.feedback')" :current="request()->routeIs('admin.feedback')" wire:navigate>{{ __('Feedback') }}</flux:navlist.item>
-                        <flux:navlist.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users')" wire:navigate>{{ __('User Management') }}</flux:navlist.item>
-                        <flux:navlist.item icon="video-camera" :href="route('admin.webcams')" :current="request()->routeIs('admin.webcams')" wire:navigate>{{ __('Webcams') }}</flux:navlist.item>
-                        <flux:navlist.item icon="code-bracket" :href="route('admin.scripts')" :current="request()->routeIs('admin.scripts')" wire:navigate>{{ __('Skriptspeicher') }}</flux:navlist.item>
-                    </flux:navlist.group>
-                @endif
             </flux:navlist>
 
             <flux:spacer />
 
             <flux:navlist variant="outline">
-                <flux:navlist.item icon="chat-bubble-left-right" :href="route('feedback.form')" :current="request()->routeIs('feedback.*')" wire:navigate>
-                {{ __('Send Feedback') }}
-                </flux:navlist.item>
 
                 <flux:navlist.item icon="folder-git-2" href="https://github.com/Nileneb/SupportedGrowControl" target="_blank">
                 {{ __('Repository') }}
@@ -77,7 +63,7 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
+                        <flux:menu.item :href="route('dashboard')" icon="home" wire:navigate>{{ __('Home') }}</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
@@ -127,7 +113,7 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
+                        <flux:menu.item :href="route('dashboard')" icon="home" wire:navigate>{{ __('Home') }}</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />

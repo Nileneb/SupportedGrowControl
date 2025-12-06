@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class BootstrapController extends Controller
@@ -171,6 +172,59 @@ class BootstrapController extends Controller
 
         // Pair device with authenticated user
         $plaintextToken = $device->pairWithUser($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Device paired successfully',
+            'device' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'public_id' => $device->public_id,
+                'paired_at' => $device->paired_at->toISOString(),
+            ],
+            'agent_token' => $plaintextToken,
+        ]);
+    }
+
+    /**
+     * Pair device by user credentials (no prior session required).
+     *
+     * POST /api/agents/pair-with-credentials
+     * Body: { email, password, bootstrap_code }
+     */
+    public function pairWithCredentials(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+            'bootstrap_code' => 'required|string|size:6',
+        ]);
+
+        $device = Device::findByBootstrapCode(strtoupper($data['bootstrap_code']));
+
+        if (! $device) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid bootstrap code',
+            ], 404);
+        }
+
+        if ($device->isPaired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Device already paired',
+            ], 400);
+        }
+
+        if (! Auth::attempt(['email' => $data['email'], 'password' => $data['password']])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ], 401);
+        }
+
+        $user = Auth::user();
+        $plaintextToken = $device->pairWithUser($user->id);
 
         return response()->json([
             'success' => true,

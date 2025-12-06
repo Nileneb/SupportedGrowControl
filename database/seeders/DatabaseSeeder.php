@@ -15,20 +15,15 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::firstOrCreate(
+        // Ensure a default admin test user exists with a hashed password
+        User::updateOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
-                'password' => 'password',
+                'password' => bcrypt('password'),
                 'email_verified_at' => now(),
+                'is_admin' => true,
             ]
         );
-
-        // Seed Growdash devices
-        $this->call([
-            SensorTypeSeeder::class,
-            ActuatorTypeSeeder::class,
-            DeviceSeeder::class,
-        ]);
     }
 }
