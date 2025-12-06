@@ -15,7 +15,7 @@ class ShellyWebhookController extends Controller
     {
         // Verify token from query parameter
         $token = $request->query('token');
-        
+
         if (!$token || !$shelly->verifyToken($token)) {
             return response()->json([
                 'error' => 'Invalid or missing token',

@@ -121,7 +121,7 @@ class AgentController extends Controller
 
         // Accept result_data or legacy output/error fields
         $resultData = $request->input('result_data', []);
-        
+
         // Legacy support: merge output/error if provided directly
         if ($request->has('output')) {
             $resultData['output'] = $request->input('output');

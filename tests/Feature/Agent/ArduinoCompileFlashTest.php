@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->user = User::factory()->create();
     $this->device = Device::factory()->create(['user_id' => $this->user->id]);
-    
+
     // Pair device to get auth token
     $this->plaintextToken = $this->device->pairWithUser($this->user->id);
 });
@@ -85,7 +85,7 @@ test('arduino compile stores code and board in params', function () {
     $response->assertStatus(200);
 
     $command = Command::where('type', 'arduino_compile')->first();
-    
+
     expect($command->params['code'])->toBe($code);
     expect($command->params['board'])->toBe($board);
 });
@@ -181,7 +181,7 @@ test('arduino upload stores all params correctly', function () {
     $response->assertStatus(200);
 
     $command = Command::where('type', 'arduino_upload')->first();
-    
+
     expect($command->params['code'])->toBe($code);
     expect($command->params['board'])->toBe($board);
     expect($command->params['port'])->toBe($port);
@@ -234,7 +234,7 @@ test('port scan command has empty params', function () {
     $response->assertStatus(200);
 
     $command = Command::where('type', 'scan_ports')->first();
-    
+
     expect($command->params)->toBe([]);
 });
 
@@ -264,7 +264,7 @@ test('agent can report compile success', function () {
         ->assertJson(['success' => true]);
 
     $command->refresh();
-    
+
     expect($command->status)->toBe('completed');
     expect($command->result_message)->toBe('Compilation successful');
     expect($command->result_data['output'])->toBe('Sketch uses 1234 bytes');
@@ -294,7 +294,7 @@ test('agent can report compile failure', function () {
     $response->assertStatus(200);
 
     $command->refresh();
-    
+
     expect($command->status)->toBe('failed');
     expect($command->result_message)->toContain('expected `;`');
 });
@@ -322,7 +322,7 @@ test('agent can report upload success', function () {
     $response->assertStatus(200);
 
     $command->refresh();
-    
+
     expect($command->status)->toBe('completed');
     expect($command->result_data['bytes_uploaded'])->toBe(1234);
 });
@@ -354,7 +354,7 @@ test('agent can report port scan results', function () {
     $response->assertStatus(200);
 
     $command->refresh();
-    
+
     expect($command->status)->toBe('completed');
     expect($command->result_data['ports'])->toHaveCount(2);
     expect($command->result_data['ports'][0]['port'])->toBe('/dev/ttyUSB0');
