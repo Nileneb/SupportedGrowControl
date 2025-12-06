@@ -54,14 +54,16 @@ services:
     build:
       context: .
       dockerfile: ./docker/common/php-fpm/dockerfile
+      target: php-cli
     tty: true
     stdin_open: true
     env_file:
       - .env
+    volumes:
+      - grow-laravel-storage-production:/var/www/storage
+      - ./.env:/var/www/.env
     networks:
       - grow-laravel-production
-    volumes:
-      - ./.env:/var/www/.env
 
   postgres:
     image: postgres:16

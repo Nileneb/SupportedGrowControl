@@ -35,7 +35,7 @@ class DeviceLogsController extends Controller
         $logs = $query
             ->orderBy('created_at', 'desc')
             ->limit($request->input('limit', 50))
-            ->get(['id', 'level', 'message', 'context', 'created_at']);
+            ->get(['id', 'level', 'message', 'context', 'created_at', 'agent_timestamp']);
 
         Log::info('🎯 ENDPOINT_TRACKED: DeviceLogsController@index', [
             'user_id' => $request->user()->id,

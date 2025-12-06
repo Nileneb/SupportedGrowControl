@@ -16,6 +16,7 @@ window.Echo = new Echo({
     enabledTransports: ["ws", "wss"],
     authEndpoint: "/broadcasting/auth",
     auth: {
+        withCredentials: true,
         headers: {
             "X-CSRF-TOKEN": document
                 .querySelector('meta[name="csrf-token"]')

@@ -36,6 +36,11 @@ COPY . /var/www
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
     && composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
 
+# Stage 1b: CLI tools with dev dependencies (for tests)
+FROM builder AS php-cli
+RUN composer install --no-interaction --no-progress --prefer-dist
+CMD ["php", "-v"]
+
 # Stage 1.5: Build frontend assets with Node.js
 FROM node:20-alpine AS node-builder
 

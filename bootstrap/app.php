@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.auth' => \App\Http\Middleware\AuthenticateDevice::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+        
+        // Enable session for API routes (needed for auth:web in api.php)
+        $middleware->api(append: [
+            \Illuminate\Session\Middleware\StartSession::class,
+        ]);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         // Timeout pending commands after 5 minutes

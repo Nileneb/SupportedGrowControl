@@ -132,6 +132,7 @@
             <script>
                 const deviceId = '{{ $device->public_id }}';
                 const devicePublicId = '{{ $device->public_id }}';
+                const deviceLogsUrl = '{{ route('devices.logs.data', $device->public_id) }}';
                 window.deviceId = deviceId;
                 window.devicePublicId = devicePublicId;
 
@@ -239,6 +240,7 @@
                                 'Content-Type': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
+                            credentials: 'same-origin',
                             body: JSON.stringify({
                                 type: 'serial_command',
                                 params: { command }
@@ -278,13 +280,14 @@
                 // Load historical logs from database
                 async function loadHistoricalLogs() {
                     try {
-                        const response = await fetch(`/api/devices/${deviceId}/logs?limit=100`, {
+                        const limit = 100;
+                        const response = await fetch(`${deviceLogsUrl}?limit=${limit}`, {
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            credentials: 'same-origin' // wichtig: Cookies mitschicken!
+                            credentials: 'same-origin'
                         });
 
                         if (!response.ok) {
@@ -293,8 +296,7 @@
                         }
 
                         const data = await response.json();
-                        if (data.logs && data.logs.length > 0) {
-                            // Display logs in reverse chronological order (oldest first)
+                        if (data.logs?.length) {
                             data.logs.reverse().forEach(log => {
                                 processAndDisplayLog(log.message, 'device', log.created_at);
                             });
