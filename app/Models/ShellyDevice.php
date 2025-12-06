@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Http;
 
 class ShellyDevice extends Model
 {
@@ -74,9 +75,14 @@ class ShellyDevice extends Model
      */
     public function isGen2(): bool
     {
-        return str_contains(strtolower($this->shelly_device_id ?? ''), 'plus') 
-            || str_contains(strtolower($this->shelly_device_id ?? ''), 'pro')
-            || str_contains(strtolower($this->model ?? ''), 'gen2');
+        $id = strtolower($this->shelly_device_id ?? '');
+        $model = strtolower($this->model ?? '');
+
+        return str_contains($id, 'plus')
+            || str_contains($id, 'pro')
+            || str_contains($model, 'gen2')
+            || str_contains($model, 'plus')
+            || str_contains($model, 'pro');
     }
 
     /**
@@ -116,8 +122,6 @@ class ShellyDevice extends Model
         }
 
         try {
-            $client = new \GuzzleHttp\Client(['timeout' => 5]);
-
             if ($this->isGen2()) {
                 // Shelly Gen2/Plus API
                 $url = "http://{$this->ip_address}/rpc/Switch.Set";
@@ -129,14 +133,14 @@ class ShellyDevice extends Model
                     $params = ['id' => 0, 'toggle' => true];
                 }
 
-                $response = $client->post($url, ['json' => $params]);
+                $response = Http::timeout(5)->post($url, $params);
             } else {
                 // Shelly Gen1 API
                 $url = "http://{$this->ip_address}/relay/0";
-                $response = $client->get($url, ['query' => ['turn' => $action]]);
+                $response = Http::timeout(5)->get($url, ['turn' => $action]);
             }
 
-            $body = json_decode($response->getBody(), true);
+            $body = $response->json();
 
             // Update last seen
             $this->update(['last_seen_at' => now()]);
