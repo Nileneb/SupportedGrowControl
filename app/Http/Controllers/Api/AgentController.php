@@ -90,7 +90,7 @@ class AgentController extends Controller
         $commands = $device->commands()
             ->where('status', 'pending')
             ->orderBy('created_at', 'asc')
-            ->get(['id', 'type', 'params']);
+            ->get(['id', 'type', 'params', 'status', 'created_at']);
 
         return response()->json([
             'success' => true,
@@ -119,7 +119,10 @@ class AgentController extends Controller
             ], 422);
         }
 
-        $resultData = [];
+        // Accept result_data or legacy output/error fields
+        $resultData = $request->input('result_data', []);
+        
+        // Legacy support: merge output/error if provided directly
         if ($request->has('output')) {
             $resultData['output'] = $request->input('output');
         }

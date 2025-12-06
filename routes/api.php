@@ -38,6 +38,10 @@ Route::post('/growdash/log', [GrowdashWebhookController::class, 'log']);
 Route::post('/growdash/manual-spray', [GrowdashManualController::class, 'manualSpray']);
 Route::post('/growdash/manual-fill', [GrowdashManualController::class, 'manualFill']);
 
+// Shelly Webhook: Receive status updates from Shelly devices
+Route::post('/shelly/webhook/{shelly}', [\App\Http\Controllers\ShellyWebhookController::class, 'handleWebhook'])
+    ->name('api.shelly.webhook');
+
 // ============================================================================
 // USER AUTHENTICATION - Sanctum (API tokens for web/mobile apps)
 // ============================================================================

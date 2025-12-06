@@ -21,6 +21,8 @@ return new class extends Migration {
                 $table->string('status')->default('planned'); // planned|active|done|canceled
                 $table->string('color')->nullable();
                 $table->json('meta')->nullable();
+                $table->string('rrule')->nullable(); // Recurring rule (iCal RRULE format)
+                $table->timestamp('last_executed_at')->nullable(); // Last time a recurring event was triggered
                 $table->timestamps();
                 $table->index(['user_id', 'start_at']);
             });

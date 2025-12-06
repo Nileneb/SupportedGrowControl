@@ -49,7 +49,7 @@ class Event extends Model
     public function getDurationAttribute(): ?int
     {
         if (!$this->start_at || !$this->end_at) return null;
-        return $this->end_at->diffInMinutes($this->start_at);
+        return $this->start_at->diffInSeconds($this->end_at);
     }
 
     public function getIsPastAttribute(): bool
