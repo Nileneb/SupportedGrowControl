@@ -209,6 +209,15 @@ class CalendarView extends Component
         if (! $event || ! Auth::user()->can('view', $event)) {
             return;
         }
+        
+        $meta = $event->meta ?? [];
+        $shelly_device_id = $meta['shelly_device_id'] ?? null;
+        $shelly_action = $meta['action'] ?? null;
+        $duration_minutes = null;
+        if (isset($meta['duration']) && is_numeric($meta['duration'])) {
+            $duration_minutes = (int)($meta['duration'] / 60); // Convert seconds to minutes
+        }
+        
         $this->dispatch('open-event-form', [
             'id' => $event->id,
             'title' => $event->title,
@@ -220,6 +229,11 @@ class CalendarView extends Component
             'device_id' => $event->device_id,
             'color' => $event->color,
             'status' => $event->status,
+            'rrule' => $event->rrule,
+            'shelly_device_id' => $shelly_device_id,
+            'shelly_action' => $shelly_action,
+            'duration_minutes' => $duration_minutes,
+            'last_executed_at' => $event->last_executed_at?->toDateTimeString(),
         ]);
     }
 

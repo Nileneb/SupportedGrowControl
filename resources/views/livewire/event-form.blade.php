@@ -67,7 +67,9 @@
                         <div>Auto-Off: <span class="font-mono">{{ $duration_minutes }} min</span></div>
                     @endif
                     @if($last_executed_at)
-                        <div>Zuletzt ausgeführt: <span class="font-mono">{{ \Carbon\Carbon::parse($last_executed_at)->format('d.m.Y H:i') }}</span></div>
+                        <div>Zuletzt ausgeführt: <span
+                                class="font-mono">{{ \Carbon\Carbon::parse($last_executed_at)->format('d.m.Y H:i') }}</span>
+                        </div>
                     @endif
                 </div>
             @endif

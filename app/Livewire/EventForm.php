@@ -21,7 +21,8 @@ class EventForm extends Component
     public ?int $calendar_id = null;
     public ?int $device_id = null;
     public ?string $color = null;
-    public string $status = 'planned';
+    public string $status = 'scheduled';
+    public ?string $last_executed_at = null;
 
     // Scheduling & command linkage
     public ?string $rrule = null; // e.g., FREQ=DAILY;INTERVAL=2
