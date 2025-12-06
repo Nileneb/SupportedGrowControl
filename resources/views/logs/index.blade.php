@@ -168,7 +168,7 @@
         // Load all logs from ALL devices
         async function loadLogs() {
             try {
-                const response = await fetch('/api/logs/all?limit=1000', {
+                const response = await fetch('/logs/all?limit=1000', {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',

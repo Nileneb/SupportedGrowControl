@@ -121,6 +121,25 @@ class EventForm extends Component
             ],
         ];
 
+        // Shelly Device Commands (if device has linked Shelly)
+        $shellyDevices = \App\Models\ShellyDevice::where('user_id', \Auth::id())->get();
+        foreach ($shellyDevices as $shelly) {
+            $commands[] = [
+                'command_type' => 'shelly_on',
+                'label' => "Shelly ON: {$shelly->name}",
+                'params_template' => [
+                    ['name' => 'shelly_id', 'type' => 'hidden', 'default' => $shelly->id],
+                ],
+            ];
+            $commands[] = [
+                'command_type' => 'shelly_off',
+                'label' => "Shelly OFF: {$shelly->name}",
+                'params_template' => [
+                    ['name' => 'shelly_id', 'type' => 'hidden', 'default' => $shelly->id],
+                ],
+            ];
+        }
+
         $this->availableCommands = $commands;
     }
 

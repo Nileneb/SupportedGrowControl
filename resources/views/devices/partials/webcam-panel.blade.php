@@ -26,12 +26,15 @@
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                 },
                 credentials: 'same-origin'
             });
 
             if (!response.ok) {
-                console.error('Failed to load webcams:', response.statusText);
+                console.warn('Webcams not available:', response.status);
+                webcams = [];
+                renderWebcams();
                 return;
             }
 

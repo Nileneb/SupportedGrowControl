@@ -100,6 +100,8 @@ Route::middleware(['auth'])->group(function () {
     
     // System Logs Viewer (Zentral mit Arduino-Filter)
     Route::get('/logs', [\App\Http\Controllers\LogsController::class, 'index'])->name('logs.index');
+    Route::get('/logs/all', [\App\Http\Controllers\LogsController::class, 'all'])->name('logs.all');
+    Route::delete('/logs/clear', [\App\Http\Controllers\LogsController::class, 'clear'])->name('logs.clear');
 
     // Device Commands API for Calendar
     Route::get('/devices/{device}/commands', [\App\Http\Controllers\DeviceActuatorController::class, 'getCommands'])->name('devices.commands');

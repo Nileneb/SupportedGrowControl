@@ -95,26 +95,66 @@ class RunScheduledEvents extends Command
     {
         // New: Use command_type and command_params directly from Event model
         if ($event->command_type) {
+            // Handle Shelly commands directly instead of queuing to device
+            if (in_array($event->command_type, ['shelly_on', 'shelly_off'])) {
+                $this->executeShellyCommand($event);
+                return null; // Don't create device command
+            }
+            
             return [
                 'type' => $event->command_type,
                 'params' => $event->command_params ?? [],
             ];
         }
 
-        // Legacy: fallback to meta field
+        // Fallback: Old system (kept for backward compat)
         $meta = $event->meta ?? [];
-        $type = $meta['command_type'] ?? null;
-        $params = $meta['params'] ?? [];
-        if (!$type) return null;
-
-        // Legacy actuator mapping to serial_command
-        $serialCommand = $this->buildLegacySerialCommand($type, $params);
-        if (!$serialCommand) return null;
+        if (!isset($meta['command_type'])) {
+            return null;
+        }
 
         return [
-            'type' => 'serial_command',
-            'params' => ['command' => $serialCommand],
+            'type' => $meta['command_type'],
+            'params' => $meta['command_params'] ?? [],
         ];
+    }
+
+    /**
+     * Execute Shelly command (ON/OFF) immediately
+     */
+    private function executeShellyCommand(Event $event): void
+    {
+        $params = $event->command_params ?? [];
+        $shellyId = $params['shelly_id'] ?? null;
+
+        if (!$shellyId) {
+            Log::warning('Shelly command missing shelly_id', ['event_id' => $event->id]);
+            return;
+        }
+
+        $shelly = \App\Models\ShellyDevice::find($shellyId);
+        if (!$shelly) {
+            Log::warning('Shelly device not found', ['shelly_id' => $shellyId, 'event_id' => $event->id]);
+            return;
+        }
+
+        $result = $event->command_type === 'shelly_on' 
+            ? $shelly->turnOn() 
+            : $shelly->turnOff();
+
+        if ($result['success'] ?? false) {
+            Log::info('Shelly command executed', [
+                'event_id' => $event->id,
+                'shelly_id' => $shellyId,
+                'action' => $event->command_type,
+            ]);
+        } else {
+            Log::error('Shelly command failed', [
+                'event_id' => $event->id,
+                'shelly_id' => $shellyId,
+                'error' => $result['error'] ?? 'Unknown error',
+            ]);
+        }
     }
 
     private function buildLegacySerialCommand(string $type, array $params): ?string
