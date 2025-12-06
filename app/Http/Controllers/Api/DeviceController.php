@@ -17,9 +17,11 @@ class DeviceController extends Controller
      * 
      * Expects:
      * - User authenticated via Sanctum token
-     * - bootstrap_id (required)
-     * - name (optional)
-     * - device_info (optional)
+    * - name (optional)
+    * - platform (optional)
+    * - version (optional)
+    * - device_info (optional)
+    * - bootstrap_id (optional, for legacy re-pair)
      */
     public function register(Request $request): JsonResponse
     {
@@ -33,13 +35,17 @@ class DeviceController extends Controller
         }
         
         $validated = $request->validate([
-            'bootstrap_id' => 'required|string|max:255',
+            'bootstrap_id' => 'nullable|string|max:255',
             'name' => 'nullable|string|max:255',
+            'platform' => 'nullable|string|max:255',
+            'version' => 'nullable|string|max:255',
             'device_info' => 'nullable|array',
         ]);
         
         // Prüfen ob Device bereits existiert (für Re-Pairing)
-        $device = Device::where('bootstrap_id', $validated['bootstrap_id'])->first();
+        $device = $validated['bootstrap_id']
+            ? Device::where('bootstrap_id', $validated['bootstrap_id'])->first()
+            : null;
         
         if ($device) {
             // Re-Pairing: neuen Token generieren
@@ -66,20 +72,28 @@ class DeviceController extends Controller
         // Neue Registrierung
         $publicId = (string) Str::uuid();
         $agentTokenPlain = Str::random(64);
-        
+
         // Generate unique slug
         $baseSlug = Str::slug($validated['name'] ?? 'GrowDash Device');
         $slug = $baseSlug . '-' . Str::random(8);
+
+        $deviceInfo = $validated['device_info'] ?? [];
+        if (!empty($validated['platform'])) {
+            $deviceInfo['platform'] = $validated['platform'];
+        }
+        if (!empty($validated['version'])) {
+            $deviceInfo['version'] = $validated['version'];
+        }
         
         try {
             $device = Device::create([
                 'user_id' => $user->id,
                 'public_id' => $publicId,
-                'bootstrap_id' => $validated['bootstrap_id'],
+                'bootstrap_id' => $validated['bootstrap_id'] ?? null,
                 'name' => $validated['name'] ?? 'GrowDash Device',
                 'slug' => $slug,
                 'agent_token' => hash('sha256', $agentTokenPlain),
-                'device_info' => $validated['device_info'] ?? [],
+                'device_info' => $deviceInfo,
                 'status' => 'paired',
                 'paired_at' => now(),
                 'bootstrap_code' => strtoupper(Str::random(6)),

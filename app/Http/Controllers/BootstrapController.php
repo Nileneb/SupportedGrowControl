@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class BootstrapController extends Controller
@@ -14,7 +15,7 @@ class BootstrapController extends Controller
      *
      * POST /api/agents/bootstrap
      *
-     * Request: { "bootstrap_id": "agent-unique-id", "name": "optional-device-name" }
+    * Request: { "name": "optional-device-name", "bootstrap_id": "optional-agent-id", "platform": "linux", "version": "2.0", "device_info": { ... } }
      *
      * Response (unpaired):
      * {
@@ -34,11 +35,22 @@ class BootstrapController extends Controller
     public function bootstrap(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'bootstrap_id' => 'required|string|max:64',
+            'bootstrap_id' => 'nullable|string|max:64',
             'name' => 'nullable|string|max:255',
+            'platform' => 'nullable|string|max:255',
+            'version' => 'nullable|string|max:255',
+            'device_info' => 'nullable|array',
         ]);
 
-        $bootstrapId = $data['bootstrap_id'];
+        // If no bootstrap_id provided, generate one server-side (agent now asks Laravel to create it)
+        $bootstrapId = $data['bootstrap_id'] ?? null;
+        if ($bootstrapId === null) {
+            $bootstrapId = 'growdash-' . Str::random(12);
+            while (Device::where('bootstrap_id', $bootstrapId)->exists()) {
+                $bootstrapId = 'growdash-' . Str::random(12);
+            }
+        }
+
         $device = Device::findByBootstrapId($bootstrapId);
 
         // Device doesn't exist yet - create unclaimed device
@@ -47,6 +59,10 @@ class BootstrapController extends Controller
                 'bootstrap_id' => $bootstrapId,
                 'name' => $data['name'] ?? 'Unclaimed Device',
                 'slug' => 'device-' . Str::random(8),
+                'device_info' => $data['device_info'] ?? [
+                    'platform' => $data['platform'] ?? null,
+                    'version' => $data['version'] ?? null,
+                ],
             ]);
 
             Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@bootstrap (new)', [
@@ -56,6 +72,7 @@ class BootstrapController extends Controller
 
             return response()->json([
                 'status' => 'unpaired',
+                'bootstrap_id' => $device->bootstrap_id,
                 'bootstrap_code' => $device->bootstrap_code,
                 'message' => "Device registered. Please pair via web UI with code: {$device->bootstrap_code}",
             ], 201);
@@ -76,6 +93,7 @@ class BootstrapController extends Controller
 
             return response()->json([
                 'status' => 'paired',
+                'bootstrap_id' => $device->bootstrap_id,
                 'public_id' => $device->public_id,
                 'agent_token' => $plaintextToken, // New plaintext token (never stored!)
                 'device_name' => $device->name,
@@ -91,6 +109,7 @@ class BootstrapController extends Controller
 
         return response()->json([
             'status' => 'unpaired',
+            'bootstrap_id' => $device->bootstrap_id,
             'bootstrap_code' => $device->bootstrap_code,
             'message' => "Device waiting for pairing. Use code: {$device->bootstrap_code}",
         ]);
@@ -99,7 +118,7 @@ class BootstrapController extends Controller
     /**
      * Pairing status polling endpoint for agents.
      *
-     * GET /api/agents/pairing/status?bootstrap_id=xxx&bootstrap_code=xxx
+    * GET /api/agents/pairing/status?bootstrap_id=xxx
      *
      * Agent polls this endpoint to check if user has paired the device.
      *
@@ -121,12 +140,15 @@ class BootstrapController extends Controller
     {
         $data = $request->validate([
             'bootstrap_id' => 'required|string|max:64',
-            'bootstrap_code' => 'required|string|size:6',
+            'bootstrap_code' => 'nullable|string|size:6',
         ]);
 
-        $device = Device::where('bootstrap_id', $data['bootstrap_id'])
-            ->where('bootstrap_code', $data['bootstrap_code'])
-            ->first();
+        $query = Device::where('bootstrap_id', $data['bootstrap_id']);
+        if (!empty($data['bootstrap_code'])) {
+            $query->where('bootstrap_code', $data['bootstrap_code']);
+        }
+
+        $device = $query->first();
 
         if (!$device) {
             Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (not_found)', [
@@ -162,6 +184,7 @@ class BootstrapController extends Controller
 
         return response()->json([
             'status' => 'paired',
+            'bootstrap_id' => $device->bootstrap_id,
             'public_id' => $device->public_id,
             'agent_token' => $plaintextToken,
             'device_name' => $device->name,

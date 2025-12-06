@@ -26,6 +26,7 @@ class ShellyWebhookController extends Controller
      *   "temperature": 45.2,
      *   "overtemperature": false
      * }
+    use Illuminate\Support\Facades\Log;
      */
     public function handle(Request $request, int $shellyId): JsonResponse
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\DevicePairingController;
 use App\Http\Controllers\GrowdashWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\GrowdashPairingController;
 use App\Http\Controllers\Api\DeviceRegistrationController;
 use App\Http\Controllers\Api\ShellyWebhookController;
 use Illuminate\Http\Request;
@@ -43,11 +44,18 @@ Route::post('/agents/bootstrap', [BootstrapController::class, 'bootstrap']);
 // Pairing status polling endpoint (agent checks if user paired)
 Route::get('/agents/pairing/status', [BootstrapController::class, 'status']);
 
+// New GrowDash agent pairing endpoints (public, agent-initiated)
+Route::post('/growdash/agent/pairing/init', [GrowdashPairingController::class, 'init']);
+Route::get('/growdash/agent/pairing/status', [GrowdashPairingController::class, 'status']);
+
 // Device pairing endpoints (require user authentication)
 Route::middleware('auth:web')->prefix('devices')->group(function () {
     Route::post('/pair', [DevicePairingController::class, 'pair']);
     Route::get('/unclaimed', [DevicePairingController::class, 'unclaimed']);
 });
+
+// Growdash frontend pairing (user enters code, Sanctum auth)
+Route::middleware('auth:sanctum')->post('/growdash/devices/pair', [GrowdashPairingController::class, 'pair']);
 
 // ==================== Agent API (Device-Authenticated) ====================
 

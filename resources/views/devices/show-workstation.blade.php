@@ -1,588 +1,307 @@
 <x-layouts.app :title="$device->name">
-    <style>
-        [data-section] {
-            resize: both;
-            overflow: auto;
-            min-width: 300px;
-            min-height: 300px;
-        }
-        
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 1rem;
-            grid-auto-rows: 500px;
-            grid-auto-flow: dense;
-        }
-        
-        .workspace-item {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            border-radius: 0.5rem;
-            border: 1px solid rgb(229, 231, 235);
-            background: white;
-            overflow: hidden;
-        }
-        
-        .workspace-item.dark\:bg-neutral-800 {
-            border-color: rgb(63, 63, 70);
-            background: rgb(24, 24, 27);
-        }
-        
-        .workspace-item.tall { grid-row: span 2; }
-        .workspace-item.wide { grid-column: span 2; }
-        
-        .workspace-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid inherit;
-            background: rgb(249, 250, 251);
-            cursor: grab;
-            user-select: none;
-        }
-        
-        .workspace-header.dark\:bg-neutral-700 {
-            background: rgb(55, 65, 81);
-        }
-        
-        .workspace-header:active {
-            cursor: grabbing;
-        }
-        
-        .workspace-body {
-            flex: 1;
-            overflow: auto;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .workspace-action-btn {
-            width: 24px;
-            height: 24px;
-            padding: 0;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-        }
-        
-        .workspace-action-btn:hover {
-            opacity: 1;
-        }
-        
-        @media (max-width: 1024px) {
-            .workspace-grid {
-                grid-template-columns: 1fr;
-            }
-            .workspace-item.wide {
-                grid-column: span 1;
-            }
-        }
-    </style>
-
-    <div class="flex h-full w-full flex-1 gap-4 p-4">
-        <!-- Sidebar -->
-        <div id="sidebar" class="sidebar-container w-64 flex-shrink-0 space-y-2 transition-all duration-300">
-            <div class="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-4">
-                <!-- Device Header -->
-                <div class="mb-4">
-                    <h2 class="font-semibold text-neutral-900 dark:text-neutral-100">{{ $device->name }}</h2>
-                    <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ $device->bootstrap_id }}</p>
-                </div>
-
-                <!-- Device Status -->
-                <div class="mb-4 flex items-center gap-2">
-                    <span class="px-3 py-1 text-xs font-medium rounded-full
-                        @if($device->status === 'online') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
-                        @else bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400
-                        @endif">
-                        {{ ucfirst($device->status) }}
-                    </span>
-                    @if($device->last_seen_at)
-                        <span class="text-xs text-neutral-500 dark:text-neutral-400">
-                            {{ $device->last_seen_at->diffForHumans() }}
-                        </span>
-                    @endif
-                </div>
-
-                <!-- WebSocket Status -->
-                <div id="ws-status" class="mb-4 text-xs">
-                    <span class="text-yellow-600 dark:text-yellow-400">⏳ Connecting...</span>
-                </div>
-
-                <!-- Workspace Sections -->
-                <div class="mb-4 space-y-2 border-t border-neutral-200 dark:border-neutral-700 pt-4">
-                    <p class="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">Sections</p>
-                    
-                    <div class="space-y-1">
-                        <!-- Terminal -->
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="terminal" class="section-toggle" checked>
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">💻 Terminal</span>
-                        </label>
-
-                        <!-- Sensors -->
-                        @if(!empty($sensors))
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="sensors" class="section-toggle" checked>
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">📊 Sensors ({{ count($sensors) }})</span>
-                        </label>
+            <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Device Overview</p>
+                        <h1 class="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">{{ $device->name }}</h1>
+                        <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-600 dark:text-neutral-300">
+                            <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium
+                                @if($device->status === 'online') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                                @else bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 @endif">
+                                <span class="h-2 w-2 rounded-full @if($device->status === 'online') bg-green-500 @else bg-neutral-400 @endif"></span>
+                                {{ ucfirst($device->status) }}
+                            </span>
+                            @if($device->last_seen_at)
+                                <span>Last seen {{ $device->last_seen_at->diffForHumans() }}</span>
+                            @else
+                                <span>Last seen: never</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 text-xs sm:justify-end">
+                        <span class="rounded-full bg-neutral-100 px-3 py-1 font-mono text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Public ID: {{ $device->public_id }}</span>
+                        @if($device->bootstrap_id)
+                            <span class="rounded-full bg-neutral-100 px-3 py-1 font-mono text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">Bootstrap: {{ $device->bootstrap_id }}</span>
                         @endif
-
-                        <!-- Actuators -->
-                        @if(!empty($actuators))
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="actuators" class="section-toggle" checked>
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">⚙️ Actuators ({{ count($actuators) }})</span>
-                        </label>
-                        @endif
-
-                        <!-- Device Info -->
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="info" class="section-toggle">
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">ℹ️ Device Info</span>
-                        </label>
-
-                        <!-- Logs -->
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="logs" class="section-toggle">
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">📝 Logs</span>
-                        </label>
-
-                        <!-- Shelly Integration -->
-                        <label class="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                            <input type="checkbox" data-section-toggle="shelly" class="section-toggle">
-                            <span class="text-sm text-neutral-700 dark:text-neutral-300">🔌 Shelly</span>
-                        </label>
+                        <form method="POST" action="{{ route('devices.destroy', $device->public_id) }}" onsubmit="return confirm('Device wirklich löschen? Dieser Schritt kann nicht rückgängig gemacht werden.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/40 text-xs">
+                                Delete Device
+                            </button>
+                        </form>
                     </div>
                 </div>
 
-                <!-- Workspace Controls -->
-                <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4 space-y-2">
-                    <p class="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">Workspace</p>
-                    
-                    <button id="reset-layout-btn" class="w-full px-3 py-2 text-sm text-left rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600">
-                        🔄 Reset Layout
-                    </button>
-                    
-                    <button id="export-config-btn" class="w-full px-3 py-2 text-sm text-left rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600">
-                        💾 Export Config
-                    </button>
-                </div>
-
-                <!-- Quick Actions -->
-                @if($device->status === 'online')
-                <div class="border-t border-neutral-200 dark:border-neutral-700 pt-4 space-y-2">
-                    <p class="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">Quick Actions</p>
-                    
-                    <button id="quick-refresh-btn" class="w-full px-3 py-2 text-sm text-left rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50">
-                        🔄 Refresh
-                    </button>
-                    
-                    <button id="quick-reconnect-btn" class="w-full px-3 py-2 text-sm text-left rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50">
-                        ⚡ Reconnect
-                    </button>
-                </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- Main Workspace -->
-        <div class="flex-1 min-w-0 overflow-hidden flex flex-col">
-            <div class="workspace-grid" id="workspace-grid">
-                <!-- Terminal -->
-                <div id="section-terminal" class="workspace-item" data-section="terminal">
-                    <div class="workspace-header dark:bg-neutral-700" id="terminal-header">
-                        <span class="text-sm font-medium">💻 Terminal</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+                        <div class="mb-4 flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-50">Device Information</h2>
                         </div>
+                        <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Device Name</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">{{ $device->name }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Bootstrap ID</dt>
+                                <dd class="mt-1 font-mono text-neutral-800 dark:text-neutral-200">{{ $device->bootstrap_id ?? '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Status</dt>
+                                <dd class="mt-1">
+                                    <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium
+                                        @if($device->status === 'online') bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
+                                        @else bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 @endif">
+                                        <span class="h-2 w-2 rounded-full @if($device->status === 'online') bg-green-500 @else bg-neutral-400 @endif"></span>
+                                        {{ ucfirst($device->status) }}
+                                    </span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Last Seen</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">
+                                    @if($device->last_seen_at)
+                                        {{ $device->last_seen_at->diffForHumans() }}
+                                    @else
+                                        Never
+                                    @endif
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Platform</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">{{ $device->device_info['platform'] ?? '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Version</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">{{ $device->device_info['version'] ?? '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Paired At</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">{{ optional($device->paired_at)?->format('Y-m-d H:i') ?? '—' }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-neutral-500 dark:text-neutral-400">Created</dt>
+                                <dd class="mt-1 text-neutral-900 dark:text-neutral-50">{{ optional($device->created_at)?->format('Y-m-d H:i') ?? '—' }}</dd>
+                            </div>
+                        </dl>
                     </div>
-                    <div class="workspace-body">
-                        @include('devices.sections.terminal', ['device' => $device])
-                    </div>
-                </div>
 
-                <!-- Sensors -->
-                @if(!empty($sensors))
-                <div id="section-sensors" class="workspace-item hidden" data-section="sensors">
-                    <div class="workspace-header dark:bg-neutral-700" id="sensors-header">
-                        <span class="text-sm font-medium">📊 Sensors ({{ count($sensors) }})</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                    <div class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h2 class="text-lg font-semibold text-neutral-900 dark:text-neutral-50">Serial Console</h2>
+                                <p class="text-sm text-neutral-500 dark:text-neutral-400">Sende Befehle und sieh dir die unmittelbaren Antworten an.</p>
+                            </div>
+                            <span id="serial-ws-status" class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">Connecting...</span>
                         </div>
-                    </div>
-                    <div class="workspace-body">
-                        @include('devices.sections.sensors', ['device' => $device, 'sensors' => $sensors, 'sensorReadings' => $sensorReadings])
-                    </div>
-                </div>
-                @endif
 
-                <!-- Actuators -->
-                @if(!empty($actuators))
-                <div id="section-actuators" class="workspace-item hidden" data-section="actuators">
-                    <div class="workspace-header dark:bg-neutral-700" id="actuators-header">
-                        <span class="text-sm font-medium">⚙️ Actuators ({{ count($actuators) }})</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="workspace-body">
-                        @include('devices.sections.actuators', ['device' => $device, 'actuators' => $actuators])
-                    </div>
-                </div>
-                @endif
+                        <div class="mt-4 space-y-4">
+                            <div id="serial-console" class="h-80 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-950 p-4 font-mono text-xs text-green-300 shadow-inner dark:border-neutral-700">
+                                <div class="text-neutral-500">Waiting for device output...</div>
+                            </div>
 
-                <!-- Device Info -->
-                <div id="section-info" class="workspace-item hidden" data-section="info">
-                    <div class="workspace-header dark:bg-neutral-700" id="info-header">
-                        <span class="text-sm font-medium">ℹ️ Device Info</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="workspace-body">
-                        @include('devices.sections.info', ['device' => $device])
-                    </div>
-                </div>
+                            <form id="serial-command-form" class="space-y-2">
+                                <label class="block text-sm font-medium text-neutral-700 dark:text-neutral-200">Command</label>
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                    <input
+                                        id="serial-command-input"
+                                        type="text"
+                                        autocomplete="off"
+                                        placeholder="Status, TDS, Spray 1000, FillL 2.0 ..."
+                                        class="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100" />
+                                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60">
+                                        Send
+                                    </button>
+                                </div>
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400">Tipps: Status, TDS, Spray &lt;ms&gt;, FillL &lt;liters&gt;, SprayOn, SprayOff</p>
+                            </form>
 
-                <!-- Logs -->
-                <div id="section-logs" class="workspace-item hidden" data-section="logs">
-                    <div class="workspace-header dark:bg-neutral-700" id="logs-header">
-                        <span class="text-sm font-medium">📝 Logs</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                            <div>
+                                <div class="mb-2 flex items-center justify-between">
+                                    <h3 class="text-sm font-semibold text-neutral-800 dark:text-neutral-100">Command History</h3>
+                                    <button id="clear-history" type="button" class="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200">Clear</button>
+                                </div>
+                                <div id="command-history" class="space-y-1 max-h-32 overflow-y-auto text-xs"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="workspace-body">
-                        <div id="device-logs-container">
-                            <div class="text-sm text-neutral-500 dark:text-neutral-400">Loading logs...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Shelly Integration -->
-                <div id="section-shelly" class="workspace-item hidden" data-section="shelly">
-                    <div class="workspace-header dark:bg-neutral-700" id="shelly-header">
-                        <span class="text-sm font-medium">🔌 Shelly Integration</span>
-                        <div class="flex gap-1">
-                            <button class="workspace-action-btn section-minimize-btn" title="Minimize">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <button class="workspace-action-btn section-close-btn" title="Close">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="workspace-body">
-                        @include('devices.sections.shelly', ['device' => $device])
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <script>
-        const DEVICE_ID = {{ $device->id }};
-        const DEVICE_PUBLIC_ID = '{{ $device->public_id }}';
-        const STORAGE_KEY = `workspace-${DEVICE_ID}`;
-        const MINIMIZE_KEY = `minimize-${DEVICE_ID}`;
+            <script>
+                const deviceId = {{ $device->id }};
+                const devicePublicId = '{{ $device->public_id }}';
+                window.deviceId = deviceId;
+                window.devicePublicId = devicePublicId;
 
-        // ==================== Workspace State Management ====================
-        class WorkspaceManager {
-            constructor() {
-                this.state = this.loadState();
-                this.minimizedSections = this.loadMinimized();
-            }
+                const wsStatusEl = document.getElementById('serial-ws-status');
+                const serialConsole = document.getElementById('serial-console');
+                const commandInput = document.getElementById('serial-command-input');
+                const commandForm = document.getElementById('serial-command-form');
+                const historyContainer = document.getElementById('command-history');
+                const clearHistoryBtn = document.getElementById('clear-history');
 
-            loadState() {
-                const saved = localStorage.getItem(STORAGE_KEY);
-                return saved ? JSON.parse(saved) : this.getDefaultState();
-            }
+                let serialLogCount = 0;
+                const MAX_SERIAL_LOGS = 500;
+                let commandHistory = [];
+                const MAX_HISTORY = 30;
 
-            getDefaultState() {
-                return {
-                    visibleSections: ['terminal', 'sensors', 'actuators'],
-                    sectionOrder: [],
-                    gridLayout: {},
-                    lastUpdated: new Date().toISOString()
-                };
-            }
-
-            loadMinimized() {
-                const saved = localStorage.getItem(MINIMIZE_KEY);
-                return saved ? JSON.parse(saved) : [];
-            }
-
-            saveState() {
-                this.state.lastUpdated = new Date().toISOString();
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-            }
-
-            saveMinimized() {
-                localStorage.setItem(MINIMIZE_KEY, JSON.stringify(this.minimizedSections));
-            }
-
-            toggleSection(sectionName, isVisible) {
-                if (isVisible && !this.state.visibleSections.includes(sectionName)) {
-                    this.state.visibleSections.push(sectionName);
-                } else if (!isVisible && this.state.visibleSections.includes(sectionName)) {
-                    this.state.visibleSections = this.state.visibleSections.filter(s => s !== sectionName);
+                function setWsStatus(label, tone) {
+                    const tones = {
+                        success: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+                        warn: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                        muted: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200'
+                    };
+                    wsStatusEl.className = `rounded-full px-3 py-1 text-xs font-semibold ${tones[tone] || tones.muted}`;
+                    wsStatusEl.textContent = label;
                 }
-                this.saveState();
-            }
 
-            toggleMinimize(sectionName) {
-                const idx = this.minimizedSections.indexOf(sectionName);
-                if (idx > -1) {
-                    this.minimizedSections.splice(idx, 1);
-                } else {
-                    this.minimizedSections.push(sectionName);
-                }
-                this.saveMinimized();
-            }
+                function addSerialLog(message, source = 'device') {
+                    if (!serialConsole) return;
+                    const ts = new Date().toLocaleTimeString();
+                    const prefix = source === 'user' ? '→' : '←';
+                    const color = source === 'user' ? 'text-blue-300' : 'text-green-300';
 
-            reset() {
-                localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem(MINIMIZE_KEY);
-                this.state = this.getDefaultState();
-                this.minimizedSections = [];
-                window.location.reload();
-            }
-
-            export() {
-                return JSON.stringify({
-                    workspace: this.state,
-                    minimized: this.minimizedSections,
-                    exportedAt: new Date().toISOString()
-                }, null, 2);
-            }
-        }
-
-        const workspace = new WorkspaceManager();
-
-        // ==================== Section Toggle Handlers ====================
-        document.querySelectorAll('.section-toggle').forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const section = e.target.dataset.sectionToggle;
-                const element = document.getElementById(`section-${section}`);
-                
-                if (e.target.checked) {
-                    element.classList.remove('hidden');
-                    workspace.toggleSection(section, true);
-                } else {
-                    element.classList.add('hidden');
-                    workspace.toggleSection(section, false);
-                }
-            });
-        });
-
-        // ==================== Close/Minimize Buttons ====================
-        document.querySelectorAll('.section-close-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const item = e.target.closest('.workspace-item');
-                const section = item.dataset.section;
-                const toggle = document.querySelector(`[data-section-toggle="${section}"]`);
-                
-                item.classList.add('hidden');
-                toggle.checked = false;
-                workspace.toggleSection(section, false);
-            });
-        });
-
-        document.querySelectorAll('.section-minimize-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const item = e.target.closest('.workspace-item');
-                const section = item.dataset.section;
-                const body = item.querySelector('.workspace-body');
-                
-                workspace.toggleMinimize(section);
-                item.classList.toggle('h-12');
-                body.classList.toggle('hidden');
-            });
-        });
-
-        // ==================== Workspace Controls ====================
-        document.getElementById('reset-layout-btn').addEventListener('click', () => {
-            if (confirm('Reset workspace to default layout? Current configuration will be lost.')) {
-                workspace.reset();
-            }
-        });
-
-        document.getElementById('export-config-btn').addEventListener('click', () => {
-            const config = workspace.export();
-            const blob = new Blob([config], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `device-${DEVICE_ID}-workspace-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        // ==================== Quick Actions ====================
-        document.getElementById('quick-refresh-btn')?.addEventListener('click', () => {
-            console.log('Refreshing device data...');
-            // Reload terminal output and sensor readings
-            window.dispatchEvent(new CustomEvent('device-refresh'));
-        });
-
-        document.getElementById('quick-reconnect-btn')?.addEventListener('click', () => {
-            console.log('Reconnecting to device...');
-            if (window.Echo) {
-                window.Echo.leave(`device.${DEVICE_ID}`);
-                setTimeout(() => {
-                    window.Echo.private(`device.${DEVICE_ID}`).listen('DeviceTelemetryReceived', (event) => {
-                        window.dispatchEvent(new CustomEvent('device-telemetry', { detail: event }));
-                    });
-                }, 500);
-            }
-        });
-
-        // ==================== WebSocket & Event Listeners ====================
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize WebSocket
-            let wsConnected = false;
-            const wsStatusEl = document.getElementById('ws-status');
-
-            if (window.Echo) {
-                try {
-                    window.Echo.private(`device.${DEVICE_ID}`)
-                        .listen('DeviceTelemetryReceived', (event) => {
-                            window.dispatchEvent(new CustomEvent('device-telemetry', { detail: event }));
-                        })
-                        .listen('CommandStatusUpdated', (event) => {
-                            window.dispatchEvent(new CustomEvent('command-status', { detail: event }));
-                        })
-                        .listen('DeviceCapabilitiesUpdated', (event) => {
-                            window.dispatchEvent(new CustomEvent('device-capabilities', { detail: event }));
-                        });
-
-                    if (window.Echo.connector?.pusher?.connection) {
-                        window.Echo.connector.pusher.connection.bind('connected', () => {
-                            wsConnected = true;
-                            wsStatusEl.innerHTML = '<span class="text-green-600 dark:text-green-400">✓ Connected</span>';
-                            window.dispatchEvent(new CustomEvent('ws-connected'));
-                        });
-
-                        window.Echo.connector.pusher.connection.bind('disconnected', () => {
-                            wsConnected = false;
-                            wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Disconnected</span>';
-                            window.dispatchEvent(new CustomEvent('ws-disconnected'));
-                        });
-
-                        window.Echo.connector.pusher.connection.bind('error', (error) => {
-                            wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Error</span>';
-                            window.dispatchEvent(new CustomEvent('ws-error', { detail: error }));
-                        });
+                    if (serialLogCount === 0) {
+                        serialConsole.innerHTML = '';
                     }
-                } catch (error) {
-                    console.error('WebSocket initialization error:', error);
-                    wsStatusEl.innerHTML = '<span class="text-red-600 dark:text-red-400">✗ Failed</span>';
+
+                    const row = document.createElement('div');
+                    row.className = `${color} mb-1`;
+                    row.innerHTML = `<span class="text-neutral-500">[${ts}]</span> ${prefix} ${escapeHtml(message)}`;
+                    serialConsole.appendChild(row);
+                    serialLogCount++;
+
+                    if (serialLogCount > MAX_SERIAL_LOGS) {
+                        serialConsole.removeChild(serialConsole.firstChild);
+                        serialLogCount--;
+                    }
+
+                    serialConsole.scrollTop = serialConsole.scrollHeight;
                 }
-            }
 
-            // Restore minimized sections
-            workspace.minimizedSections.forEach(section => {
-                const item = document.getElementById(`section-${section}`);
-                if (item) {
-                    const body = item.querySelector('.workspace-body');
-                    item.classList.add('h-12');
-                    body.classList.add('hidden');
+                function renderCommandHistory() {
+                    if (!historyContainer) return;
+                    if (commandHistory.length === 0) {
+                        historyContainer.innerHTML = '<div class="text-neutral-500 dark:text-neutral-400">No commands yet</div>';
+                        return;
+                    }
+
+                    const tone = {
+                        pending: 'text-amber-600 dark:text-amber-300',
+                        executing: 'text-blue-600 dark:text-blue-300',
+                        success: 'text-green-600 dark:text-green-300',
+                        failed: 'text-red-600 dark:text-red-300'
+                    };
+
+                    historyContainer.innerHTML = commandHistory.map(cmd => {
+                        const statusTone = tone[cmd.status] || tone.pending;
+                        return `<div class="flex items-center justify-between rounded border border-neutral-200 bg-neutral-50 px-2 py-1 dark:border-neutral-700 dark:bg-neutral-800">
+                            <div class="flex items-center gap-2">
+                                <span class="${statusTone}">${cmd.status}</span>
+                                <span class="font-mono text-neutral-900 dark:text-neutral-100">${escapeHtml(cmd.command)}</span>
+                            </div>
+                            <span class="text-neutral-500 dark:text-neutral-400">${cmd.timestamp.toLocaleTimeString()}</span>
+                        </div>`;
+                    }).join('');
                 }
-            });
 
-            // Load logs on demand
-            const logsSection = document.getElementById('section-logs');
-            if (logsSection && !logsSection.classList.contains('hidden')) {
-                loadDeviceLogs();
-            }
-
-            logsSection?.addEventListener('click', () => {
-                if (!logsSection.classList.contains('hidden') && !logsSection.querySelector('.log-entry')) {
-                    loadDeviceLogs();
+                function updateCommandHistory(event) {
+                    const cmd = commandHistory.find(c => c.id === event.command_id);
+                    if (cmd) {
+                        cmd.status = event.status || cmd.status;
+                        cmd.result = event.result_message;
+                        renderCommandHistory();
+                        if (event.result_message) {
+                            addSerialLog(event.result_message, 'device');
+                        }
+                    }
                 }
-            });
-        });
 
-        async function loadDeviceLogs() {
-            const container = document.getElementById('device-logs-container');
-            if (!container) return;
-
-            try {
-                const response = await fetch(`/api/devices/${DEVICE_ID}/logs?limit=50`);
-                const data = await response.json();
-
-                if (data.logs && data.logs.length > 0) {
-                    container.innerHTML = data.logs.map(log => `
-                        <div class="log-entry mb-2 pb-2 border-b border-neutral-200 dark:border-neutral-700">
-                            <div class="text-xs text-neutral-500 dark:text-neutral-400">${new Date(log.created_at).toLocaleString()}</div>
-                            <div class="text-sm text-neutral-900 dark:text-neutral-100">${log.message}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<div class="text-sm text-neutral-500 dark:text-neutral-400">No logs available</div>';
+                function escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
                 }
-            } catch (error) {
-                container.innerHTML = `<div class="text-sm text-red-600 dark:text-red-400">Failed to load logs: ${error.message}</div>`;
-            }
-        }
-    </script>
+
+                commandForm?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const command = commandInput.value.trim();
+                    if (!command) return;
+
+                    try {
+                        const response = await fetch(`/api/growdash/devices/${devicePublicId}/commands`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                type: 'serial_command',
+                                params: { command }
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const error = await response.json().catch(() => ({}));
+                            addSerialLog(`Error: ${error.message || 'Failed to send command'}`, 'user');
+                            return;
+                        }
+
+                        const data = await response.json();
+                        addSerialLog(command, 'user');
+                        commandInput.value = '';
+
+                        commandHistory.unshift({
+                            id: data.command_id,
+                            command,
+                            status: 'pending',
+                            timestamp: new Date()
+                        });
+                        if (commandHistory.length > MAX_HISTORY) {
+                            commandHistory.pop();
+                        }
+                        renderCommandHistory();
+                    } catch (error) {
+                        addSerialLog(`Error: ${error.message}`, 'user');
+                    }
+                });
+
+                clearHistoryBtn?.addEventListener('click', () => {
+                    commandHistory = [];
+                    renderCommandHistory();
+                });
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    renderCommandHistory();
+                    if (!window.Echo) {
+                        setWsStatus('No WebSocket', 'error');
+                        return;
+                    }
+
+                    try {
+                        const channel = window.Echo.private(`device.${deviceId}`)
+                            .listen('DeviceTelemetryReceived', (event) => {
+                                if (event.telemetry && event.telemetry.serial_output) {
+                                    addSerialLog(event.telemetry.serial_output, 'device');
+                                }
+                            })
+                            .listen('CommandStatusUpdated', (event) => updateCommandHistory(event));
+
+                        const connection = window.Echo.connector?.pusher?.connection;
+                        if (connection) {
+                            connection.bind('connected', () => setWsStatus('Connected', 'success'));
+                            connection.bind('disconnected', () => setWsStatus('Disconnected', 'muted'));
+                            connection.bind('error', () => setWsStatus('Error', 'error'));
+                        } else {
+                            setWsStatus('Connected', 'success');
+                        }
+                    } catch (err) {
+                        console.error('WebSocket init failed', err);
+                        setWsStatus('Failed', 'error');
+                    }
+                });
+            </script>
 </x-layouts.app>

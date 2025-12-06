@@ -5,11 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class DeviceViewController extends Controller
 {
     public function show(Request $request, string $deviceId)
     {
+        // Return 404 for invalid UUIDs to avoid DB errors when static assets hit this route
+        if (!Str::isUuid($deviceId)) {
+            abort(404);
+        }
+
         // Optimize: Only select needed columns, don't load relationships
         $device = Device::select([
             'id', 'public_id', 'name', 'status', 'user_id', 'bootstrap_id',
@@ -43,6 +49,10 @@ class DeviceViewController extends Controller
 
     public function destroy(Request $request, string $deviceId)
     {
+        if (!Str::isUuid($deviceId)) {
+            abort(404);
+        }
+
         $device = Device::where('public_id', $deviceId)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
