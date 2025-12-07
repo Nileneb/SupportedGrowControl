@@ -29,7 +29,7 @@ class WebcamController extends Controller
     public function registerFromAgent(Request $request)
     {
         // Device-Auth bereits durch device.auth Middleware validiert
-        $device = $request->device; // Injected durch Middleware
+        $device = $request->attributes->get('device'); // Aus Middleware Attributes lesen
         
         $validated = $request->validate([
             'webcams' => 'required|array',

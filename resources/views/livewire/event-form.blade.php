@@ -36,32 +36,37 @@
                 <div class="bg-gray-50 rounded p-3 space-y-2">
                     <div class="text-xs font-semibold text-gray-700">Command Parameters</div>
                     @foreach($paramTemplate as $param)
-                        <div>
-                            <label class="text-xs">{{ $param['label'] ?? ucfirst($param['name']) }}</label>
-                            @if($param['type'] === 'select')
-                                <select wire:model="command_params.{{ $param['name'] }}" class="w-full border rounded px-2 py-1">
-                                    @foreach($param['options'] ?? [] as $opt)
-                                        <option value="{{ $opt }}">{{ ucfirst($opt) }}</option>
-                                    @endforeach
-                                </select>
-                            @elseif($param['type'] === 'number')
-                                <input 
-                                    type="number" 
-                                    wire:model="command_params.{{ $param['name'] }}" 
-                                    class="w-full border rounded px-2 py-1"
-                                    @if(isset($param['min'])) min="{{ $param['min'] }}" @endif
-                                    @if(isset($param['max'])) max="{{ $param['max'] }}" @endif
-                                    @if($param['required'] ?? false) required @endif
-                                />
-                            @else
-                                <input 
-                                    type="text" 
-                                    wire:model="command_params.{{ $param['name'] }}" 
-                                    class="w-full border rounded px-2 py-1"
-                                    @if($param['required'] ?? false) required @endif
-                                />
-                            @endif
-                        </div>
+                        @if($param['type'] === 'hidden')
+                            {{-- Hidden fields: set but don't display --}}
+                            <input type="hidden" wire:model="command_params.{{ $param['name'] }}" value="{{ $param['default'] ?? '' }}" />
+                        @else
+                            <div>
+                                <label class="text-xs">{{ $param['label'] ?? ucfirst($param['name']) }}</label>
+                                @if($param['type'] === 'select')
+                                    <select wire:model="command_params.{{ $param['name'] }}" class="w-full border rounded px-2 py-1">
+                                        @foreach($param['options'] ?? [] as $opt)
+                                            <option value="{{ $opt }}">{{ ucfirst($opt) }}</option>
+                                        @endforeach
+                                    </select>
+                                @elseif($param['type'] === 'number')
+                                    <input 
+                                        type="number" 
+                                        wire:model="command_params.{{ $param['name'] }}" 
+                                        class="w-full border rounded px-2 py-1"
+                                        @if(isset($param['min'])) min="{{ $param['min'] }}" @endif
+                                        @if(isset($param['max'])) max="{{ $param['max'] }}" @endif
+                                        @if($param['required'] ?? false) required @endif
+                                    />
+                                @else
+                                    <input 
+                                        type="text" 
+                                        wire:model="command_params.{{ $param['name'] }}" 
+                                        class="w-full border rounded px-2 py-1"
+                                        @if($param['required'] ?? false) required @endif
+                                    />
+                                @endif
+                            </div>
+                        @endif
                     @endforeach
                 </div>
             @endif
