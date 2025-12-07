@@ -65,13 +65,22 @@ class LogController extends Controller
 
             $inserted[] = $deviceLog->id;
             
-            // Broadcast log to WebSocket (Real-time Serial Console)
-            broadcast(new DeviceLogReceived(
-                $device,
-                $log['level'],
-                $log['message'],
-                $log['timestamp'] ?? null
-            ))->toOthers();
+            // Broadcast log to WebSocket (Real-time Serial Console) - async via queue
+            try {
+                dispatch(function () use ($device, $log) {
+                    broadcast(new DeviceLogReceived(
+                        $device,
+                        $log['level'],
+                        $log['message'],
+                        $log['timestamp'] ?? null
+                    ))->toOthers();
+                });
+            } catch (\Throwable $e) {
+                Log::warning('Failed to queue log broadcast', [
+                    'device_id' => $device->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
 
         // TODO: Broadcast WebSocket event for critical errors (level=error)
