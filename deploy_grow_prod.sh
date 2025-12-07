@@ -15,8 +15,14 @@ docker compose -f "$COMPOSE_FILE" up -d
 echo ">>> Run Laravel setup tasks inside php-cli container..."
 # Ensure php-cli image is built
 docker compose -f "$COMPOSE_FILE" build php-cli
-# APP_KEY generieren (falls leer)
-docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan key:generate --force
+
+# APP_KEY generieren nur falls noch nicht gesetzt
+if ! grep -q "^APP_KEY=base64:" .env; then
+    echo "Generating new APP_KEY..."
+    docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan key:generate --force
+else
+    echo "APP_KEY already exists, skipping generation"
+fi
 
 # Datenbank-Migrationen zuerst (stellt Schema bereit)
 docker compose -f "$COMPOSE_FILE" run --rm php-cli php artisan migrate --force
