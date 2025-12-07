@@ -139,6 +139,24 @@ services:
       - grow-laravel-storage-production:/var/www/storage
       - ./.env:/var/www/.env
 
+  queue:
+    build:
+      context: .
+      dockerfile: ./docker/common/Dockerfile
+      target: php-fpm
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
+    env_file:
+      - .env
+    networks:
+      - grow-laravel-production
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - grow-laravel-storage-production:/var/www/storage
+      - ./.env:/var/www/.env
+
 networks:
   grow-laravel-production:
     driver: bridge

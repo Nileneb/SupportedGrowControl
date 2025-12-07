@@ -48,6 +48,7 @@ class GrowdashWebhookController extends Controller
             'level' => $data['level'] ?? 'info',
             'message' => $data['message'],
             'context' => null,
+            'agent_timestamp' => $data['timestamp'] ?? null,
         ]);
 
         // Parse the message for structured data

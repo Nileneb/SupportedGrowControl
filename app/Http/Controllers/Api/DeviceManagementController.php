@@ -114,26 +114,30 @@ class DeviceManagementController extends Controller
                     'agent_timestamp' => $log['timestamp'] ?? null,
                 ]);
                 
-                // Broadcast log to WebSocket (Real-time Serial Console); do not fail heartbeat if broadcast backend is down
-                try {
-                    broadcast(new DeviceEventBroadcast(
-                        $device,
-                        'log.received',
-                        [
-                            'level' => $log['level'],
-                            'message' => $log['message'],
-                            'agent_timestamp' => $log['timestamp'] ?? null,
-                        ]
-                    ));
-                } catch (\Throwable $e) {
-                    Log::warning('Broadcast failed for device log', [
-                        'device_id' => $device->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-                
                 $logsProcessed++;
             }
+            
+            // Broadcast ALL logs async in one queue job (don't block heartbeat response)
+            dispatch(function () use ($device, $logs) {
+                foreach ($logs as $log) {
+                    try {
+                        broadcast(new DeviceEventBroadcast(
+                            $device,
+                            'log.received',
+                            [
+                                'level' => $log['level'],
+                                'message' => $log['message'],
+                                'agent_timestamp' => $log['timestamp'] ?? null,
+                            ]
+                        ));
+                    } catch (\Throwable $e) {
+                        Log::warning('Broadcast failed for device log', [
+                            'device_id' => $device->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            });
         }
 
         Log::info('🎯 ENDPOINT_TRACKED: DeviceManagementController@heartbeat', [
