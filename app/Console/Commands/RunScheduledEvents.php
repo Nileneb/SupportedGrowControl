@@ -93,14 +93,18 @@ class RunScheduledEvents extends Command
 
     private function buildCommandFromEvent(Event $event): ?array
     {
-        // New: Use command_type and command_params directly from Event model
-        if ($event->command_type) {
-            // Handle Shelly commands directly instead of queuing to device
-            if (in_array($event->command_type, ['shelly_on', 'shelly_off'])) {
-                $this->executeShellyCommand($event);
+        // Check if this event targets a Shelly device
+        if ($event->device_id) {
+            $device = \App\Models\Device::find($event->device_id);
+            if ($device && $device->device_type === 'shelly') {
+                // Execute Shelly command directly
+                $this->executeShellyCommandForDevice($event, $device);
                 return null; // Don't create device command
             }
-            
+        }
+
+        // Regular device commands
+        if ($event->command_type) {
             return [
                 'type' => $event->command_type,
                 'params' => $event->command_params ?? [],
@@ -120,38 +124,47 @@ class RunScheduledEvents extends Command
     }
 
     /**
-     * Execute Shelly command (ON/OFF) immediately
+     * Execute Shelly command for a device-linked Shelly
      */
-    private function executeShellyCommand(Event $event): void
+    private function executeShellyCommandForDevice(Event $event, \App\Models\Device $device): void
     {
-        $params = $event->command_params ?? [];
-        $shellyId = $params['shelly_id'] ?? null;
-
-        if (!$shellyId) {
-            Log::warning('Shelly command missing shelly_id', ['event_id' => $event->id]);
-            return;
-        }
-
-        $shelly = \App\Models\ShellyDevice::find($shellyId);
+        // Find linked ShellyDevice
+        $shelly = \App\Models\ShellyDevice::where('device_id', $device->id)->first();
+        
         if (!$shelly) {
-            Log::warning('Shelly device not found', ['shelly_id' => $shellyId, 'event_id' => $event->id]);
+            Log::warning('Shelly device link not found', [
+                'event_id' => $event->id,
+                'device_id' => $device->id,
+            ]);
             return;
         }
 
-        $result = $event->command_type === 'shelly_on' 
-            ? $shelly->turnOn() 
-            : $shelly->turnOff();
+        // Determine action from command_type
+        $action = $event->command_type;
+        
+        if ($action === 'turn_on' || $action === 'relay_on') {
+            $result = $shelly->turnOn();
+        } elseif ($action === 'turn_off' || $action === 'relay_off') {
+            $result = $shelly->turnOff();
+        } else {
+            Log::warning('Unknown Shelly command type', [
+                'event_id' => $event->id,
+                'command_type' => $action,
+            ]);
+            return;
+        }
 
         if ($result['success'] ?? false) {
-            Log::info('Shelly command executed', [
+            Log::info('Shelly command executed via device', [
                 'event_id' => $event->id,
-                'shelly_id' => $shellyId,
-                'action' => $event->command_type,
+                'device_id' => $device->id,
+                'shelly_id' => $shelly->id,
+                'action' => $action,
             ]);
         } else {
-            Log::error('Shelly command failed', [
+            Log::error('Shelly command failed via device', [
                 'event_id' => $event->id,
-                'shelly_id' => $shellyId,
+                'device_id' => $device->id,
                 'error' => $result['error'] ?? 'Unknown error',
             ]);
         }

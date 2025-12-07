@@ -97,11 +97,28 @@ class EventForm extends Component
             return;
         }
 
-        // Fetch from DeviceActuatorController logic
+        $commands = [];
+
+        // Check if this is a Shelly device
+        if ($device->device_type === 'shelly') {
+            $commands[] = [
+                'command_type' => 'turn_on',
+                'label' => 'Turn ON',
+                'params_template' => [],
+            ];
+            $commands[] = [
+                'command_type' => 'turn_off',
+                'label' => 'Turn OFF',
+                'params_template' => [],
+            ];
+            
+            $this->availableCommands = $commands;
+            return;
+        }
+
+        // Fetch from DeviceActuatorController logic for regular devices
         $capabilities = $device->capabilities ?? [];
         $actuators = $capabilities['actuators'] ?? [];
-
-        $commands = [];
 
         foreach ($actuators as $actuator) {
             $commands[] = [
@@ -112,7 +129,7 @@ class EventForm extends Component
             ];
         }
 
-        // Generic commands
+        // Generic commands for regular devices
         $commands[] = [
             'command_type' => 'serial_command',
             'label' => 'Custom Serial Command',
@@ -120,25 +137,6 @@ class EventForm extends Component
                 ['name' => 'command', 'type' => 'text', 'required' => true, 'label' => 'Command Text'],
             ],
         ];
-
-        // Shelly Device Commands (if device has linked Shelly)
-        $shellyDevices = \App\Models\ShellyDevice::where('user_id', \Auth::id())->get();
-        foreach ($shellyDevices as $shelly) {
-            $commands[] = [
-                'command_type' => 'shelly_on',
-                'label' => "Shelly ON: {$shelly->name}",
-                'params_template' => [
-                    ['name' => 'shelly_id', 'type' => 'hidden', 'default' => $shelly->id],
-                ],
-            ];
-            $commands[] = [
-                'command_type' => 'shelly_off',
-                'label' => "Shelly OFF: {$shelly->name}",
-                'params_template' => [
-                    ['name' => 'shelly_id', 'type' => 'hidden', 'default' => $shelly->id],
-                ],
-            ];
-        }
 
         $this->availableCommands = $commands;
     }
