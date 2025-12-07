@@ -63,6 +63,23 @@ class RunScheduledEvents extends Command
                     continue;
                 }
 
+                // Check if this is a Shelly device - execute directly
+                if ($event->device_id) {
+                    $device = \App\Models\Device::find($event->device_id);
+                    if ($device && $device->device_type === 'shelly') {
+                        $this->executeShellyCommandForDevice($event, $device);
+                        
+                        // Mark event as executed for this occurrence
+                        $event->last_executed_at = $occCarbon;
+                        $event->save();
+                        
+                        $countTriggered++;
+                        $this->line("✓ Shelly Event #{$event->id} executed at {$occCarbon->toDateTimeString()}");
+                        continue;
+                    }
+                }
+
+                // Regular device commands
                 $commandPayload = $this->buildCommandFromEvent($event);
                 if (!$commandPayload) {
                     Log::warning('Event missing command; skipping', ['event_id' => $event->id]);
@@ -93,16 +110,6 @@ class RunScheduledEvents extends Command
 
     private function buildCommandFromEvent(Event $event): ?array
     {
-        // Check if this event targets a Shelly device
-        if ($event->device_id) {
-            $device = \App\Models\Device::find($event->device_id);
-            if ($device && $device->device_type === 'shelly') {
-                // Execute Shelly command directly
-                $this->executeShellyCommandForDevice($event, $device);
-                return null; // Don't create device command
-            }
-        }
-
         // Regular device commands
         if ($event->command_type) {
             return [
