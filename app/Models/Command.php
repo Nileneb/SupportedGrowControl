@@ -19,6 +19,8 @@ class Command extends Model
         'params',
         'result_message',
         'result_data',
+        'output',
+        'error',
         'status',
         'completed_at',
     ];

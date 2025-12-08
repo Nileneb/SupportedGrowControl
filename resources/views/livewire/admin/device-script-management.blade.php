@@ -266,6 +266,16 @@
             };
         }
 
+        // Safe JSON parsing helper to avoid uncaught SyntaxErrors on HTML error responses
+        async function parseJsonResponse(response) {
+            const text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return { errorText: text };
+            }
+        }
+
         // ==================== COMPILE SCRIPT ====================
         window.compileScript = async function(event, scriptId) {
             console.log('🔵 compileScript aufgerufen:', scriptId);
@@ -273,7 +283,8 @@
 
             try {
                 const response = await fetch('/api/arduino/devices', {
-                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                    headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content},
+                    credentials: 'same-origin',
                 });
                 const data = await response.json();
                 window.scriptManagerState.availableDevices = data.devices || [];
@@ -313,7 +324,8 @@
                 const select = document.getElementById('uploadDeviceSelect');
                 select.innerHTML = window.scriptManagerState.availableDevices.map(d => {
                     const boardInfo = d.last_state?.board_type ? ` [${d.last_state.board_type}]` : '';
-                    const portInfo = d.last_state?.port ? ` 🔌 ${d.last_state.port}` : '';
+                    const portValue = d.last_state?.port || d.serial_port || d.device_info?.port;
+                    const portInfo = portValue ? ` 🔌 ${portValue}` : '';
                     return `<option value="${d.id}">${d.name}${boardInfo}${portInfo}</option>`;
                 }).join('');
 
@@ -338,15 +350,16 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify({device_id: deviceId, board})
                 });
-                const data = await response.json();
-                if (data.success) {
+                const data = await parseJsonResponse(response);
+                if (response.ok && data.success) {
                     alert('✅ Befehl gesendet: ' + data.device);
                     window.closeCompileModal();
                     if (data.command_id) window.pollCommandStatus(data.command_id);
                 } else {
-                    alert('❌ ' + (data.error || 'Fehler'));
+                    alert('❌ ' + (data.error || data.message || data.errorText || 'Fehler'));
                 }
             } catch (error) {
                 alert('❌ Netzwerk: ' + error.message);
@@ -357,8 +370,14 @@
         window.submitUpload = async function() {
             const deviceId = document.getElementById('uploadDeviceSelect').value;
             const board = document.getElementById('uploadBoardSelect').value;
+            const selectedDevice = window.scriptManagerState.availableDevices.find(d => String(d.id) === String(deviceId));
+            const port = selectedDevice?.last_state?.port || selectedDevice?.serial_port || selectedDevice?.device_info?.port;
             if (!deviceId || !board) {
                 alert('❌ Alle Felder ausfüllen!');
+                return;
+            }
+            if (!port) {
+                alert('❌ Kein Port für dieses Device gefunden. Bitte Port in der Device-Ansicht setzen.');
                 return;
             }
             try {
@@ -368,15 +387,16 @@
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    body: JSON.stringify({device_id: deviceId, board})
+                    credentials: 'same-origin',
+                    body: JSON.stringify({device_id: deviceId, board, port})
                 });
-                const data = await response.json();
-                if (data.success) {
+                const data = await parseJsonResponse(response);
+                if (response.ok && data.success) {
                     alert('✅ Upload gesendet!');
                     window.closeUploadModal();
                     setTimeout(() => location.reload(), 2000);
                 } else {
-                    alert('❌ ' + (data.error || 'Fehler'));
+                    alert('❌ ' + (data.error || data.message || data.errorText || 'Fehler'));
                 }
             } catch (error) {
                 alert('❌ ' + error.message);

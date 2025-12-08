@@ -31,7 +31,8 @@ class DeviceEventBroadcast implements ShouldBroadcastNow
      */
     public function broadcastOn(): Channel
     {
-        return new PrivateChannel('device.' . $this->device->id);
+        // Use public_id so it matches the frontend subscription channel and channel auth
+        return new PrivateChannel('device.' . $this->device->public_id);
     }
 
     /**
@@ -48,7 +49,10 @@ class DeviceEventBroadcast implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return array_merge(
-            ['device_id' => $this->device->id],
+            [
+                'device_id' => $this->device->id,
+                'device_public_id' => $this->device->public_id,
+            ],
             $this->payload,
             ['timestamp' => now()->toIso8601String()]
         );

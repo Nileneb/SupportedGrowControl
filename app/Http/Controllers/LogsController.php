@@ -32,8 +32,7 @@ class LogsController extends Controller
                 $q->where('user_id', Auth::id());
             })
             ->with('device:id,name')
-            // Sort by agent_timestamp if available, otherwise by created_at
-            ->orderByRaw('COALESCE(agent_timestamp, created_at) DESC')
+            ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
 

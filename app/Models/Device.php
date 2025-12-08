@@ -25,6 +25,7 @@ class Device extends Model
         'name',
         'slug',
         'ip_address',
+        'api_port',
         'serial_port',
         'bootstrap_id',
         'bootstrap_code',

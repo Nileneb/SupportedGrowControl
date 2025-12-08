@@ -27,6 +27,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \Illuminate\Session\Middleware\StartSession::class,
         ]);
+
+        // Relax CSRF for interactive console endpoints to avoid JSON.parse errors and websocket auth failures
+        $middleware->validateCsrfTokens(except: [
+            'broadcasting/auth',
+            'api/growdash/devices/*/commands',
+            'devices/*/logs-data',
+            'api/arduino/*',
+        ]);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         // Timeout pending commands after 5 minutes

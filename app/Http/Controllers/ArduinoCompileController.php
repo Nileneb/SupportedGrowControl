@@ -84,7 +84,7 @@ class ArduinoCompileController extends Controller
 
         $request->validate([
             'device_id' => 'required|exists:devices,id',
-            'port' => 'required|string',
+            'port' => 'nullable|string',
             'board' => 'nullable|string',
             'target_device_id' => 'nullable|string',
         ]);
@@ -95,7 +95,14 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        $port = $request->input('port');
+        // Port optional: fallback auf zuletzt bekannten Port oder gespeicherten serial_port
+        $port = $request->input('port')
+            ?? ($device->last_state['port'] ?? null)
+            ?? ($device->serial_port ?? null)
+            ?? ($device->device_info['port'] ?? null);
+        if (!$port) {
+            return response()->json(['error' => 'Kein Port angegeben oder gefunden'], 422);
+        }
         $board = $request->input('board', 'esp32:esp32:esp32');
 
         // Upload bedeutet: Compile + Upload in einem Schritt (arduino_compile_upload)
@@ -243,7 +250,7 @@ class ArduinoCompileController extends Controller
     {
         $devices = Device::where('user_id', Auth::id())
             ->where('status', 'online')
-            ->select('id', 'name', 'bootstrap_id', 'serial_port', 'device_info')
+            ->select('id', 'name', 'bootstrap_id', 'serial_port', 'device_info', 'last_state')
             ->get();
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@listDevices', [

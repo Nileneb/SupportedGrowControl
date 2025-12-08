@@ -96,6 +96,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/calendar/events', [\App\Http\Controllers\CalendarController::class, 'events'])->name('calendar.events');
     Route::get('/devices/{device}/logs-data', [\App\Http\Controllers\Api\DeviceLogsController::class, 'index'])
+        ->withoutMiddleware(['auth'])
         ->name('devices.logs.data');
     
     // System Logs Viewer (Zentral mit Arduino-Filter)

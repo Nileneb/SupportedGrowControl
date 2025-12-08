@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\DeviceLogReceived;
+use App\Events\DeviceEventBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\Device;
 use Illuminate\Http\JsonResponse;
@@ -65,20 +65,18 @@ class LogController extends Controller
 
             $inserted[] = $deviceLog->id;
             
-            // Broadcast log to WebSocket (Real-time Serial Console) - async via queue
+            // Broadcast log to WebSocket (Real-time Serial Console)
             try {
-                dispatch(function () use ($device, $log) {
-                    broadcast(new DeviceLogReceived(
-                        $device,
-                        $log['level'],
-                        $log['message'],
-                        $log['timestamp'] ?? null
-                    ))->toOthers();
-                });
+                DeviceEventBroadcast::log(
+                    $device,
+                    $log['level'],
+                    $log['message'],
+                    $log['timestamp'] ?? null
+                );
             } catch (\Throwable $e) {
-                Log::warning('Failed to queue log broadcast', [
+                Log::warning('Failed to broadcast device log', [
                     'device_id' => $device->id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }

@@ -73,6 +73,8 @@ class DeviceManagementController extends Controller
         $device = $request->attributes->get('device');
 
         $validator = Validator::make($request->all(), [
+            'ip_address' => 'nullable|ip',
+            'api_port' => 'nullable|integer|min:1|max:65535',
             'last_state' => 'nullable|array',
             'logs' => 'nullable|array|max:100',
             'logs.*.level' => 'required_with:logs|in:debug,info,warning,error',
@@ -93,6 +95,12 @@ class DeviceManagementController extends Controller
             'status' => 'online', // Set status to online on heartbeat
         ];
 
+        if ($request->filled('ip_address')) {
+            $updateData['ip_address'] = $request->input('ip_address');
+        }
+        if ($request->filled('api_port')) {
+            $updateData['api_port'] = (int) $request->input('api_port');
+        }
         if ($request->has('last_state')) {
             $updateData['last_state'] = $request->input('last_state');
         }

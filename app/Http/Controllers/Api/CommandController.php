@@ -92,6 +92,8 @@ class CommandController extends Controller
         $command->update([
             'status' => $request->input('status'),
             'result_message' => $request->input('result_message'),
+            'output' => $request->input('output'),
+            'error' => $request->input('error'),
             'result_data' => !empty($resultData) ? $resultData : null,
             'completed_at' => in_array($request->input('status'), ['completed', 'failed'])
                 ? now()
