@@ -72,12 +72,15 @@ Route::middleware('device.auth')->prefix('growdash/agent')->group(function () {
 
     // POST heartbeat/last_seen update
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DeviceManagementController::class, 'heartbeat']);
-    
+
     // POST webcam endpoints registration (Camera Module)
     Route::post('/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'registerFromAgent']);
-    
+
     // GET list of registered webcams for this device
     Route::get('/webcams', [\App\Http\Controllers\Api\WebcamController::class, 'indexForAgent']);
+
+    // POST video frame (WebSocket-ähnlich, für Video-Streaming)
+    Route::post('/video-frame', [\App\Http\Controllers\Api\VideoStreamController::class, 'receiveFrame']);
 });
 
 // ==================== User API (Sanctum-Authenticated) ====================

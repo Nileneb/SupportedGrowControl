@@ -25,7 +25,14 @@ window.Echo = new Echo({
     },
 });
 
+
 console.log("✓ Laravel Echo initialized");
+
+// VideoFrame WebSocket-Listener importieren
+import { subscribeVideoFrame } from "./video-frame";
+
+// Beispiel: Video-Stream für ein Device abonnieren
+// subscribeVideoFrame('DEVICE_PUBLIC_ID', 'video-frame-img');
 
 // Global WebSocket status indicator
 window.wsConnected = false;
