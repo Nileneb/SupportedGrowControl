@@ -1,9 +1,11 @@
-<div x-data="{ open: $wire.entangle('open') }" x-show="open" class="fixed inset-0 bg-black/30 flex items-center justify-center">
-    <div class="bg-white rounded shadow p-4 w-[420px]">
+<div x-data="{ open: $wire.entangle('open') }" x-show="open"
+    class="fixed inset-0 bg-black/30 flex items-center justify-center">
+    <div class="bg-white rounded shadow p-4 w-[460px]">
         <div class="font-semibold mb-2">Event</div>
         <div class="space-y-2">
             <input type="text" wire:model="title" class="w-full border rounded px-2 py-1" placeholder="Titel" />
-            <textarea wire:model="description" class="w-full border rounded px-2 py-1" placeholder="Beschreibung"></textarea>
+            <textarea wire:model="description" class="w-full border rounded px-2 py-1"
+                placeholder="Beschreibung"></textarea>
             <div class="flex gap-2">
                 <input type="datetime-local" wire:model="start_at" class="border rounded px-2 py-1 w-1/2" />
                 <input type="datetime-local" wire:model="end_at" class="border rounded px-2 py-1 w-1/2" />
@@ -16,18 +18,21 @@
                     <label class="text-xs">Device</label>
                     <select wire:model.live="device_id" class="w-full border rounded px-2 py-1">
                         <option value="">Keins</option>
-                        @foreach($devices as $dev)
-                            <option value="{{ $dev['id'] }}">{{ $dev['name'] }}</option>
+                        @foreach($shellyDevices as $sh)
+                            <option value="{{ $sh['id'] }}">{{ $sh['name'] ?? ('Shelly #' . $sh['id']) }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div>
                     <label class="text-xs">Aktion</label>
-                    <select wire:model.live="command_type" class="w-full border rounded px-2 py-1" @if(empty($availableCommands)) disabled @endif>
+                    <select wire:model="command_type" class="w-full border rounded px-2 py-1">
                         <option value="">Keine</option>
-                        @foreach($availableCommands as $cmd)
-                            <option value="{{ $cmd['command_type'] }}">{{ $cmd['label'] }}</option>
-                        @endforeach
+                        <option value="spray_pump">Spray Pump</option>
+                        <option value="fill_valve">Fill Valve</option>
+                        <option value="pump">Pump</option>
+                        <option value="valve">Valve</option>
+                        <option value="light">Light</option>
+                        <option value="fan">Fan</option>
                     </select>
                 </div>
             </div>
@@ -73,6 +78,10 @@
             
             <div class="grid grid-cols-2 gap-2">
                 <div>
+                    <label class="text-xs">Dauer (Minuten)</label>
+                    <input type="number" min="1" max="1440" wire:model="duration_minutes" class="w-full border rounded px-2 py-1" placeholder="z.B. 4" />
+                </div>
+                <div>
                     <label class="text-xs">Wiederholung (RRULE)</label>
                     <select wire:model="rrule" class="w-full border rounded px-2 py-1">
                         <option value="">Keine</option>
@@ -81,20 +90,32 @@
                         <option value="FREQ=WEEKLY;INTERVAL=1">Wöchentlich</option>
                     </select>
                 </div>
-                <div>
-                    <label class="text-xs">Status</label>
-                    <select wire:model="status" class="w-full border rounded px-2 py-1">
-                        <option value="planned">planned</option>
-                        <option value="active">active</option>
-                        <option value="done">done</option>
-                        <option value="canceled">canceled</option>
-                    </select>
+            </div>
+            <div class="flex gap-2">
+                <input type="text" wire:model="color" class="border rounded px-2 py-1 w-1/2" placeholder="#color" />
+                <select wire:model="status" class="border rounded px-2 py-1 w-1/2">
+                    <option value="planned">planned</option>
+                    <option value="active">active</option>
+                    <option value="done">done</option>
+                    <option value="canceled">canceled</option>
+                </select>
+            </div>
+
+            @if($id && $shelly_device_id)
+                <div class="mt-3 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs space-y-1">
+                    <div class="font-semibold">Shelly Info</div>
+                    <div>Gerät: <span class="font-mono">{{ $shelly_device_id }}</span></div>
+                    <div>Aktion: <span class="font-mono">{{ $shelly_action ?? 'Keine' }}</span></div>
+                    @if($duration_minutes)
+                        <div>Auto-Off: <span class="font-mono">{{ $duration_minutes }} min</span></div>
+                    @endif
+                    @if($last_executed_at)
+                        <div>Zuletzt ausgeführt: <span
+                                class="font-mono">{{ \Carbon\Carbon::parse($last_executed_at)->format('d.m.Y H:i') }}</span>
+                        </div>
+                    @endif
                 </div>
-            </div>
-            <div>
-                <label class="text-xs">Farbe</label>
-                <input type="text" wire:model="color" class="w-full border rounded px-2 py-1" placeholder="#3788d8" />
-            </div>
+            @endif
         </div>
 
         <div class="mt-4 flex justify-end gap-2">

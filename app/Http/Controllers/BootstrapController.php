@@ -37,40 +37,17 @@ class BootstrapController extends Controller
         $data = $request->validate([
             'bootstrap_id' => 'nullable|string|max:64',
             'name' => 'nullable|string|max:255',
-            'platform' => 'nullable|string|max:255',
-            'version' => 'nullable|string|max:255',
-            'device_info' => 'nullable|array',
         ]);
 
-        // Fallback name for devices that have not provided one yet
-        $deviceName = $data['name'] ?? 'GrowDash Device';
-
-        // If no bootstrap_id provided, generate one server-side (agent now asks Laravel to create it)
-        $bootstrapId = $data['bootstrap_id'] ?? null;
-        if ($bootstrapId === null) {
-            $bootstrapId = 'growdash-' . Str::random(12);
-            while (Device::where('bootstrap_id', $bootstrapId)->exists()) {
-                $bootstrapId = 'growdash-' . Str::random(12);
-            }
-        }
-
+        $bootstrapId = $data['bootstrap_id'];
         $device = Device::findByBootstrapId($bootstrapId);
 
         // Device doesn't exist yet - create unclaimed device
-        if (!$device) {
+        if (! $device) {
             $device = Device::create([
                 'bootstrap_id' => $bootstrapId,
-                'name' => $deviceName,
+                'name' => $data['name'] ?? 'Unclaimed Device',
                 'slug' => 'device-' . Str::random(8),
-                'device_info' => $data['device_info'] ?? [
-                    'platform' => $data['platform'] ?? null,
-                    'version' => $data['version'] ?? null,
-                ],
-            ]);
-
-            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@bootstrap (new)', [
-                'bootstrap_id' => $bootstrapId,
-                'device_id' => $device->id,
             ]);
 
             return response()->json([
@@ -99,7 +76,7 @@ class BootstrapController extends Controller
                 'bootstrap_id' => $device->bootstrap_id,
                 'device_id' => $device->public_id, // Agent expects device_id (which is our public_id UUID)
                 'public_id' => $device->public_id,
-                'agent_token' => $plaintextToken, // New plaintext token (never stored!)
+                'device_token' => $plaintextToken, // New plaintext token (never stored!)
                 'device_name' => $device->name,
                 'user_email' => optional($device->user)->email,
             ]);
@@ -155,10 +132,6 @@ class BootstrapController extends Controller
         $device = $query->first();
 
         if (!$device) {
-            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (not_found)', [
-                'bootstrap_id' => $data['bootstrap_id'],
-            ]);
-
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid bootstrap_id or bootstrap_code',
@@ -167,12 +140,8 @@ class BootstrapController extends Controller
 
         // Not yet paired
         if (!$device->isPaired()) {
-            Log::info('🎯 ENDPOINT_TRACKED: BootstrapController@status (pending)', [
-                'device_id' => $device->id,
-            ]);
-
             return response()->json([
-                'status' => 'pending',
+                'status' => 'unpaired',
             ]);
         }
 
@@ -191,9 +160,52 @@ class BootstrapController extends Controller
             'bootstrap_id' => $device->bootstrap_id,
             'device_id' => $device->public_id, // Agent expects device_id (which is our public_id UUID)
             'public_id' => $device->public_id,
-            'agent_token' => $plaintextToken,
+            'device_token' => $plaintextToken,
             'device_name' => $device->name,
             'user_email' => optional($device->user)->email,
+        ]);
+    }
+
+    /**
+     * User pairs device with bootstrap code.
+     *
+     * POST /api/devices/pair
+     */
+    public function pair(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'bootstrap_code' => 'required|string|size:6',
+        ]);
+
+        $device = Device::findByBootstrapCode($data['bootstrap_code']);
+
+        if (!$device) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid bootstrap code',
+            ], 404);
+        }
+
+        if ($device->isPaired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Device already paired',
+            ], 400);
+        }
+
+        // Pair device with authenticated user
+        $plaintextToken = $device->pairWithUser($request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Device paired successfully',
+            'device' => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'public_id' => $device->public_id,
+                'paired_at' => $device->paired_at->toISOString(),
+            ],
+            'agent_token' => $plaintextToken,
         ]);
     }
 }

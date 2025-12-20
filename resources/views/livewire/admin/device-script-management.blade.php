@@ -188,10 +188,16 @@
                     <select id="uploadDeviceSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
                         <option value="">Lade Devices...</option>
                     </select>
-                    <p class="text-xs text-neutral-500 mt-1">Der Agent erkennt automatisch angeschlossene Boards via Board-Registry</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">Board Typ</label>
+                    <label class="block text-sm font-medium mb-2">Serieller Port</label>
+                    <select id="uploadPortSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
+                        <option value="">Zuerst Device wählen...</option>
+                    </select>
+                    <p class="text-xs text-neutral-500 mt-1">Der Agent erkennt automatisch angeschlossene Boards</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Board Typ (FQBN)</label>
                     <select id="uploadBoardSelect" class="w-full px-3 py-2 border rounded dark:bg-neutral-700 dark:border-neutral-600">
                         <option value="arduino:avr:uno">Arduino Uno</option>
                         <option value="arduino:avr:mega">Arduino Mega</option>
@@ -200,7 +206,11 @@
                         <option value="esp32:esp32:esp32s3">ESP32-S3 Dev Module</option>
                         <option value="esp32:esp32:esp32c3">ESP32-C3 Dev Module</option>
                         <option value="esp8266:esp8266:nodemcuv2">NodeMCU 1.0 (ESP-12E)</option>
+                        <option value="arduino:avr:uno">Arduino Uno</option>
+                        <option value="arduino:avr:mega">Arduino Mega</option>
+                        <option value="arduino:avr:nano">Arduino Nano</option>
                     </select>
+                    <p class="text-xs text-neutral-500 mt-1">Überschreibt automatisch erkannten Typ falls nötig</p>
                 </div>
             </div>
             <div class="flex gap-2 mt-6">
@@ -322,12 +332,31 @@
                 }
 
                 const select = document.getElementById('uploadDeviceSelect');
-                select.innerHTML = window.scriptManagerState.availableDevices.map(d => {
-                    const boardInfo = d.last_state?.board_type ? ` [${d.last_state.board_type}]` : '';
-                    const portValue = d.last_state?.port || d.serial_port || d.device_info?.port;
-                    const portInfo = portValue ? ` 🔌 ${portValue}` : '';
-                    return `<option value="${d.id}">${d.name}${boardInfo}${portInfo}</option>`;
-                }).join('');
+                select.innerHTML = window.scriptManagerState.availableDevices.map(d =>
+                    `<option value="${d.id}">${d.name} (${d.bootstrap_id})</option>`
+                ).join('');
+
+                select.onchange = async () => {
+                    const deviceId = select.value;
+                    if (!deviceId) return;
+                    const portSelect = document.getElementById('uploadPortSelect');
+                    portSelect.innerHTML = '<option value="">⏳ Lädt Ports...</option>';
+                    try {
+                        const resp = await fetch(`/api/arduino/devices/${deviceId}/ports`, {
+                            headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content}
+                        });
+                        const portData = await resp.json();
+                        if (portData.ports && portData.ports.length > 0) {
+                            portSelect.innerHTML = portData.ports.map(p =>
+                                `<option value="${p.port}">${p.port} - ${p.description || p.manufacturer}</option>`
+                            ).join('');
+                        } else {
+                            portSelect.innerHTML = '<option value="">⚠️ Keine Ports gefunden</option>';
+                        }
+                    } catch (err) {
+                        portSelect.innerHTML = '<option value="">❌ Port-Scan fehlgeschlagen</option>';
+                    }
+                };
 
                 document.getElementById('uploadModal').classList.remove('hidden');
             } catch (error) {
@@ -370,31 +399,29 @@
         window.submitUpload = async function() {
             const deviceId = document.getElementById('uploadDeviceSelect').value;
             const board = document.getElementById('uploadBoardSelect').value;
-            const selectedDevice = window.scriptManagerState.availableDevices.find(d => String(d.id) === String(deviceId));
-            const port = selectedDevice?.last_state?.port || selectedDevice?.serial_port || selectedDevice?.device_info?.port;
-            if (!deviceId || !board) {
+            if (!deviceId || !port || !board) {
                 alert('❌ Alle Felder ausfüllen!');
                 return;
             }
-            if (!port) {
-                alert('❌ Kein Port für dieses Device gefunden. Bitte Port in der Device-Ansicht setzen.');
-                return;
-            }
             try {
+                // Port wird NICHT mehr mitgeschickt - Agent nutzt Board-Registry!
                 const response = await fetch(`/api/arduino/scripts/${window.scriptManagerState.currentScriptId}/upload`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({device_id: deviceId, board, port})
+                    body: JSON.stringify({device_id: deviceId, port, board})
                 });
-                const data = await parseJsonResponse(response);
-                if (response.ok && data.success) {
+                const data = await response.json();
+                if (data.success) {
                     alert('✅ Upload gesendet!');
                     window.closeUploadModal();
-                    setTimeout(() => location.reload(), 2000);
+                    if (data.command_id) {
+                        window.pollCommandStatus(data.command_id);
+                    } else {
+                        setTimeout(() => location.reload(), 2000);
+                    }
                 } else {
                     alert('❌ ' + (data.error || data.message || data.errorText || 'Fehler'));
                 }

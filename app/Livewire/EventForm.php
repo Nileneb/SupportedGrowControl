@@ -21,19 +21,17 @@ class EventForm extends Component
     public ?int $calendar_id = null;
     public ?int $device_id = null;
     public ?string $color = null;
-    public string $status = 'planned';
+    public string $status = 'scheduled';
+    public ?string $last_executed_at = null;
 
     // Scheduling & command linkage
     public ?string $rrule = null; // e.g., FREQ=DAILY;INTERVAL=2
-    public ?string $command_type = null;
-    public array $command_params = [];
-    
-    // Available commands for selected device
-    public array $availableCommands = [];
-    public array $paramTemplate = [];
+    public ?string $command_type = null; // e.g., spray_pump
+    public ?int $duration_minutes = null; // e.g., 4 -> 4 minutes
 
     // Device list for dropdown
     public array $devices = [];
+    public array $shellyDevices = [];
 
     public function render()
     {
@@ -44,6 +42,13 @@ class EventForm extends Component
         } else {
             $this->devices = [];
         }
+        if (\Illuminate\Support\Facades\Schema::hasTable('shelly_devices')) {
+            $this->shellyDevices = \App\Models\ShellyDevice::where('user_id', Auth::id())
+                ->orderBy('name')->get(['id','name','ip_address'])->toArray();
+        } else {
+            $this->shellyDevices = [];
+        }
+
         return view('livewire.event-form');
     }
 
@@ -202,11 +207,26 @@ class EventForm extends Component
             'calendar_id' => ['nullable', 'integer'],
             'device_id' => ['nullable', 'integer'],
             'color' => ['nullable', 'string', 'max:32'],
-            'status' => ['required', Rule::in(['planned','active','done','canceled'])],
+            'status' => ['required', Rule::in(['scheduled','completed','canceled'])],
             'rrule' => ['nullable', 'string', 'max:255'],
             'command_type' => ['nullable', 'string', 'max:50'],
-            'command_params' => ['nullable', 'array'],
+            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
         ]);
+
+        // Build meta from command fields
+        $meta = null;
+        if (!empty($validated['command_type'])) {
+            $durationMs = null;
+            if (!empty($validated['duration_minutes'])) {
+                $durationMs = (int)$validated['duration_minutes'] * 60 * 1000;
+            }
+            $meta = [
+                'command_type' => $validated['command_type'],
+                'params' => array_filter([
+                    'duration_ms' => $durationMs,
+                ], fn($v) => $v !== null),
+            ];
+        }
 
         if ($this->id) {
             $event = Event::where('user_id', Auth::id())->find($this->id);
@@ -218,6 +238,8 @@ class EventForm extends Component
         } else {
             $event = Event::create(array_merge($validated, [
                 'user_id' => Auth::id(),
+                'rrule' => $validated['rrule'] ?? null,
+                'meta' => $meta,
             ]));
             $this->dispatch('event-saved', ['id' => $event->id]);
         }

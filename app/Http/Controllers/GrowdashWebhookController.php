@@ -2,61 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DeviceLog;
+use App\Models\ArduinoLog;
 use App\Models\Device;
 use App\Models\FillEvent;
 use App\Models\SprayEvent;
 use App\Models\SystemStatus;
 use App\Models\TdsReading;
 use App\Models\TemperatureReading;
-use App\Models\WaterLevel;
-use Illuminate\Http\JsonResponse;
+use App\Models\SprayEvent;
+use App\Models\FillEvent;
+use App\Models\SystemStatus;
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class GrowdashWebhookController extends Controller
 {
-    use AuthorizesRequests;
     /**
-     * Find or create a device by slug.
+     * Handle incoming webhook log from Arduino/Growdash
      */
-    protected function findDevice(string $slug): Device
+    public function log(Request $request)
     {
-        return Device::firstOrCreate(
-            ['slug' => $slug],
-            ['name' => $slug]
-        );
-    }
+        // Validate token
+        $token = $request->header('X-Growdash-Token');
+        $validToken = config('services.growdash.webhook_token');
 
-    /**
-     * Receive and process a log message from Growdash device.
-     *
-     * POST /api/growdash/log
-     */
-    public function log(Request $request): JsonResponse
-    {
-        $data = $request->validate([
+        if ($token !== $validToken) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
             'device_slug' => 'required|string',
             'message' => 'required|string',
-            'level' => 'nullable|string|in:debug,info,warning,error',
+            'level' => 'sometimes|string|in:debug,info,warning,error',
         ]);
 
-        $device = $this->findDevice($data['device_slug']);
+        // Find or create device
+        $device = Device::firstOrCreate(
+            ['slug' => $request->device_slug],
+            ['name' => $request->device_slug]
+        );
 
-        $log = DeviceLog::create([
+        $log = ArduinoLog::create([
             'device_id' => $device->id,
             'level' => $data['level'] ?? 'info',
             'message' => $data['message'],
-            'context' => null,
+            'logged_at' => now(),
         ]);
 
         // Parse the message for structured data
         $this->parseMessage($device, $log->message);
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@log', [
-            'device_id' => $device->id,
-            'level' => $log->level,
-        ]);
 
         return response()->json(['success' => true, 'log_id' => $log->id]);
     }
@@ -160,76 +153,65 @@ class GrowdashWebhookController extends Controller
                 break;
         }
 
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@event', [
-            'device_id' => $device->id,
-            'event_type' => $type,
-        ]);
-
         return response()->json(['success' => true]);
     }
 
     /**
-     * Parse log messages to extract structured data.
+     * Parse log message and store relevant data
      */
-    protected function parseMessage(Device $device, string $message): void
+    protected function parseAndStoreData(Device $device, string $message)
     {
-        // Water Level: "WaterLevel: 75.3" or "Water: 75.3%"
-        if (preg_match('/(?:WaterLevel|Water):\s*([\d.]+)(?:%)?/i', $message, $matches)) {
-            $percent = (float) $matches[1];
-            $wl = WaterLevel::create([
+        // Water Level: XX.X
+        if (preg_match('/WaterLevel:\s*([\d.]+)/i', $message, $matches)) {
+            $level = (float) $matches[1];
+
+            WaterLevel::create([
                 'device_id' => $device->id,
                 'measured_at' => now(),
-                'level_percent' => $percent,
-                'liters' => null, // Could calculate based on tank dimensions
+                'level_percent' => $level,
+                'liters' => $level * 0.2, // Approximate conversion
             ]);
-            $this->updateStatus($device, [
-                'water_level' => $wl->level_percent,
-                'water_liters' => $wl->liters,
-            ]);
+
+            $this->updateSystemStatus($device, ['water_level' => $level]);
         }
 
-        // TDS: "TDS: 450.2" or "TDS: 450 ppm"
+        // TDS: XX.X
         if (preg_match('/TDS:\s*([\d.]+)/i', $message, $matches)) {
-            $value = (float) $matches[1];
+            $tds = (float) $matches[1];
+
             TdsReading::create([
                 'device_id' => $device->id,
                 'measured_at' => now(),
-                'value_ppm' => $value,
+                'value_ppm' => $tds,
             ]);
-            $this->updateStatus($device, ['last_tds' => $value]);
+
+            $this->updateSystemStatus($device, ['last_tds' => $tds]);
         }
 
-        // Temperature: "Temp: 22.5" or "Temperature: 22.5°C"
-        if (preg_match('/(?:Temp|Temperature):\s*([\d.]+)/i', $message, $matches)) {
+        // Temp: XX.X
+        if (preg_match('/Temp:\s*([\d.]+)/i', $message, $matches)) {
             $temp = (float) $matches[1];
+
             TemperatureReading::create([
                 'device_id' => $device->id,
                 'measured_at' => now(),
                 'value_c' => $temp,
             ]);
-            $this->updateStatus($device, ['last_temperature' => $temp]);
+
+            $this->updateSystemStatus($device, ['last_temperature' => $temp]);
         }
 
-        // Spray: "Spray: ON" or "Spray: OFF"
+        // Spray: ON/OFF
         if (preg_match('/Spray:\s*(ON|OFF)/i', $message, $matches)) {
-            $active = strtoupper($matches[1]) === 'ON';
+            $isOn = strtoupper($matches[1]) === 'ON';
 
-            if ($active) {
-                // Check if there's already an active spray event
-                $existing = $device->sprayEvents()
-                    ->whereNull('end_time')
-                    ->latest('start_time')
-                    ->first();
-
-                if (!$existing) {
-                    SprayEvent::create([
-                        'device_id' => $device->id,
-                        'start_time' => now(),
-                        'manual' => false,
-                    ]);
-                }
+            if ($isOn) {
+                SprayEvent::create([
+                    'device_id' => $device->id,
+                    'start_time' => now(),
+                    'manual' => false,
+                ]);
             } else {
-                // End the current spray event
                 $event = $device->sprayEvents()
                     ->whereNull('end_time')
                     ->latest('start_time')
@@ -238,31 +220,24 @@ class GrowdashWebhookController extends Controller
                 if ($event) {
                     $event->update([
                         'end_time' => now(),
-                        'duration_seconds' => $event->start_time->diffInSeconds(now()),
+                        'duration_seconds' => now()->diffInSeconds($event->start_time),
                     ]);
                 }
             }
 
-            $this->updateStatus($device, ['spray_active' => $active]);
+            $this->updateSystemStatus($device, ['spray_active' => $isOn]);
         }
 
-        // Filling: "Filling: ON" or "Filling: OFF"
+        // Filling: ON/OFF
         if (preg_match('/Filling:\s*(ON|OFF)/i', $message, $matches)) {
-            $active = strtoupper($matches[1]) === 'ON';
+            $isOn = strtoupper($matches[1]) === 'ON';
 
-            if ($active) {
-                $existing = $device->fillEvents()
-                    ->whereNull('end_time')
-                    ->latest('start_time')
-                    ->first();
-
-                if (!$existing) {
-                    FillEvent::create([
-                        'device_id' => $device->id,
-                        'start_time' => now(),
-                        'manual' => false,
-                    ]);
-                }
+            if ($isOn) {
+                FillEvent::create([
+                    'device_id' => $device->id,
+                    'start_time' => now(),
+                    'manual' => false,
+                ]);
             } else {
                 $event = $device->fillEvents()
                     ->whereNull('end_time')
@@ -272,55 +247,26 @@ class GrowdashWebhookController extends Controller
                 if ($event) {
                     $event->update([
                         'end_time' => now(),
-                        'duration_seconds' => $event->start_time->diffInSeconds(now()),
                     ]);
                 }
             }
 
-            $this->updateStatus($device, ['filling_active' => $active]);
+            $this->updateSystemStatus($device, ['filling_active' => $isOn]);
         }
     }
 
     /**
-     * Update or create system status for device.
+     * Update or create system status
      */
-    protected function updateStatus(Device $device, array $attributes): void
+    protected function updateSystemStatus(Device $device, array $data)
     {
         $status = $device->systemStatuses()->latest('measured_at')->first();
 
-        if (!$status) {
-            $status = new SystemStatus([
+        if (!$status || $status->measured_at->diffInMinutes(now()) > 5) {
+            // Create new status
+            $defaults = [
                 'device_id' => $device->id,
                 'measured_at' => now(),
-            ]);
-        }
-
-        foreach ($attributes as $key => $value) {
-            $status->{$key} = $value;
-        }
-
-        $status->measured_at = now();
-        $status->save();
-    }
-
-    // ==================== Public API Endpoints ====================
-
-    /**
-     * Get current system status.
-     *
-     * GET /api/growdash/status?device_slug=growdash-1
-     */
-    public function status(Request $request): JsonResponse
-    {
-        $deviceSlug = $request->query('device_slug', config('services.growdash.device_slug'));
-        $device = Device::where('slug', $deviceSlug)->first();
-
-        if ($device) {
-            $this->authorize('view', $device);
-        }
-
-        if (!$device) {
-            return response()->json([
                 'water_level' => 0,
                 'water_liters' => 0,
                 'spray_active' => false,
@@ -344,11 +290,6 @@ class GrowdashWebhookController extends Controller
                 'timestamp' => now()->timestamp,
             ]);
         }
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@status', [
-            'device_slug' => $deviceSlug,
-            'device_id' => $device->id,
-        ]);
 
         return response()->json([
             'water_level' => $status->water_level,
@@ -384,11 +325,6 @@ class GrowdashWebhookController extends Controller
                 'liters' => $wl->liters,
             ]);
 
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@waterHistory', [
-            'device_id' => $device->id,
-            'record_count' => $history->count(),
-        ]);
-
         return response()->json(['history' => $history]);
     }
 
@@ -414,11 +350,6 @@ class GrowdashWebhookController extends Controller
                 'value_ppm' => $tds->value_ppm,
             ]);
 
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@tdsHistory', [
-            'device_id' => $device->id,
-            'record_count' => $history->count(),
-        ]);
-
         return response()->json(['history' => $history]);
     }
 
@@ -443,11 +374,6 @@ class GrowdashWebhookController extends Controller
                 'timestamp' => $temp->measured_at->timestamp,
                 'value_c' => $temp->value_c,
             ]);
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@temperatureHistory', [
-            'device_id' => $device->id,
-            'record_count' => $history->count(),
-        ]);
 
         return response()->json(['history' => $history]);
     }
@@ -475,11 +401,6 @@ class GrowdashWebhookController extends Controller
                 'duration_seconds' => $event->duration_seconds,
                 'manual' => $event->manual,
             ]);
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@sprayEvents', [
-            'device_id' => $device->id,
-            'event_count' => $events->count(),
-        ]);
 
         return response()->json(['events' => $events]);
     }
@@ -511,11 +432,6 @@ class GrowdashWebhookController extends Controller
                 'manual' => $event->manual,
             ]);
 
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@fillEvents', [
-            'device_id' => $device->id,
-            'event_count' => $events->count(),
-        ]);
-
         return response()->json(['events' => $events]);
     }
 
@@ -533,7 +449,7 @@ class GrowdashWebhookController extends Controller
         $device = Device::where('slug', $deviceSlug)->firstOrFail();
         $this->authorize('view', $device);
 
-        $query = $device->deviceLogs()->latest('created_at');
+        $query = $device->arduinoLogs()->latest('logged_at');
 
         if ($level) {
             $query->where('level', $level);
@@ -541,17 +457,11 @@ class GrowdashWebhookController extends Controller
 
         $logs = $query->limit($limit)
             ->get()
-            ->map(fn (DeviceLog $log) => [
-                'timestamp' => $log->created_at->timestamp,
+            ->map(fn (ArduinoLog $log) => [
+                'timestamp' => $log->logged_at->timestamp,
                 'level' => $log->level,
                 'message' => $log->message,
-                'context' => $log->context,
             ]);
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@logs', [
-            'device_id' => $device->id,
-            'log_count' => $logs->count(),
-        ]);
 
         return response()->json(['logs' => $logs]);
     }
@@ -603,11 +513,6 @@ class GrowdashWebhookController extends Controller
         }
 
         $this->updateStatus($device, ['spray_active' => $active]);
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@manualSpray', [
-            'device_id' => $device->id,
-            'action' => $data['action'],
-        ]);
 
         return response()->json([
             'success' => true,
@@ -668,11 +573,6 @@ class GrowdashWebhookController extends Controller
 
             $this->updateStatus($device, ['filling_active' => false]);
         }
-
-        \Log::info('🎯 ENDPOINT_TRACKED: GrowdashWebhookController@manualFill', [
-            'device_id' => $device->id,
-            'action' => $data['action'],
-        ]);
 
         return response()->json([
             'success' => true,

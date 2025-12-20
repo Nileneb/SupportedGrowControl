@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DeviceScript;
-use App\Models\Device;
 use App\Models\Command;
+use App\Models\Device;
+use App\Models\DeviceScript;
 use App\Services\ArduinoErrorAnalyzer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ArduinoCompileController extends Controller
 {
@@ -40,7 +40,7 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        $board = $request->input('board', 'esp32:esp32:esp32');
+        $board = $request->input('board', 'arduino:avr:uno');
 
         $command = Command::create([
             'device_id' => $device->id,
@@ -57,7 +57,14 @@ class ArduinoCompileController extends Controller
 
         $script->update([
             'status' => 'compiling',
-            'compile_log' => 'Kompilierung gestartet auf Device: ' . $device->name,
+            'compile_log' => 'Kompilierung gestartet auf Device: '.$device->name,
+        ]);
+
+        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@compile', [
+            'user_id' => Auth::id(),
+            'device_id' => $device->id,
+            'script_id' => $script->id,
+            'command_id' => $command->id,
         ]);
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@compile', [
@@ -84,7 +91,7 @@ class ArduinoCompileController extends Controller
 
         $request->validate([
             'device_id' => 'required|exists:devices,id',
-            'port' => 'nullable|string',
+            'port' => 'required|string',
             'board' => 'nullable|string',
             'target_device_id' => 'nullable|string',
         ]);
@@ -103,6 +110,8 @@ class ArduinoCompileController extends Controller
         if (!$port) {
             return response()->json(['error' => 'Kein Port angegeben oder gefunden'], 422);
         }
+
+        $port = $request->input('port');
         $board = $request->input('board', 'esp32:esp32:esp32');
 
         // Upload bedeutet: Compile + Upload in einem Schritt (arduino_compile_upload)
@@ -110,11 +119,11 @@ class ArduinoCompileController extends Controller
         $command = Command::create([
             'device_id' => $device->id,
             'created_by_user_id' => Auth::id(),
-            'type' => 'arduino_compile_upload',  // Nicht arduino_upload!
+            'type' => 'arduino_upload',
             'params' => [
                 'script_id' => $script->id,
-                'sketch_name' => $script->name,
-                'code' => $script->code,
+                'script_name' => $script->name,
+                'code' => $script->code,  // Agent needs code to compile+upload
                 'port' => $port,
                 'board' => $board,
                 'target_device_id' => $request->input('target_device_id'),
@@ -122,16 +131,13 @@ class ArduinoCompileController extends Controller
             'status' => 'pending',
         ]);
 
+        $logMessage = $port
+            ? "Upload gestartet auf Device: {$device->name} → Port: {$port}"
+            : "Upload gestartet auf Device: {$device->name} (Port aus Board-Registry)";
+
         $script->update([
             'status' => 'uploading',
-            'flash_log' => 'Compile + Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
-        ]);
-
-        Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@upload', [
-            'user_id' => Auth::id(),
-            'device_id' => $device->id,
-            'script_id' => $script->id,
-            'command_id' => $command->id,
+            'flash_log' => 'Upload gestartet auf Device: ' . $device->name . ' → Port: ' . $port,
         ]);
 
         return response()->json([
@@ -151,7 +157,7 @@ class ArduinoCompileController extends Controller
 
         $request->validate([
             'device_id' => 'required|exists:devices,id',
-            'port' => 'required|string',
+            'port' => 'nullable|string', // Optional: Agent nutzt Board-Registry falls leer
             'board' => 'nullable|string',
             'target_device_id' => 'nullable|string',
         ]);
@@ -162,27 +168,33 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Device not owned by user'], 403);
         }
 
-        $port = $request->input('port');
-        $board = $request->input('board', 'esp32:esp32:esp32');
+        $port = $request->input('port'); // Kann null sein
+        $board = $request->input('board', 'arduino:avr:uno');
+
+        $params = [
+            'script_id' => $script->id,
+            'script_name' => $script->name,
+            'code' => $script->code,
+            'board' => $board,
+            'target_device_id' => $request->input('target_device_id'),
+        ];
+
+        // Port nur hinzufügen wenn explizit angegeben
+        if ($port) {
+            $params['port'] = $port;
+        }
 
         $command = Command::create([
             'device_id' => $device->id,
             'created_by_user_id' => Auth::id(),
             'type' => 'arduino_compile_upload',
-            'params' => [
-                'script_id' => $script->id,
-                'script_name' => $script->name,
-                'code' => $script->code,
-                'port' => $port,
-                'board' => $board,
-                'target_device_id' => $request->input('target_device_id'),
-            ],
+            'params' => $params,
             'status' => 'pending',
         ]);
 
         $script->update([
             'status' => 'compiling',
-            'compile_log' => 'Compile & Upload gestartet auf Device: ' . $device->name,
+            'compile_log' => 'Compile & Upload gestartet auf Device: '.$device->name,
         ]);
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@compileAndUpload', [
@@ -250,7 +262,7 @@ class ArduinoCompileController extends Controller
     {
         $devices = Device::where('user_id', Auth::id())
             ->where('status', 'online')
-            ->select('id', 'name', 'bootstrap_id', 'serial_port', 'device_info', 'last_state')
+            ->select('id', 'name', 'bootstrap_id', 'device_info')
             ->get();
 
         Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@listDevices', [
@@ -276,6 +288,34 @@ class ArduinoCompileController extends Controller
             'status' => $command->status,
         ];
 
+        // If upload succeeded, update script status
+        if ($command->status === 'completed' && $command->type === 'arduino_upload') {
+            $scriptId = $command->params['script_id'] ?? null;
+            if ($scriptId) {
+                $script = DeviceScript::find($scriptId);
+                if ($script && $script->user_id === Auth::id()) {
+                    $script->update([
+                        'status' => 'flashed',
+                        'flash_log' => 'Firmware erfolgreich auf Zielgerät geflasht!',
+                    ]);
+                }
+            }
+        }
+
+        // If compilation succeeded, update script status
+        if ($command->status === 'completed' && $command->type === 'arduino_compile') {
+            $scriptId = $command->params['script_id'] ?? null;
+            if ($scriptId) {
+                $script = DeviceScript::find($scriptId);
+                if ($script && $script->user_id === Auth::id()) {
+                    $script->update([
+                        'status' => 'compiled',
+                        'compile_log' => 'Kompilierung erfolgreich abgeschlossen!',
+                    ]);
+                }
+            }
+        }
+
         // If compilation failed, analyze error with LLM
         if ($command->status === 'failed' && $command->type === 'arduino_compile') {
             $errorMessage = $command->result_data['error'] ?? $command->result_data['output'] ?? 'Unbekannter Fehler';
@@ -283,7 +323,7 @@ class ArduinoCompileController extends Controller
             $boardFqbn = $command->params['board'] ?? 'unknown';
 
             if ($errorMessage && $originalCode) {
-                $analyzer = new ArduinoErrorAnalyzer();
+                $analyzer = new ArduinoErrorAnalyzer;
                 $analysis = $analyzer->analyzeAndFix($errorMessage, $originalCode, $boardFqbn);
 
                 $response['error_analysis'] = $analysis;
@@ -310,20 +350,25 @@ class ArduinoCompileController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Check if device is online
-        if ($device->status !== 'online') {
+        // Check if device has IP address
+        if (! $device->ip_address) {
+            // Fallback: return common ports if device has no IP
             return response()->json([
-                'error' => 'Device offline',
-                'ports' => []
-            ], 400);
+                'success' => true,
+                'ports' => [
+                    ['port' => '/dev/ttyACM0', 'description' => 'Arduino Uno', 'manufacturer' => 'Arduino'],
+                    ['port' => '/dev/ttyUSB0', 'description' => 'USB-Serial', 'manufacturer' => 'FTDI'],
+                    ['port' => 'COM3', 'description' => 'COM3 (Windows)', 'manufacturer' => 'Standard'],
+                    ['port' => 'COM4', 'description' => 'COM4 (Windows)', 'manufacturer' => 'Standard'],
+                ],
+                'count' => 4,
+                'fallback' => true,
+            ]);
         }
 
         try {
             // Call agent's local API to get available ports
-            // Use device's agent_url if set, otherwise fallback to APP_URL
-            $agentUrl = $device->agent_url ?? config('app.url');
-
-            $response = Http::timeout(5)->get("{$agentUrl}/ports");
+            $response = Http::timeout(10)->get("http://{$device->ip_address}:8000/ports");
 
             if ($response->successful()) {
                 Log::info('🎯 ENDPOINT_TRACKED: ArduinoCompileController@getPorts', [
@@ -335,18 +380,30 @@ class ArduinoCompileController extends Controller
                 return response()->json($response->json());
             }
 
+            // Agent unreachable - return fallback
             return response()->json([
-                'error' => 'Agent nicht erreichbar',
-                'ports' => []
-            ], 503);
+                'success' => true,
+                'ports' => [
+                    ['port' => '/dev/ttyACM0', 'description' => 'Arduino Uno (Fallback)', 'manufacturer' => 'Arduino'],
+                    ['port' => '/dev/ttyUSB0', 'description' => 'USB-Serial (Fallback)', 'manufacturer' => 'FTDI'],
+                ],
+                'count' => 2,
+                'fallback' => true,
+            ]);
 
         } catch (\Exception $e) {
-            Log::error("Port-Scan fehlgeschlagen für Device {$device->id}: " . $e->getMessage());
+            Log::error("Port-Scan failed for Device {$device->id}: ".$e->getMessage());
 
+            // Return fallback ports
             return response()->json([
-                'error' => 'Port-Scan fehlgeschlagen: ' . $e->getMessage(),
-                'ports' => []
-            ], 500);
+                'success' => true,
+                'ports' => [
+                    ['port' => '/dev/ttyACM0', 'description' => 'Arduino Uno (Error)', 'manufacturer' => 'Arduino'],
+                    ['port' => '/dev/ttyUSB0', 'description' => 'USB-Serial (Error)', 'manufacturer' => 'FTDI'],
+                ],
+                'count' => 2,
+                'fallback' => true,
+            ]);
         }
     }
 }

@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class CommandController extends Controller
 {
@@ -29,11 +28,6 @@ class CommandController extends Controller
             ->where('status', 'pending')
             ->orderBy('created_at', 'asc')
             ->get(['id', 'type', 'params', 'created_at']);
-
-        Log::info('🎯 ENDPOINT_TRACKED: CommandController@pending', [
-            'device_id' => $device->id,
-            'command_count' => $commands->count(),
-        ]);
 
         return response()->json([
             'success' => true,
@@ -92,8 +86,6 @@ class CommandController extends Controller
         $command->update([
             'status' => $request->input('status'),
             'result_message' => $request->input('result_message'),
-            'output' => $request->input('output'),
-            'error' => $request->input('error'),
             'result_data' => !empty($resultData) ? $resultData : null,
             'completed_at' => in_array($request->input('status'), ['completed', 'failed'])
                 ? now()
@@ -106,33 +98,8 @@ class CommandController extends Controller
             'status' => $request->input('status'),
         ]);
 
-        // Broadcast WebSocket event async via queue (don't block agent response)
-        dispatch(function () use ($command) {
-            try {
-                broadcast(new DeviceEventBroadcast(
-                    $command->device,
-                    'command.status.updated',
-                    [
-                        'command_id' => $command->id,
-                        'type' => $command->type,
-                        'status' => $command->status,
-                        'result_message' => $command->result_message,
-                        'completed_at' => $command->completed_at?->toIso8601String(),
-                    ]
-                ));
-            } catch (\Throwable $e) {
-                Log::warning('Broadcast failed for command status update', [
-                    'command_id' => $command->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        });
-
-        Log::info('🎯 ENDPOINT_TRACKED: CommandController@result', [
-            'device_id' => $device->id,
-            'command_id' => $command->id,
-            'new_status' => $request->input('status'),
-        ]);
+        // Broadcast WebSocket event
+        broadcast(new CommandStatusUpdated($command));
 
         return response()->json([
             'success' => true,
@@ -197,12 +164,6 @@ class CommandController extends Controller
                     'status' => 'pending',
                 ]);
 
-                Log::info('🎯 ENDPOINT_TRACKED: CommandController@send (serial_command)', [
-                    'user_id' => Auth::id(),
-                    'device_id' => $device->id,
-                    'command_id' => $command->id,
-                ]);
-
                 return response()->json([
                     'success' => true,
                     'message' => 'Serial command queued',
@@ -216,12 +177,70 @@ class CommandController extends Controller
                 ], 201);
             }
 
-            // For arduino_compile* commands: ensure sketch_name is set properly
-            $params = $validated['params'] ?? [];
-            if (in_array($validated['type'], ['arduino_compile', 'arduino_compile_upload', 'arduino_upload'])) {
-                // Set sketch_name to current timestamp-based identifier if not provided
-                if (empty($params['sketch_name'])) {
-                    $params['sketch_name'] = 'growdash_' . str_replace(['-', ':'], '', now()->toIso8601String());
+            // Validate actuator-based commands against device capabilities (skip for serial_command above)
+            if ($device->capabilities) {
+                try {
+                    $capabilitiesDTO = DeviceCapabilities::fromArray($device->capabilities);
+                    $actuator = $capabilitiesDTO->getActuatorById($validated['type']);
+
+                    if (!$actuator) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Unknown actuator: {$validated['type']}",
+                            'available_actuators' => array_map(
+                                fn($a) => $a->id,
+                                $capabilitiesDTO->actuators
+                            ),
+                        ], 422);
+                    }
+
+                    // Validate params against actuator spec
+                    $providedParams = $validated['params'] ?? [];
+                    $paramErrors = $actuator->validateParams($providedParams);
+
+                    if (!empty($paramErrors)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Invalid command parameters',
+                            'errors' => $paramErrors,
+                        ], 422);
+                    }
+
+                    // Map actuator command to Arduino serial command
+                    $arduinoCommand = $this->mapActuatorToArduinoCommand($validated['type'], $providedParams);
+
+                    // Create serial_command instead of actuator-specific type
+                    $command = Command::create([
+                        'device_id' => $device->id,
+                        'created_by_user_id' => Auth::id(),
+                        'type' => 'serial_command',
+                        'params' => ['command' => $arduinoCommand],
+                        'status' => 'pending',
+                    ]);
+
+                    Log::info('Actuator command mapped to serial', [
+                        'actuator_type' => $validated['type'],
+                        'arduino_command' => $arduinoCommand,
+                        'command_id' => $command->id,
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Command queued successfully',
+                        'command' => [
+                            'id' => $command->id,
+                            'type' => $command->type,
+                            'params' => $command->params,
+                            'status' => $command->status,
+                            'created_at' => $command->created_at->toISOString(),
+                        ]
+                    ], 201);
+                } catch (\Exception $e) {
+                    // If capabilities validation fails, continue without it
+                    Log::warning('Failed to validate command against capabilities', [
+                        'device_id' => $device->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
 
@@ -341,63 +360,4 @@ class CommandController extends Controller
      * Map actuator commands to Arduino serial commands
      * Based on GrowDash agent expectations (see https://github.com/nileneb/growdash)
      */
-    private function mapActuatorToArduinoCommand(string $actuatorType, array $params): string
-    {
-        return match($actuatorType) {
-            'spray_pump' => $this->buildSprayCommand($params),
-            'fill_valve' => $this->buildFillCommand($params),
-            'pump' => $this->buildPumpCommand($params),
-            'valve' => $this->buildValveCommand($params),
-            'light' => $this->buildLightCommand($params),
-            'fan' => $this->buildFanCommand($params),
-            default => "STATUS", // Fallback
-        };
-    }
-
-    private function buildSprayCommand(array $params): string
-    {
-        $durationMs = $params['duration_ms'] ?? 1000;
-        return "Spray {$durationMs}";
-    }
-
-    private function buildFillCommand(array $params): string
-    {
-        // Check if we have duration_ms (time-based) or target_liters (volume-based)
-        if (isset($params['target_liters'])) {
-            $liters = $params['target_liters'];
-            return "FillL {$liters}";
-        }
-
-        // Duration-based fill (convert ms to seconds, use as rough estimate)
-        $durationMs = $params['duration_ms'] ?? 5000;
-        $durationSec = $durationMs / 1000;
-        $estimatedLiters = ($durationSec / 60) * 6.0; // Assume 6L/min fill rate
-        return "FillL " . number_format($estimatedLiters, 2);
-    }
-
-    private function buildPumpCommand(array $params): string
-    {
-        // Generic pump command
-        $durationMs = $params['duration_ms'] ?? 1000;
-        return "Spray {$durationMs}"; // Re-use spray pin for generic pump
-    }
-
-    private function buildValveCommand(array $params): string
-    {
-        $state = $params['state'] ?? 'on';
-        return $state === 'on' ? "TabON" : "TabOFF";
-    }
-
-    private function buildLightCommand(array $params): string
-    {
-        // Assuming custom light control command
-        $state = $params['state'] ?? 'on';
-        return $state === 'on' ? "LightON" : "LightOFF";
-    }
-
-    private function buildFanCommand(array $params): string
-    {
-        $durationMs = $params['duration_ms'] ?? 5000;
-        return "Fan {$durationMs}";
-    }
 }
